@@ -1,6 +1,6 @@
 # DocLens AI
 
-DocLens AI currently provides the Backend Core foundation for a production-oriented document intelligence system. This stage includes a FastAPI service, typed configuration, async PostgreSQL connectivity, SQLAlchemy/Alembic foundations, and health endpoints.
+DocLens AI currently provides the Backend Core and PostgreSQL document-domain foundation for a production-oriented document intelligence system. This stage includes a FastAPI service, typed configuration, async PostgreSQL connectivity, health endpoints, and persistence models for workspaces, logical documents, and immutable document versions.
 
 Document ingestion, authentication, object storage, background jobs, Qdrant, retrieval, RAG, embeddings, and LLM features are not implemented yet.
 
@@ -43,16 +43,17 @@ ruff check src tests alembic
 pytest
 ```
 
-The PostgreSQL integration test runs only when `TEST_DATABASE_URL` is set to an async PostgreSQL URL. For example:
+The PostgreSQL integration tests run only when `TEST_DATABASE_URL` is set to a disposable PostgreSQL database whose user can create temporary test databases. For example:
 
 ```bash
 TEST_DATABASE_URL=postgresql+asyncpg://doclens:doclens-local@localhost:5432/doclens pytest -m integration
 ```
 
-Validate the current Alembic environment against the configured database:
+Apply or revert the document-domain migration:
 
 ```bash
-alembic current
+alembic upgrade head
+alembic downgrade base
 ```
 
-No business schema exists yet. Future schema changes must be created as Alembic revisions rather than by editing database state manually.
+The current schema stores workspace ownership, stable document identity, and immutable version/file metadata. It does not store file contents, extracted text, processing state, embeddings, or authorization data. Future schema changes must be created as new Alembic revisions rather than by editing migration history.

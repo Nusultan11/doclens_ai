@@ -8,6 +8,7 @@ from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
+import doclens_ai.models  # noqa: F401 - registers model metadata for Alembic.
 from doclens_ai.core.config import get_settings
 from doclens_ai.db.base import Base
 
@@ -35,7 +36,12 @@ def run_migrations_offline() -> None:
 
 
 def run_sync_migrations(connection: Connection) -> None:
-    context.configure(connection=connection, target_metadata=target_metadata, compare_type=True)
+    context.configure(
+        connection=connection,
+        target_metadata=target_metadata,
+        compare_type=True,
+        compare_server_default=True,
+    )
 
     with context.begin_transaction():
         context.run_migrations()
