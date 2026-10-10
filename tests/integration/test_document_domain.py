@@ -4,7 +4,7 @@ import asyncio
 from uuid import uuid4
 
 import pytest
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import selectinload
@@ -108,3 +108,64 @@ def test_invalid_foreign_keys_are_rejected(migrated_database_url: str) -> None:
             await engine.dispose()
 
     asyncio.run(create_orphans())
+
+
+@pytest.mark.integration
+def test_persisted_document_version_is_immutable(migrated_database_url: str) -> None:
+    async def exercise_immutability() -> None:
+        engine = create_async_engine(migrated_database_url)
+        try:
+            async with AsyncSession(engine, expire_on_commit=False) as session:
+                document = Document(workspace=Workspace(name="Immutable versions"))
+                version = _version(document)
+                session.add(version)
+                await session.commit()
+
+                document_id = document.id
+                version_id = version.id
+                original_values = {
+                    "original_filename": version.original_filename,
+                    "content_type": version.content_type,
+                    "file_size": version.file_size,
+                    "sha256_checksum": version.sha256_checksum,
+                    "object_storage_key": version.object_storage_key,
+                    "updated_at": version.updated_at,
+                }
+
+                version.original_filename = "tampered.pdf"
+                with pytest.raises(IntegrityError, match="immutable"):
+                    await session.commit()
+                await session.rollback()
+
+            async with engine.connect() as connection:
+                transaction = await connection.begin()
+                with pytest.raises(IntegrityError, match="immutable"):
+                    await connection.execute(
+                        text(
+                            "UPDATE document_versions SET content_type = :content_type "
+                            "WHERE id = :version_id"
+                        ),
+                        {"content_type": "text/plain", "version_id": version_id},
+                    )
+                await transaction.rollback()
+
+            async with AsyncSession(engine, expire_on_commit=False) as session:
+                persisted_version = await session.get(DocumentVersion, version_id)
+                assert persisted_version is not None
+                for field, expected_value in original_values.items():
+                    assert getattr(persisted_version, field) == expected_value
+
+                persisted_document = await session.get(Document, document_id)
+                assert persisted_document is not None
+                new_version = _version(persisted_document, number=2)
+                session.add(new_version)
+                await session.commit()
+                new_version_id = new_version.id
+
+                await session.delete(new_version)
+                await session.commit()
+                assert await session.get(DocumentVersion, new_version_id) is None
+        finally:
+            await engine.dispose()
+
+    asyncio.run(exercise_immutability())

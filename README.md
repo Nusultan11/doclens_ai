@@ -56,4 +56,4 @@ alembic upgrade head
 alembic downgrade base
 ```
 
-The current schema stores workspace ownership, stable document identity, and immutable version/file metadata. It does not store file contents, extracted text, processing state, embeddings, or authorization data. Future schema changes must be created as new Alembic revisions rather than by editing migration history.
+The current schema stores workspace ownership, stable document identity, and immutable version/file metadata. PostgreSQL rejects updates to persisted document-version rows; future upload flows must validate and confirm the complete file metadata before inserting a version, then create a new version rather than mutate it. It does not store file contents, extracted text, processing state, embeddings, or authorization data. Future schema changes must be created as new Alembic revisions rather than by editing migration history.
