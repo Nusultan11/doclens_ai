@@ -2,7 +2,9 @@
 
 DocLens AI currently provides the Backend Core, PostgreSQL document domain, and an authenticated document-intake API for a production-oriented document intelligence system. This stage includes a FastAPI service, OIDC JWT verification, PostgreSQL workspace authorization, async PostgreSQL connectivity, health endpoints, immutable document versions, private S3-compatible storage, and mutable upload-session coordination.
 
-Parsing/extraction, background jobs, Qdrant, retrieval, RAG, embeddings, and LLM features are not implemented yet.
+Production ingestion parsing/extraction, background jobs, Qdrant, retrieval, RAG, embeddings,
+and LLM features are not implemented yet. A standalone offline structured-extraction baseline is
+available for engineering evaluation; it is not connected to the API, database, or object storage.
 
 ## Prerequisites
 
@@ -54,12 +56,15 @@ the EDA dependencies and point it at an explicit corpus directory:
 ```bash
 python -m pip install -e ".[dev,eda]"
 python -m doclens_ai.eda --input-dir ./local-corpus --output-dir ./eda-output
+python -m doclens_ai.extraction --input-dir ./local-corpus --output-dir ./extraction-output
 ```
 
-The output contains privacy-safe aggregate metrics and opaque document identifiers; it never
-includes filenames, paths, or extracted content. See `docs/eda/README.md` for the methodology,
-limits, deterministic-run option, and interpretation guidance. Generated reports and local
-corpora must not be committed.
+The EDA profiler measures corpus characteristics. The extraction command evaluates ordered PDF
+page text, ordered DOCX body paragraphs and tables, and sparse XLSX cells and table metadata.
+Both commands persist privacy-safe aggregate metrics and opaque document identifiers; neither
+persists filenames, paths, extracted text, table contents, worksheet names, or cell values. See
+`docs/eda/README.md` for the methodology, limits, deterministic-run option, and interpretation
+guidance. Generated reports and local corpora must not be committed.
 
 The PostgreSQL integration tests run only when `TEST_DATABASE_URL` is set to a disposable PostgreSQL database whose user can create temporary test databases. The real object-storage tests additionally require an initialized private test bucket and `TEST_S3_*` settings. For the local Compose services:
 

@@ -1,4 +1,4 @@
-# Document EDA and extraction baseline
+# Document EDA and extraction baselines
 
 This tool profiles an explicitly selected local corpus of PDF, DOCX, and XLSX files. It is an
 offline engineering baseline, not the production ingestion pipeline. It never calls the DocLens
@@ -11,12 +11,13 @@ Install the optional parser set, then select both directories explicitly:
 ```bash
 python -m pip install -e ".[dev,eda]"
 python -m doclens_ai.eda --input-dir ./local-corpus --output-dir ./eda-output
+python -m doclens_ai.extraction --input-dir ./local-corpus --output-dir ./extraction-output
 ```
 
-The output directory must differ from the input directory. If it is nested below the input, it is
-excluded from discovery so old reports are not profiled as documents. Files are processed in a
-stable relative-path order and receive opaque identifiers such as `document-000001`; paths and
-names are never written to reports.
+The output directory must differ from the input directory. The EDA profiler excludes a nested
+output directory from discovery; the structured extractor requires its output directory to be
+outside the input tree. Files are processed in a stable relative-path order and receive opaque
+identifiers such as `document-000001`; paths and names are never written to reports.
 
 Use `--omit-runtime-metrics` when byte-for-byte reproducibility matters. Normal runs measure
 parser latency, which necessarily varies by machine and run. The `deterministic_content_sha256`
@@ -33,6 +34,39 @@ No output includes filenames, directory paths, extracted text, worksheet names, 
 cell values, parser exception messages, credentials, or document metadata that can expose source
 content. SHA-256 is retained because exact-byte duplicate detection is a required corpus-quality
 metric; it should still be handled as internal analysis data.
+
+The structured extraction command writes `metrics.json`, `manifest.csv`, and `report.md` with the
+same privacy boundary. Its in-memory result contains the actual extracted blocks and cells, but
+the CLI persists only format, status, sanitized warning/error categories, SHA-256, byte size,
+structural counts, latency, configured limits, and a deterministic fingerprint. Use
+`--omit-runtime-metrics` to omit latency values from its per-document output.
+
+## Structured extraction contract
+
+`doclens_ai.extraction` is a standalone baseline for future chunking experiments. It is not a
+production ingestion stage and does not mutate the API, PostgreSQL, object storage, or upload
+state. Each file returns one of `success`, `needs_review`, or `failed`; failures use a fixed
+sanitized category and cannot stop later files.
+
+- PDF emits one ordered text block per page with a one-based page number. Pages below 20
+  non-whitespace characters require review. No OCR is attempted, and an informational warning
+  states that table structure is not preserved.
+- DOCX emits body paragraphs and tables in document order. A merged logical cell is emitted once
+  with its anchor coordinate and row/column span. Headers, footers, footnotes, endnotes, comments,
+  drawings, text boxes, nested tables, and unsupported body containers are not extracted;
+  detected occurrences require review.
+- XLSX reads stored cells rather than iterating each coordinate inside a declared worksheet
+  rectangle. It preserves sheet order/state, meaningful cell coordinates and raw values, formula
+  definitions and cached values when present, merged ranges, and table names/references/columns.
+  Missing shared-formula definitions or cached results and detected drawings/comments require
+  review. Formulae and external content are never executed.
+
+The parser bounds corpus file count, input bytes, office archive entries and expansion, PDF pages,
+extracted characters, document blocks, DOCX table grid positions, worksheets, stored spreadsheet
+cells, merged ranges, and spreadsheet table definitions. XML document type/entity declarations
+are rejected.
+These safeguards are application-level limits, not a substitute for OS/container resource
+isolation when processing hostile documents.
 
 ## Confidential documents
 
