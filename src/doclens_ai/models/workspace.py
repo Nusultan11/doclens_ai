@@ -12,6 +12,7 @@ from doclens_ai.db.base import Base
 
 if TYPE_CHECKING:
     from doclens_ai.models.document import Document
+    from doclens_ai.models.membership import WorkspaceMembership
 
 
 class Workspace(Base):
@@ -32,6 +33,10 @@ class Workspace(Base):
     )
 
     documents: Mapped[list[Document]] = relationship(
+        back_populates="workspace",
+        passive_deletes=True,
+    )
+    memberships: Mapped[list[WorkspaceMembership]] = relationship(
         back_populates="workspace",
         passive_deletes=True,
     )

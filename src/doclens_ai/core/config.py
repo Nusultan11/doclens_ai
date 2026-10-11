@@ -21,6 +21,12 @@ class Settings(BaseSettings):
     environment: str = "local"
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
     database_url: str
+    oidc_issuer: str | None = None
+    oidc_audience: str | None = None
+    oidc_jwks_url: str | None = None
+    oidc_required_scope: str = "doclens:documents"
+    oidc_jwks_timeout_seconds: float | str = 3.0
+    oidc_jwks_cache_ttl_seconds: int | str = 300
 
     @field_validator("database_url")
     @classmethod
@@ -33,6 +39,17 @@ class Settings(BaseSettings):
         if url.drivername != "postgresql+asyncpg" or not url.database:
             raise ValueError("DATABASE_URL must use postgresql+asyncpg and name a database")
         return value
+
+    @field_validator("oidc_issuer", "oidc_audience", "oidc_jwks_url", mode="before")
+    @classmethod
+    def normalize_optional_oidc_value(cls, value: object) -> object:
+        if isinstance(value, str) and not value.strip():
+            return None
+        return value
+
+    @property
+    def oidc_is_configured(self) -> bool:
+        return all((self.oidc_issuer, self.oidc_audience, self.oidc_jwks_url))
 
 
 @lru_cache

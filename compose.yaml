@@ -7,6 +7,12 @@ services:
       DATABASE_URL: postgresql+asyncpg://doclens:doclens-local@postgres:5432/doclens
       ENVIRONMENT: local
       LOG_LEVEL: INFO
+      OIDC_AUDIENCE: ${OIDC_AUDIENCE:-}
+      OIDC_ISSUER: ${OIDC_ISSUER:-}
+      OIDC_JWKS_CACHE_TTL_SECONDS: ${OIDC_JWKS_CACHE_TTL_SECONDS:-300}
+      OIDC_JWKS_TIMEOUT_SECONDS: ${OIDC_JWKS_TIMEOUT_SECONDS:-3}
+      OIDC_JWKS_URL: ${OIDC_JWKS_URL:-}
+      OIDC_REQUIRED_SCOPE: ${OIDC_REQUIRED_SCOPE:-doclens:documents}
       S3_ACCESS_KEY: doclens-local
       S3_BUCKET_NAME: doclens-documents
       S3_ENDPOINT_URL: http://minio:9000
@@ -16,6 +22,8 @@ services:
     ports:
       - "8000:8000"
     depends_on:
+      minio-init:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
 
