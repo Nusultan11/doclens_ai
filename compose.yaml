@@ -7,6 +7,12 @@ services:
       DATABASE_URL: postgresql+asyncpg://doclens:doclens-local@postgres:5432/doclens
       ENVIRONMENT: local
       LOG_LEVEL: INFO
+      S3_ACCESS_KEY: doclens-local
+      S3_BUCKET_NAME: doclens-documents
+      S3_ENDPOINT_URL: http://minio:9000
+      S3_MAX_UPLOAD_SIZE_BYTES: 52428800
+      S3_SECRET_KEY: doclens-local-secret
+      S3_SECURE: "false"
     ports:
       - "8000:8000"
     depends_on:
@@ -30,5 +36,41 @@ services:
       retries: 10
       start_period: 5s
 
+  minio:
+    build:
+      context: .
+      target: minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_PASSWORD: doclens-local-secret
+      MINIO_ROOT_USER: doclens-local
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - doclens-minio-data:/data
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+
+  minio-init:
+    build:
+      context: .
+      target: api
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      S3_ACCESS_KEY: doclens-local
+      S3_BUCKET_NAME: doclens-documents
+      S3_ENDPOINT_URL: http://minio:9000
+      S3_SECRET_KEY: doclens-local-secret
+      S3_SECURE: "false"
+    command: ["python", "-m", "doclens_ai.storage.s3"]
+
 volumes:
+  doclens-minio-data:
   doclens-postgres-data:

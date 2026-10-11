@@ -1,4 +1,23 @@
-FROM python:3.12-slim
+FROM golang:1.24.8-alpine AS minio-build
+
+ARG MINIO_VERSION=RELEASE.2025-09-07T16-13-09Z
+
+RUN GOBIN=/out go install github.com/minio/minio@${MINIO_VERSION}
+
+FROM alpine:3.22 AS minio
+
+RUN addgroup -S minio \
+    && adduser -S -G minio -h /data minio
+
+COPY --from=minio-build /out/minio /usr/local/bin/minio
+
+USER minio
+
+EXPOSE 9000 9001
+
+ENTRYPOINT ["minio"]
+
+FROM python:3.12-slim AS api
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1

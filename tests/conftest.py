@@ -13,6 +13,8 @@ from sqlalchemy import text
 from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import create_async_engine
 
+from doclens_ai.storage.config import StorageSettings
+
 os.environ.setdefault(
     "DATABASE_URL",
     "postgresql+asyncpg://doclens:doclens-local@localhost:5432/doclens_test",
@@ -84,3 +86,23 @@ def migrated_database_url(
 ) -> str:
     alembic_runner(disposable_database_url, "upgrade", "head")
     return disposable_database_url
+
+
+@pytest.fixture
+def test_storage_settings() -> StorageSettings:
+    endpoint_url = os.getenv("TEST_S3_ENDPOINT_URL")
+    access_key = os.getenv("TEST_S3_ACCESS_KEY")
+    secret_key = os.getenv("TEST_S3_SECRET_KEY")
+    bucket_name = os.getenv("TEST_S3_BUCKET_NAME")
+    if not all((endpoint_url, access_key, secret_key, bucket_name)):
+        pytest.skip("TEST_S3_ENDPOINT_URL/access key/secret key/bucket name are not configured")
+    return StorageSettings(
+        endpoint_url=endpoint_url,
+        access_key=access_key,
+        secret_key=secret_key,
+        bucket_name=bucket_name,
+        region=os.getenv("TEST_S3_REGION") or None,
+        secure=os.getenv("TEST_S3_SECURE", "false"),
+        connect_timeout_seconds=1,
+        read_timeout_seconds=5,
+    )
