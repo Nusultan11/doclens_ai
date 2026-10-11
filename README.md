@@ -45,6 +45,22 @@ ruff check src tests alembic
 pytest
 ```
 
+## Offline document EDA
+
+An optional, local-only profiler establishes a reproducible extraction baseline for PDF,
+DOCX, and XLSX files without using the API, PostgreSQL, object storage, or an LLM. Install
+the EDA dependencies and point it at an explicit corpus directory:
+
+```bash
+python -m pip install -e ".[dev,eda]"
+python -m doclens_ai.eda --input-dir ./local-corpus --output-dir ./eda-output
+```
+
+The output contains privacy-safe aggregate metrics and opaque document identifiers; it never
+includes filenames, paths, or extracted content. See `docs/eda/README.md` for the methodology,
+limits, deterministic-run option, and interpretation guidance. Generated reports and local
+corpora must not be committed.
+
 The PostgreSQL integration tests run only when `TEST_DATABASE_URL` is set to a disposable PostgreSQL database whose user can create temporary test databases. The real object-storage tests additionally require an initialized private test bucket and `TEST_S3_*` settings. For the local Compose services:
 
 ```bash

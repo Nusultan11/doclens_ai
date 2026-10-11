@@ -26,6 +26,11 @@ dev = [
     "pytest>=8.3,<10.0",
     "ruff>=0.8,<1.0",
 ]
+eda = [
+    "openpyxl>=3.1,<4.0",
+    "pypdf>=6.0,<7.0",
+    "python-docx>=1.2,<2.0",
+]
 
 [tool.setuptools.packages.find]
 where = ["src"]
