@@ -12,3 +12,4 @@ dist/
 eda-output/
 .eda-output/
 reports/eda/
+local-corpus/
