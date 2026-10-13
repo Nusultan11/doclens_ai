@@ -12,6 +12,7 @@ Install the optional parser set, then select both directories explicitly:
 python -m pip install -e ".[dev,eda]"
 python -m doclens_ai.eda --input-dir ./local-corpus --output-dir ./eda-output
 python -m doclens_ai.extraction --input-dir ./local-corpus --output-dir ./extraction-output
+python -m doclens_ai.chunking --input-dir ./local-corpus --output-dir ./chunking-output
 ```
 
 The output directory must differ from the input directory. The EDA profiler excludes a nested
@@ -41,6 +42,12 @@ the CLI persists only format, status, sanitized warning/error categories, SHA-25
 structural counts, latency, configured limits, and a deterministic fingerprint. Use
 `--omit-runtime-metrics` to omit latency values from its per-document output.
 
+The chunking command writes the same three metadata-only filenames. It invokes the extractor in
+memory, compares fixed-size and structure-aware strategies under the same character limit and
+overlap, and persists only counts, distributions, coverage ratios, sanitized statuses, hashes,
+configuration, and runtime metrics. It never persists chunk text, source text, worksheet names,
+cell values, filenames, or paths. Use `--omit-runtime-metrics` for byte-for-byte repeatable output.
+
 ## Structured extraction contract
 
 `doclens_ai.extraction` is a standalone baseline for future chunking experiments. It is not a
@@ -67,6 +74,36 @@ cells, merged ranges, and spreadsheet table definitions. XML document type/entit
 are rejected.
 These safeguards are application-level limits, not a substitute for OS/container resource
 isolation when processing hostile documents.
+
+## Offline chunking contract
+
+`doclens_ai.chunking` accepts the in-memory `ExtractionResult` contract. Each chunk retains the
+opaque document identity, source SHA-256, deterministic chunk identity, strategy/configuration
+fingerprint, ordinal, format, and source-unit locations/ranges. Identical extraction content,
+document identity, and configuration produce identical chunks.
+
+The fixed-size strategy creates deterministic character windows over the normalized document
+representation. It is the simplest control but may cross page, paragraph, table-row, or worksheet
+boundaries. The structure-aware strategy keeps PDF pages and XLSX worksheets separate, avoids
+mixing DOCX body text with tables, prefers whole DOCX table rows and XLSX rows, and splits any
+oversized element into bounded windows. Its overlap reuses complete trailing structural groups
+when they fit within the configured overlap; oversized elements use exact character overlap.
+
+Character sizing is intentionally dependency-free and reproducible, but it is not a token budget:
+the same number of characters can map to different token counts across languages and tokenizers.
+Before model integration, measure the selected tokenizer against the fixed evaluation corpus.
+
+For XLSX, canonical chunk input includes stored values, cell coordinates, merged ranges, and
+table metadata. Formula text and cached values are retained when available; a missing cache is
+represented explicitly, and a shared-formula follower without its own definition is marked as
+unavailable. Formulae are never calculated or executed.
+
+Only extraction results with `success` are eligible by default. `needs_review` and `failed`
+documents receive explicit skip reasons. `--include-needs-review` is an opt-in evaluation aid, not
+permission to treat incomplete extraction as production-ready. Coverage is measured over the
+normalized canonical representation: newline forms are normalized, outer whitespace is removed,
+and structural labels are included. Generated inter-unit separators are excluded from the source
+coverage denominator.
 
 ## Confidential documents
 
