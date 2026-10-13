@@ -13,7 +13,15 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import Session
 
-from doclens_ai.models import Document, DocumentVersion, UploadSession, UploadStatus, Workspace
+from doclens_ai.models import (
+    Document,
+    DocumentVersion,
+    ProcessingJob,
+    ProcessingRun,
+    UploadSession,
+    UploadStatus,
+    Workspace,
+)
 from doclens_ai.services.upload import (
     PDF_CONTENT_TYPE,
     UploadConflictError,
@@ -130,6 +138,7 @@ def test_upload_lifecycle_is_idempotent_scoped_and_keeps_versions_immutable(
             )
 
             assert repeated == first
+            assert repeated.processing_job_id == first.processing_job_id
             assert first.version_number == 1
             assert second.version_number == 2
             assert first.object_storage_key.startswith(
@@ -149,6 +158,8 @@ def test_upload_lifecycle_is_idempotent_scoped_and_keeps_versions_immutable(
             async with session_factory() as session:
                 assert await session.scalar(select(func.count(UploadSession.id))) == 2
                 assert await session.scalar(select(func.count(DocumentVersion.id))) == 2
+                assert await session.scalar(select(func.count(ProcessingRun.id))) == 2
+                assert await session.scalar(select(func.count(ProcessingJob.id))) == 2
                 persisted = await session.get(DocumentVersion, first.document_version_id)
                 assert persisted is not None
                 persisted.original_filename = "mutated.pdf"
@@ -191,6 +202,8 @@ def test_storage_failure_creates_no_version_and_retry_completes(
                 assert attempt.status == UploadStatus.FAILED
                 assert attempt.failure_code == "storage_or_verification_failed"
                 assert await session.scalar(select(func.count(DocumentVersion.id))) == 0
+                assert await session.scalar(select(func.count(ProcessingRun.id))) == 0
+                assert await session.scalar(select(func.count(ProcessingJob.id))) == 0
 
             storage.available = True
             result = await service.upload_and_confirm(
@@ -205,6 +218,8 @@ def test_storage_failure_creates_no_version_and_retry_completes(
             async with session_factory() as session:
                 assert await session.scalar(select(func.count(UploadSession.id))) == 1
                 assert await session.scalar(select(func.count(DocumentVersion.id))) == 1
+                assert await session.scalar(select(func.count(ProcessingRun.id))) == 1
+                assert await session.scalar(select(func.count(ProcessingJob.id))) == 1
         finally:
             await engine.dispose()
 
@@ -235,6 +250,7 @@ def test_concurrent_confirmation_does_not_duplicate_versions(
                 ]
             )
             assert same_results[0].document_version_id == same_results[1].document_version_id
+            assert same_results[0].processing_job_id == same_results[1].processing_job_id
 
             distinct_results = await asyncio.gather(
                 *[
@@ -252,6 +268,8 @@ def test_concurrent_confirmation_does_not_duplicate_versions(
             assert {result.version_number for result in distinct_results} == {2, 3}
             async with session_factory() as session:
                 assert await session.scalar(select(func.count(DocumentVersion.id))) == 3
+                assert await session.scalar(select(func.count(ProcessingRun.id))) == 3
+                assert await session.scalar(select(func.count(ProcessingJob.id))) == 3
         finally:
             await engine.dispose()
 
@@ -291,6 +309,8 @@ def test_database_commit_failure_returns_no_false_success_and_can_retry(
                 assert attempt is not None
                 assert attempt.status == UploadStatus.UPLOADED
                 assert await session.scalar(select(func.count(DocumentVersion.id))) == 0
+                assert await session.scalar(select(func.count(ProcessingRun.id))) == 0
+                assert await session.scalar(select(func.count(ProcessingJob.id))) == 0
                 assert attempt.object_storage_key in storage.objects
 
             result = await service.upload_and_confirm(
@@ -302,6 +322,7 @@ def test_database_commit_failure_returns_no_false_success_and_can_retry(
                 stream=io.BytesIO(_pdf("database")),
             )
             assert result.version_number == 1
+            assert result.processing_job_id is not None
         finally:
             await engine.dispose()
 

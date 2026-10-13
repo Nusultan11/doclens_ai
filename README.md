@@ -1,10 +1,11 @@
 # DocLens AI
 
-DocLens AI currently provides the Backend Core, PostgreSQL document domain, and an authenticated document-intake API for a production-oriented document intelligence system. This stage includes a FastAPI service, OIDC JWT verification, PostgreSQL workspace authorization, async PostgreSQL connectivity, health endpoints, immutable document versions, private S3-compatible storage, and mutable upload-session coordination.
+DocLens AI currently provides the Backend Core, PostgreSQL document domain, authenticated document intake, and a durable PostgreSQL processing control plane. This stage includes a FastAPI service, OIDC JWT verification, PostgreSQL workspace authorization, async PostgreSQL connectivity, health endpoints, immutable document versions, private S3-compatible storage, upload-session coordination, and lease-based processing jobs.
 
-Production ingestion parsing/extraction, background jobs, Qdrant, retrieval, RAG, embeddings,
-and LLM features are not implemented yet. A standalone offline structured-extraction baseline is
-available for engineering evaluation; it is not connected to the API, database, or object storage.
+Actual background processing handlers, production extraction, Qdrant, retrieval, RAG, embeddings,
+and LLM features are not implemented yet. New processing jobs remain queued until a real handler
+is introduced. Standalone offline extraction and chunking baselines remain engineering evaluation
+tools and are not connected to the processing queue.
 
 ## Prerequisites
 
@@ -80,6 +81,10 @@ TEST_S3_SECURE=false \
 pytest -m storage
 ```
 
+If port 5432 is already owned by a Windows PostgreSQL service, run a disposable PostgreSQL 16
+container with a dynamically assigned loopback port and point `TEST_DATABASE_URL` at that port.
+Do not assume the example port is available.
+
 PowerShell users can set the same variables with `$env:NAME = "value"` before running pytest. The S3 settings are loaded only when storage is used, so a temporary MinIO outage does not prevent the existing API liveness and database-readiness checks from starting.
 
 Apply or revert all migrations:
@@ -127,6 +132,7 @@ All document routes are under `/api/v1` and require `Authorization: Bearer <acce
 - `POST /workspaces/{workspace_id}/documents` creates a stable document identity.
 - `POST /workspaces/{workspace_id}/documents/{document_id}/versions` accepts a multipart `file` and requires `Idempotency-Key`.
 - `GET /workspaces/{workspace_id}/documents/{document_id}` returns document/version metadata without object-storage keys or credentials.
+- `GET /jobs/{job_id}` returns sanitized processing status for users who belong to the owning workspace.
 
 Example upload:
 
@@ -146,8 +152,15 @@ Expected error classes are `401` invalid credentials, `403` insufficient workspa
 
 `UploadService` remains an internal trusted boundary behind the authenticated API. It accepts a server-scoped workspace/document pair, streams a PDF, DOCX, or XLSX into a bounded spool, validates the declared type and basic file structure, calculates the actual byte count and SHA-256, and binds an idempotency key to that exact content. Object keys are generated server-side.
 
-Upload sessions move through `pending`, `uploaded`, `completed`, or `failed`. The object is uploaded and read back for independent size and SHA-256 verification before PostgreSQL creates an immutable `DocumentVersion`. Finalization locks the logical document, allocates the next version number, and records the version and completed session in one database transaction. Repeating a completed request returns its existing version; a failed or interrupted request can safely retry with the same key and content.
+Upload sessions move through `pending`, `uploaded`, `completed`, or `failed`. The object is uploaded and read back for independent size and SHA-256 verification before PostgreSQL creates an immutable `DocumentVersion`. Finalization locks the logical document, allocates the next version number, and atomically records the version, initial processing run, queued processing job, and completed session. Repeating a completed request returns its existing version and job; a failed or interrupted request can safely retry with the same key and content.
 
 Object storage and PostgreSQL are intentionally not treated as a distributed transaction. An object whose final database transaction fails remains associated with its non-completed upload-session key for retry or operator cleanup. Cleanup must first confirm that no completed upload session or document version references the object; never delete an object solely because a client reports a failed request. Failure codes are operational labels and do not contain document content or credentials.
 
-The current schema stores workspace authorization, stable document identity, upload coordination, and immutable version/file metadata. PostgreSQL rejects updates to persisted document-version rows. File bytes live only in the private object bucket; the database does not store extracted text, processing state, or embeddings. Future schema changes must be created as new Alembic revisions rather than by editing migration history.
+The current schema stores workspace authorization, stable document identity, upload coordination,
+immutable version/file metadata, versioned processing configuration identity, and durable
+queue/lease/retry state. PostgreSQL rejects updates to persisted document-version rows and to a
+processing run's identity/configuration. Atomic claims use row locking with skip-locked semantics;
+lease tokens fence stale workers, and retry backoff and attempts are bounded. No daemon or dummy
+handler consumes these jobs, and nothing marks a document ready. File bytes remain in the private
+object bucket; extracted text, chunks, embeddings, and vector state are not persisted. Future schema
+changes must be new Alembic revisions rather than edits to migration history.

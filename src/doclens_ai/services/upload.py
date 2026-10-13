@@ -14,6 +14,11 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from doclens_ai.models import Document, DocumentVersion, UploadSession, UploadStatus
+from doclens_ai.services.processing import (
+    DEFAULT_MAX_ATTEMPTS,
+    create_initial_processing_records,
+    get_initial_processing_job,
+)
 from doclens_ai.storage.s3 import ObjectMetadata, ObjectStorageError
 
 PDF_CONTENT_TYPE = "application/pdf"
@@ -77,6 +82,7 @@ class ValidatedUpload:
 class UploadResult:
     upload_session_id: UUID
     document_version_id: UUID
+    processing_job_id: UUID
     document_id: UUID
     version_number: int
     object_storage_key: str
@@ -184,10 +190,14 @@ class UploadService:
         storage: ObjectStorage,
         *,
         max_upload_size_bytes: int,
+        processing_max_attempts: int = DEFAULT_MAX_ATTEMPTS,
     ) -> None:
+        if processing_max_attempts <= 0:
+            raise ValueError("processing max attempts must be positive")
         self._session_factory = session_factory
         self._storage = storage
         self._max_upload_size_bytes = max_upload_size_bytes
+        self._processing_max_attempts = processing_max_attempts
 
     async def upload_and_confirm(
         self,
@@ -403,10 +413,15 @@ class UploadService:
             )
             session.add(version)
             await session.flush()
+            _, job = await create_initial_processing_records(
+                session,
+                document_version_id=version.id,
+                max_attempts=self._processing_max_attempts,
+            )
             attempt.status = UploadStatus.COMPLETED
             attempt.committed_document_version_id = version.id
             attempt.failure_code = None
-            return self._result(attempt, version)
+            return self._result(attempt, version, processing_job_id=job.id)
 
     async def _result_for_completed(
         self, session: AsyncSession, attempt: UploadSession
@@ -416,13 +431,25 @@ class UploadService:
         version = await session.get(DocumentVersion, attempt.committed_document_version_id)
         if version is None or version.document_id != attempt.document_id:
             raise UploadConflictError("completed upload references an invalid document version")
-        return self._result(attempt, version)
+        job = await get_initial_processing_job(
+            session,
+            document_version_id=version.id,
+        )
+        if job is None:
+            raise UploadConflictError("completed upload is missing its processing job")
+        return self._result(attempt, version, processing_job_id=job.id)
 
     @staticmethod
-    def _result(attempt: UploadSession, version: DocumentVersion) -> UploadResult:
+    def _result(
+        attempt: UploadSession,
+        version: DocumentVersion,
+        *,
+        processing_job_id: UUID,
+    ) -> UploadResult:
         return UploadResult(
             upload_session_id=attempt.id,
             document_version_id=version.id,
+            processing_job_id=processing_job_id,
             document_id=version.document_id,
             version_number=version.version_number,
             object_storage_key=version.object_storage_key,

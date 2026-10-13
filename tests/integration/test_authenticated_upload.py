@@ -16,11 +16,20 @@ import jwt
 import pytest
 from cryptography.hazmat.primitives.asymmetric import rsa
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy import func, select
 
 from doclens_ai.core.config import Settings
 from doclens_ai.db.session import Database
 from doclens_ai.main import create_app
-from doclens_ai.models import User, Workspace, WorkspaceMembership, WorkspaceRole
+from doclens_ai.models import (
+    DocumentVersion,
+    ProcessingJob,
+    ProcessingRun,
+    User,
+    Workspace,
+    WorkspaceMembership,
+    WorkspaceRole,
+)
 from doclens_ai.security import JwtVerifier
 from doclens_ai.services.upload import (
     DOCX_CONTENT_TYPE,
@@ -182,6 +191,11 @@ async def _api_context(
                     workspace_id=other_workspace.id,
                     role=WorkspaceRole.OWNER,
                 ),
+                WorkspaceMembership(
+                    user_id=identities["outsider"].id,
+                    workspace_id=other_workspace.id,
+                    role=WorkspaceRole.VIEWER,
+                ),
             ]
         )
 
@@ -278,6 +292,7 @@ async def test_supported_uploads_and_idempotency(
             )
             assert response.status_code == 201, response.text
             assert response.json()["version_number"] == index
+            assert response.json()["processing_job_id"]
 
             retry = await context.client.post(
                 path,
@@ -288,6 +303,29 @@ async def test_supported_uploads_and_idempotency(
             assert retry.json()["document_version_id"] == response.json()[
                 "document_version_id"
             ]
+            assert retry.json()["processing_job_id"] == response.json()[
+                "processing_job_id"
+            ]
+
+            if index == 1:
+                job_id = response.json()["processing_job_id"]
+                job = await context.client.get(
+                    f"/api/v1/jobs/{job_id}",
+                    headers=context.authorization(context.viewer_subject),
+                )
+                assert job.status_code == 200
+                assert job.json()["status"] == "queued"
+                assert job.json()["stage"] == "extraction"
+                assert job.json()["attempt_count"] == 0
+                assert "worker_id" not in job.text
+                assert "lease_token" not in job.text
+                assert "object_storage_key" not in job.text
+
+                cross_workspace = await context.client.get(
+                    f"/api/v1/jobs/{job_id}",
+                    headers=context.authorization(context.outsider_subject),
+                )
+                assert cross_workspace.status_code == 404
 
         conflict = await context.client.post(
             path,
@@ -405,3 +443,7 @@ async def test_storage_outage_is_sanitized_and_does_not_create_version(
         )
         assert metadata.status_code == 200
         assert metadata.json()["versions"] == []
+        async with context.database.session_factory() as session:
+            assert await session.scalar(select(func.count(DocumentVersion.id))) == 0
+            assert await session.scalar(select(func.count(ProcessingRun.id))) == 0
+            assert await session.scalar(select(func.count(ProcessingJob.id))) == 0

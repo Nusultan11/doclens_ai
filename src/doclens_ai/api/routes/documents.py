@@ -55,6 +55,7 @@ class DocumentResponse(BaseModel):
 class UploadResponse(BaseModel):
     upload_session_id: UUID
     document_version_id: UUID
+    processing_job_id: UUID
     document_id: UUID
     version_number: int
     file_size: int
@@ -152,6 +153,7 @@ async def upload_document_version(
     return UploadResponse(
         upload_session_id=result.upload_session_id,
         document_version_id=result.document_version_id,
+        processing_job_id=result.processing_job_id,
         document_id=result.document_id,
         version_number=result.version_number,
         file_size=result.file_size,
