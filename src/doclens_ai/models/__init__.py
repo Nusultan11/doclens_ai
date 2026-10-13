@@ -1,5 +1,6 @@
 """Persistent domain models."""
 
+from doclens_ai.models.chunk import CanonicalChunk
 from doclens_ai.models.document import Document, DocumentVersion
 from doclens_ai.models.membership import WorkspaceMembership, WorkspaceRole
 from doclens_ai.models.processing import (
@@ -15,6 +16,7 @@ from doclens_ai.models.user import User
 from doclens_ai.models.workspace import Workspace
 
 __all__ = [
+    "CanonicalChunk",
     "Document",
     "DocumentVersion",
     "ProcessingJob",

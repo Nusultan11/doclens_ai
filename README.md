@@ -1,11 +1,13 @@
 # DocLens AI
 
-DocLens AI currently provides the Backend Core, PostgreSQL document domain, authenticated document intake, and a durable PostgreSQL processing control plane. This stage includes a FastAPI service, OIDC JWT verification, PostgreSQL workspace authorization, async PostgreSQL connectivity, health endpoints, immutable document versions, private S3-compatible storage, upload-session coordination, and lease-based processing jobs.
+DocLens AI currently provides the Backend Core, PostgreSQL document domain, authenticated document intake, a durable PostgreSQL processing control plane, and an internal production extraction service with canonical PostgreSQL chunk persistence. This stage includes a FastAPI service, OIDC JWT verification, PostgreSQL workspace authorization, async PostgreSQL connectivity, health endpoints, immutable document versions, private S3-compatible storage, upload-session coordination, and lease-based processing jobs.
 
-Actual background processing handlers, production extraction, Qdrant, retrieval, RAG, embeddings,
-and LLM features are not implemented yet. New processing jobs remain queued until a real handler
-is introduced. Standalone offline extraction and chunking baselines remain engineering evaluation
-tools and are not connected to the processing queue.
+Actual background workers, embeddings, Qdrant, retrieval, RAG, and LLM features are not implemented
+yet. New processing jobs remain queued until a real worker invokes the internal ingestion service.
+The service does not consume jobs or mark runs/jobs complete. Standalone offline extraction and
+chunking commands remain engineering evaluation tools and are not connected to the queue.
+The future worker environment that invokes ingestion must install the existing `[eda]` optional
+dependencies; they are intentionally not added to the API image in this step.
 
 ## Prerequisites
 
@@ -157,10 +159,18 @@ Upload sessions move through `pending`, `uploaded`, `completed`, or `failed`. Th
 Object storage and PostgreSQL are intentionally not treated as a distributed transaction. An object whose final database transaction fails remains associated with its non-completed upload-session key for retry or operator cleanup. Cleanup must first confirm that no completed upload session or document version references the object; never delete an object solely because a client reports a failed request. Failure codes are operational labels and do not contain document content or credentials.
 
 The current schema stores workspace authorization, stable document identity, upload coordination,
-immutable version/file metadata, versioned processing configuration identity, and durable
-queue/lease/retry state. PostgreSQL rejects updates to persisted document-version rows and to a
-processing run's identity/configuration. Atomic claims use row locking with skip-locked semantics;
-lease tokens fence stale workers, and retry backoff and attempts are bounded. No daemon or dummy
-handler consumes these jobs, and nothing marks a document ready. File bytes remain in the private
-object bucket; extracted text, chunks, embeddings, and vector state are not persisted. Future schema
+immutable version/file metadata, versioned processing configuration identity, durable
+queue/lease/retry state, and immutable canonical chunks. The internal ingestion service resolves
+trusted object metadata through a `ProcessingRun`, performs a bounded verified download, runs the
+frozen extraction and structure-aware character chunking contracts off the async event loop, and
+atomically publishes the complete chunk set. Canonical chunk UUIDs, content hashes, configuration
+fingerprints, ordinals, and JSONB provenance support deterministic replay, citations, and future
+rebuilding of a vector index. Token counts remain `NULL` until a tokenizer is explicitly selected.
+
+PostgreSQL rejects updates to persisted document-version rows, processing-run identity/configuration,
+and canonical chunks. Atomic job claims use row locking with skip-locked semantics; lease tokens
+fence stale workers, and retry backoff and attempts are bounded. No daemon or dummy handler consumes
+these jobs, and nothing marks a document ready or complete. File bytes remain in the private object
+bucket; embeddings and vector state are not persisted. Character limits are not token limits, and
+documents requiring extraction review are rejected rather than silently published. Future schema
 changes must be new Alembic revisions rather than edits to migration history.
