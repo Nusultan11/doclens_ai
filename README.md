@@ -61,6 +61,7 @@ python -m pip install -e ".[dev,eda]"
 python -m doclens_ai.eda --input-dir ./local-corpus --output-dir ./eda-output
 python -m doclens_ai.extraction --input-dir ./local-corpus --output-dir ./extraction-output
 python -m doclens_ai.chunking --input-dir ./local-corpus --output-dir ./chunking-output
+python -m doclens_ai.evaluation validate --gold docs/evaluation/synthetic_retrieval_gold_fixture.jsonl
 ```
 
 The EDA profiler measures corpus characteristics. The extraction command evaluates ordered PDF
@@ -70,6 +71,13 @@ commands persist privacy-safe aggregate metrics and opaque document identifiers;
 persist filenames, paths, extracted/chunk text, table contents, worksheet names, or cell values.
 See `docs/eda/README.md` for methodology, limits, deterministic-run options, and interpretation
 guidance. Generated reports and local corpora must not be committed.
+
+The offline retrieval-evaluation foundation validates versioned Gold JSONL, stable source anchors,
+document-family split isolation, ranked-result inputs, workspace scope, and deterministic Hit@5/10,
+Recall@5/10, MRR, and nDCG@10 reports. It does not implement retrieval or establish measured quality.
+The committed multilingual fixture is synthetic test data only. Real reviewed annotations and result
+files belong under ignored `local-evaluation/`; see
+`docs/evaluation/retrieval_gold_v1_protocol.md`.
 
 The PostgreSQL integration tests run only when `TEST_DATABASE_URL` is set to a disposable PostgreSQL database whose user can create temporary test databases. The real object-storage tests additionally require an initialized private test bucket and `TEST_S3_*` settings. For the local Compose services:
 

@@ -13,3 +13,5 @@ eda-output/
 .eda-output/
 reports/eda/
 local-corpus/
+local-evaluation/
+evaluation-output/
