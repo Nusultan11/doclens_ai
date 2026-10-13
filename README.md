@@ -79,6 +79,24 @@ The committed multilingual fixture is synthetic test data only. Real reviewed an
 files belong under ignored `local-evaluation/`; see
 `docs/evaluation/retrieval_gold_v1_protocol.md`.
 
+The frozen offline BM25 baseline searches all extraction-eligible Corpus v1 chunks with the
+existing structure-aware chunker and evaluates the human-reviewed Gold snapshot. It is independent
+of production services and does not implement embeddings, authorization, or answer generation:
+
+```bash
+python -m doclens_ai.retrieval_baseline --output-dir evaluation-output/bm25-v1-run-1
+python -m doclens_ai.evaluation evaluate \
+  --gold local-evaluation/retrieval_gold_v1.jsonl \
+  --corpus-manifest docs/eda/corpus_v1_manifest.csv \
+  --results evaluation-output/bm25-v1-run-1/ranked_results.jsonl
+```
+
+Run from the repository root with the EDA dependencies installed and the approved local corpus
+and Gold available. Use a new output subdirectory each time; existing experiments are never
+overwritten. Ranked anchors may contain worksheet names and must remain local. Quality and
+experiment metadata are deterministic; latency is recorded separately. Measured v1 results and
+limitations are in `docs/evaluation/bm25_baseline_v1.md`.
+
 The PostgreSQL integration tests run only when `TEST_DATABASE_URL` is set to a disposable PostgreSQL database whose user can create temporary test databases. The real object-storage tests additionally require an initialized private test bucket and `TEST_S3_*` settings. For the local Compose services:
 
 ```bash
