@@ -97,6 +97,24 @@ overwritten. Ranked anchors may contain worksheet names and must remain local. Q
 experiment metadata are deterministic; latency is recorded separately. Measured v1 results and
 limitations are in `docs/evaluation/bm25_baseline_v1.md`.
 
+The optional dense v1 experiment uses a pinned local multilingual E5 model and a disposable
+Qdrant, never the production API or database. Install CPU PyTorch explicitly before the dense
+extra (the backend image installs base dependencies only):
+
+```bash
+python -m pip install torch==2.8.0 --index-url https://download.pytorch.org/whl/cpu
+python -m pip install -e ".[dev,eda,dense]"
+python -m doclens_ai.dense_baseline \
+  --qdrant-url http://127.0.0.1:YOUR_DISPOSABLE_PORT \
+  --output-dir evaluation-output/dense-v1-run-1
+```
+
+Download the pinned model/tokenizer locally first, start only an isolated Qdrant at the documented
+image digest, and retain the frozen BM25 reference outputs. Complete setup, comparison results,
+resource limits, and cleanup commands are in `docs/evaluation/dense_retrieval_baseline_v1.md`.
+Use a fresh `evaluation-output/dense-v1-*` directory per run. Local model files, vectors, Gold,
+and ranked anchors must not be committed. This experiment does not evaluate workspace security.
+
 The PostgreSQL integration tests run only when `TEST_DATABASE_URL` is set to a disposable PostgreSQL database whose user can create temporary test databases. The real object-storage tests additionally require an initialized private test bucket and `TEST_S3_*` settings. For the local Compose services:
 
 ```bash
