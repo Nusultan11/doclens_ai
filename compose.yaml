@@ -52,6 +52,48 @@ services:
       postgres:
         condition: service_healthy
 
+  index-worker:
+    profiles: ["ml"]
+    build:
+      context: .
+      target: index-worker
+    restart: unless-stopped
+    stop_grace_period: 5m
+    cpus: 4
+    mem_limit: 4g
+    environment:
+      DATABASE_URL: postgresql+asyncpg://doclens:doclens-local@postgres:5432/doclens
+      INDEX_MODEL_DIR: /models/e5
+      INDEX_QDRANT_URL: http://qdrant:6333
+      INDEX_BATCH_SIZE: ${INDEX_BATCH_SIZE:-2}
+      INDEX_CPU_THREADS: ${INDEX_CPU_THREADS:-4}
+      WORKER_POLL_INTERVAL_SECONDS: ${WORKER_POLL_INTERVAL_SECONDS:-1}
+      WORKER_HEARTBEAT_INTERVAL_SECONDS: ${WORKER_HEARTBEAT_INTERVAL_SECONDS:-10}
+      WORKER_LEASE_SECONDS: ${WORKER_LEASE_SECONDS:-120}
+      WORKER_DB_TIMEOUT_SECONDS: ${WORKER_DB_TIMEOUT_SECONDS:-5}
+    volumes:
+      - type: bind
+        source: ${DOCLENS_E5_MODEL_DIR:-./evaluation-output/dense-v1-model}
+        target: /models/e5
+        read_only: true
+        bind:
+          create_host_path: false
+    depends_on:
+      postgres:
+        condition: service_healthy
+      qdrant:
+        condition: service_started
+
+  qdrant:
+    profiles: ["ml"]
+    image: qdrant/qdrant@sha256:6ac4807063bbecddca0250bfbcff52acf18c22263b904d12919349e6d0a408f1
+    cpus: 2
+    mem_limit: 1g
+    environment:
+      QDRANT__TELEMETRY_DISABLED: "true"
+    volumes:
+      - doclens-qdrant-data:/qdrant/storage
+
   postgres:
     image: postgres:16-alpine
     environment:
@@ -107,3 +149,4 @@ services:
 volumes:
   doclens-minio-data:
   doclens-postgres-data:
+  doclens-qdrant-data:

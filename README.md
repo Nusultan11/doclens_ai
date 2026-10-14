@@ -1,9 +1,10 @@
 # DocLens AI
 
-DocLens AI currently provides the Backend Core, PostgreSQL document domain, authenticated document intake, a durable PostgreSQL processing control plane, and an internal production extraction service with canonical PostgreSQL chunk persistence. This stage includes a FastAPI service, OIDC JWT verification, PostgreSQL workspace authorization, async PostgreSQL connectivity, health endpoints, immutable document versions, private S3-compatible storage, upload-session coordination, and lease-based processing jobs.
+DocLens AI currently provides the Backend Core, PostgreSQL document domain, authenticated document intake, durable processing workers, canonical PostgreSQL chunks, and opt-in versioned CPU embeddings with persistent Qdrant indexing. This stage includes OIDC JWT verification, PostgreSQL workspace authorization, health endpoints, immutable document versions, private S3-compatible storage, upload coordination, and lease-fenced extraction/indexing. Search API, RAG, LLM generation, and a document READY workflow are not implemented.
 
 A dedicated ingestion worker consumes EXTRACTION jobs, persists canonical chunks, and hands runs
-off to EMBEDDING. Production embeddings, Qdrant indexing, retrieval, RAG, and READY transitions
+off to EMBEDDING. The opt-in index worker embeds and verifies versioned Qdrant points before
+atomic activation/completion. Retrieval, RAG, and READY transitions
 are not implemented. Standalone offline extraction and chunking remain engineering evaluation
 tools. The worker image installs existing `[eda]` dependencies; the API image does not.
 
@@ -233,14 +234,15 @@ commit, so a worker whose lease expired or was reclaimed during extraction canno
 `lease_ownership_lost` is a sanitized, non-retryable failure for that invocation; a stale caller
 must not fail or complete a job now owned by another worker. An unchanged active lease may
 repeat ingestion idempotently. Ingestion itself does not advance stages or mark jobs complete.
-The ingestion worker uses this contract, but production Qdrant indexing and the document READY
-transition remain unimplemented; this contract does not imply end-to-end production readiness.
+The ingestion worker uses this contract and hands off to the separate opt-in indexing worker.
+This boundary alone does not imply a complete index or end-to-end production readiness.
 
 PostgreSQL rejects updates to persisted document-version rows, processing-run identity/configuration,
 and canonical chunks. Atomic job claims use row locking with skip-locked semantics; lease tokens
 fence stale workers, and retry backoff and attempts are bounded. The ingestion worker consumes only
-EXTRACTION jobs; nothing marks a document ready or complete. File bytes remain in the private object
-bucket; embeddings and vector state are not persisted. Character limits are not token limits, and
+EXTRACTION jobs; it never marks a document ready or complete. The indexing worker persists vectors
+in Qdrant and atomically publishes verified revision/completion metadata in PostgreSQL. File bytes
+remain in the private object bucket. Character limits are not token limits, and
 documents requiring extraction review are rejected rather than silently published. Future schema
 changes must be new Alembic revisions rather than edits to migration history.
 
@@ -294,4 +296,144 @@ SIGINT/SIGTERM stops new polling and drains the current document with heartbeat 
 already-started claim may finish. Task cancellation also drains the parser thread before cleanup
 and skips handoff. Compose allows five minutes to drain; a forced kill beyond that grace period
 uses lease-expiry recovery. This worker does not impose a hard CPU parser timeout or run an
-embedding/indexing worker; EMBEDDING jobs intentionally remain queued.
+embedding/indexing executor; EMBEDDING jobs remain queued unless the ML worker is enabled.
+
+## Production embeddings and versioned Qdrant indexing
+
+The independent index worker consumes only EMBEDDING/INDEXING jobs. PostgreSQL remains the source
+of truth; Qdrant is a rebuildable index. API and extraction-worker images contain no Torch or
+Transformers dependencies. The `index-worker` target adds the existing optional `dense` dependencies,
+including CPU Torch 2.8.0, Transformers 4.57.6 and huggingface-hub 0.36.0. Parsing dependencies remain
+in that image because the reused offline provider imports its existing extraction contracts.
+
+### Pinned local model and startup
+
+Reuse `intfloat/multilingual-e5-small` at revision
+`614241f622f53c4eeff9890bdc4f31cfecc418b3`. Obtain approved artifacts ahead of time from that exact
+revision into a private local directory, using the existing offline baseline preparation workflow.
+Required files are `config.json`, `tokenizer_config.json`, `special_tokens_map.json`,
+`model.safetensors` and `tokenizer.json`; the SHA-256 allowlist is defined in
+`src/doclens_ai/dense_baseline/embeddings.py`. Startup validates every file and rejects symlinks,
+missing files and hash mismatches before loading. Neither builds nor startup download weights;
+loading uses local files only and never enables remote model code. Keep artifacts out of Git.
+
+Default inference is CPU float32, batch 2, maximum 512 tokens, four intra-op threads and one inter-op
+thread, seed 0, deterministic eager attention, attention-mask mean pooling, `passage: ` prefix and
+L2 normalization. Vectors must have exactly 384 finite normalized values, one per canonical chunk.
+Oversized character-based chunks can be truncated by the existing tokenizer contract; indexing
+does not resolve that quality limitation. A small replaceable `Embedder` protocol is reused rather
+than introducing a provider framework. Exact configuration, tokenizer/file identities and all six
+runtime library versions are fingerprinted and stored in PostgreSQL.
+
+For PowerShell, after preparing verified assets:
+
+```powershell
+# Default services work without this variable or model files.
+docker compose up --build -d
+docker compose exec api python -m alembic upgrade head
+
+# Explicit private location; mount is read-only and never auto-creates a missing directory.
+$env:DOCLENS_E5_MODEL_DIR = 'C:/private/doclens-models/multilingual-e5-small'
+docker compose --profile ml build index-worker
+docker compose --profile ml run --rm --no-deps index-worker python -m doclens_ai.index_worker --preflight
+docker compose --profile ml up -d qdrant index-worker
+```
+
+Preflight verifies artifacts and performs real local inference on a controlled passage; output is
+configuration/hash metadata and counts only. Apply migrations before enabling the worker. Optional
+profile `ml` gates both Qdrant and the index worker, so ordinary Compose startup does not need assets.
+For direct execution install existing `.[eda,dense]` dependencies, configure `DATABASE_URL`,
+`INDEX_MODEL_DIR`, `INDEX_QDRANT_URL` and the existing `WORKER_*` settings, then run
+`python -m doclens_ai.index_worker`. An optional `INDEX_QDRANT_API_KEY` is a secret setting, never
+logged or stored in revision metadata. Compose's unauthenticated HTTP endpoints/development
+credentials are local-only; deploy on a trusted private network and configure authentication/TLS
+for production. No Qdrant port is published by Compose.
+
+| Setting | Default / bound |
+| --- | --- |
+| `INDEX_BATCH_SIZE` | 2 / 1..8 |
+| `INDEX_CPU_THREADS` | 4 / 1..8 |
+| `INDEX_UPSERT_BATCH_SIZE` | 64 / 1..256 |
+| `INDEX_QDRANT_TIMEOUT_SECONDS` | 15 / >0..60, finite |
+| `INDEX_COLLECTION_PREFIX` | `doclens_e5_v1` / validated lowercase identifier |
+| Service source budget | at most 10,000 chunks and 20,000,000 characters per attempt |
+
+Qdrant is pinned to 1.15.4 by image digest
+`sha256:6ac4807063bbecddca0250bfbcff52acf18c22263b904d12919349e6d0a408f1`, with persistent
+`doclens-qdrant-data` storage. Compose caps the index worker at four CPUs/4 GiB and Qdrant at two
+CPUs/1 GiB. These are configured limits, not a general throughput/sizing guarantee.
+
+### Revision, verification and cutover contract
+
+Migration `0007_index_revisions` adds only the new table, indexes and lifecycle guard. Existing
+DocumentVersion and canonical chunk data/triggers are unchanged. Downgrade removes revision metadata
+but preserves canonical chunks and source versions; it does not delete external Qdrant data.
+
+Each lease attempt owns a deterministic revision UUID and immutable run/version/document/workspace
+scope, model revision/configuration, collection/dimension, canonical chunk-set fingerprint and
+expected point count. Lifecycle is `candidate -> verified -> active -> superseded`, or
+`verified -> superseded` when an older candidate loses cutover. Verification/activation timestamps
+and counts are constrained; identity/configuration cannot be changed. A PostgreSQL partial unique
+index permits at most one active revision per logical document.
+
+Collection identity is the validated prefix plus the full embedding fingerprint. Existing collection
+dimension/distance must match 384/Cosine; incompatible collections are never deleted/recreated.
+Points use UUIDv5 derived from revision UUID plus canonical chunk UUID/identity. Payload has exactly
+`workspace_id`, `document_id`, `document_version_id`, `processing_run_id`, `index_revision_id`,
+`chunk_id`, `embedding_revision`, and `embedding_configuration_fingerprint`, all constructed from
+trusted PostgreSQL/provider metadata. No chunk text, filename, storage key, path or cell values are
+sent as payload. Embeddings themselves are document-derived sensitive data and require private
+access controls even without text payloads.
+
+Batched upserts require `wait=true` and completed acknowledgements. Before marking VERIFIED, the
+adapter checks exact revision-filtered count, paginates the entire candidate, and compares every
+expected ID, complete payload, vector dimension, finite normalization and vector values. HTTP 200
+alone is insufficient. REST behavior follows the version-matched Qdrant
+[upsert](https://api.qdrant.tech/v-1-15-x/api-reference/points/upsert-points),
+[count](https://api.qdrant.tech/v-1-15-x/api-reference/points/count-points) and
+[scroll](https://api.qdrant.tech/v-1-15-x/api-reference/points/scroll-points) contracts.
+
+Inference and network calls hold no PostgreSQL row locks. Short candidate/checkpoint/activation
+transactions lock Job then Run and recheck worker/token/expiry using PostgreSQL `clock_timestamp()`
+after lock waits and after flush. Completion additionally locks the logical Document to serialize
+cutover, requires this lease's VERIFIED revision and unchanged canonical set, then atomically
+supersedes the previous index, activates the replacement and marks Run/Job COMPLETED. Calling
+stage-only `complete()` is rejected. Historical pre-migration COMPLETED rows are not falsely
+backfilled into verified indexes; operators must explicitly reprocess them if an index is required.
+
+Newer document versions win. For the same version, newer run `created_at` wins, with run UUID as a
+deterministic tie-breaker. A late older candidate becomes SUPERSEDED without activation and its job
+fails with `obsolete_index_revision`; it never gets a false COMPLETED status. A failed replacement
+does not delete old active points or replace its active revision.
+
+Temporary embedding/DB/Qdrant errors use bounded attempts/backoff. Invalid configuration/data/vector
+errors are terminal. A crash or expired lease can be reclaimed at either supported stage; retry
+creates a fresh lease-scoped candidate and deterministically re-embeds/upserts. Repeating an
+unchanged lease is idempotent. Stale external writes can only touch their old revision namespace,
+not replacement points. Heartbeat uncertainty/cancellation suppresses activation and drains the
+inference operation; lease expiry is the recovery mechanism, not a distributed transaction.
+
+Orphan CANDIDATE/VERIFIED revisions and their vectors are retained intentionally. Cleanup is deferred
+and must first establish no active/reference or in-flight owned attempt exists, then remove only
+that revision's external points and safe metadata. Never delete a shared collection on worker exit.
+An external administrator can still alter/delete Qdrant after verification; PostgreSQL completion
+does not promise continuous external availability. Future retrieval must resolve the authoritative
+active revision and tenant scope server-side, not accept arbitrary client filters.
+
+### Measured smoke and evaluation limits
+
+A controlled two-chunk DOCX traversed real MinIO, PostgreSQL 16, CPU E5 and Qdrant 1.15.4: one active
+revision, two fully verified 384-dimensional points and one COMPLETED job; embedding failures 0,
+incomplete candidate revisions 0. Worker indexing duration was 1010.662 ms, including 679.023 ms of
+embedding, excluding model startup. Separate preflight model load was 12062.060 ms. The exact smoke
+configuration fingerprint was
+`4aace3473f62dd7648fdb228b682a266ec85f92ff8c71180bbfd93567e3cd524`.
+One post-indexing Docker stats sample measured 589.6 MiB worker memory and 17.8 MiB Qdrant memory;
+these are point-in-time samples, not peak memory or representative corpus benchmarks.
+
+Fault/concurrency integration tests use an explicitly fake deterministic embedding provider with
+real PostgreSQL, MinIO and Qdrant; they test persistence/protocol/fencing, not real-model quality.
+The separate Docker smoke uses actual pinned weights. Existing
+`docs/evaluation/dense_retrieval_baseline_v1.md` remains the retrieval-quality evidence: E5 is a
+baseline candidate, not a demonstrated BM25 improvement. This step adds no Search API, retrieval
+ranking, RAG, LLM generation, fine-tuning, reranker or hybrid retrieval.

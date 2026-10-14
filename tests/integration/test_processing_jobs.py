@@ -209,6 +209,21 @@ def test_retry_backoff_attempt_limit_and_terminal_jobs(
             )
             assert second is not None
             assert second.attempt_count == 2
+            for stage in tuple(ProcessingStage)[1:]:
+                await coordinator.advance_stage(
+                    job_id=job_id,
+                    worker_id="worker-b",
+                    lease_token=second.lease_token,
+                    stage=stage,
+                    now=started_at + timedelta(seconds=11, milliseconds=500),
+                )
+            with pytest.raises(InvalidProcessingTransition, match="verified index"):
+                await coordinator.complete(
+                    job_id=job_id,
+                    worker_id="worker-b",
+                    lease_token=second.lease_token,
+                    now=started_at + timedelta(seconds=11, milliseconds=600),
+                )
             assert (
                 await coordinator.fail_attempt(
                     job_id=job_id,

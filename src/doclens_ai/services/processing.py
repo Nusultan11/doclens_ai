@@ -17,6 +17,9 @@ from doclens_ai.chunking.models import (
 )
 from doclens_ai.models import (
     CanonicalChunk,
+    Document,
+    IndexRevision,
+    IndexRevisionStatus,
     ProcessingJob,
     ProcessingJobStatus,
     ProcessingOperationKind,
@@ -24,6 +27,7 @@ from doclens_ai.models import (
     ProcessingStage,
     ProcessingStatus,
 )
+from doclens_ai.models.index_revision import chunk_set_fingerprint
 
 PROCESSING_CONFIGURATION_VERSION = "1.0"
 DEFAULT_MAX_ATTEMPTS = 3
@@ -157,8 +161,14 @@ class ProcessingCoordinator:
         worker_id: str,
         now: datetime | None = None,
         stage: ProcessingStage | None = None,
+        stages: tuple[ProcessingStage, ...] | None = None,
     ) -> ClaimedProcessingJob | None:
         _validate_worker_id(worker_id)
+        if stages is not None and (stage is not None or not stages):
+            raise ValueError("choose one nonempty stage filter")
+        selected_stages = (
+            stages if stages is not None else ((stage,) if stage is not None else None)
+        )
         async with self._session_factory() as session, session.begin():
             while True:
                 claimed_at = await _processing_now(session, now)
@@ -170,7 +180,9 @@ class ProcessingCoordinator:
                             ProcessingRun.id == ProcessingJob.processing_run_id,
                         )
                         .where(
-                            ProcessingRun.stage == stage if stage is not None else True,
+                            ProcessingRun.stage.in_(selected_stages)
+                            if selected_stages is not None
+                            else True,
                             or_(
                                 ProcessingJob.status == ProcessingJobStatus.QUEUED,
                                 (
@@ -193,7 +205,7 @@ class ProcessingCoordinator:
                 job, run = row
                 job, run = await _locked_job_and_run(session, job.id)
                 claimed_at = await _processing_now(session, now)
-                if stage is not None and run.stage != stage:
+                if selected_stages is not None and run.stage not in selected_stages:
                     return None
                 if job.attempt_count >= job.max_attempts:
                     _mark_terminal_failure(
@@ -361,7 +373,8 @@ class ProcessingCoordinator:
         worker_id: str,
         lease_token: UUID,
         now: datetime | None = None,
-    ) -> None:
+        index_revision_id: UUID | None = None,
+    ) -> IndexRevisionStatus:
         async with self._session_factory() as session, session.begin():
             job, run = await _locked_job_and_run(session, job_id)
             completed_at = await _processing_now(session, now)
@@ -375,12 +388,91 @@ class ProcessingCoordinator:
                 raise InvalidProcessingTransition(
                     "processing cannot complete before the indexing stage"
                 )
-            job.status = ProcessingJobStatus.COMPLETED
-            job.failure_reason = None
-            job.finished_at = completed_at
-            _clear_lease(job)
-            run.status = ProcessingStatus.COMPLETED
-            run.error_code = None
+            if index_revision_id is None:
+                raise InvalidProcessingTransition("completion requires a verified index revision")
+            revision = await session.get(IndexRevision, index_revision_id)
+            if revision is None or revision.processing_run_id != run.id:
+                raise InvalidProcessingTransition("completion requires a verified index revision")
+            # Serialize cutover across different runs/versions of the same logical document.
+            document = await session.scalar(
+                select(Document).where(Document.id == revision.document_id).with_for_update()
+            )
+            if document is None or document.workspace_id != revision.workspace_id:
+                raise InvalidProcessingTransition("verified index scope changed")
+            revision = await session.scalar(
+                select(IndexRevision)
+                .where(IndexRevision.id == index_revision_id)
+                .with_for_update()
+                .execution_options(populate_existing=True)
+            )
+            if (
+                run.status != ProcessingStatus.PROCESSING
+                or revision.lease_token != lease_token
+                or revision.document_version_id != run.document_version_id
+                or revision.status != IndexRevisionStatus.VERIFIED
+                or revision.verified_at is None
+                or revision.verified_point_count != revision.expected_point_count
+            ):
+                raise InvalidProcessingTransition("completion requires this lease's verified index")
+            canonical = tuple(
+                await session.execute(
+                    select(
+                        CanonicalChunk.id,
+                        CanonicalChunk.ordinal,
+                        CanonicalChunk.chunk_identity,
+                        CanonicalChunk.content_sha256,
+                    )
+                    .where(CanonicalChunk.processing_run_id == run.id)
+                    .order_by(CanonicalChunk.ordinal)
+                )
+            )
+            if (
+                len(canonical) != revision.expected_point_count
+                or chunk_set_fingerprint(canonical) != revision.canonical_chunk_set_fingerprint
+            ):
+                raise InvalidProcessingTransition("verified canonical chunk set changed")
+            active = await session.scalar(
+                select(IndexRevision)
+                .where(
+                    IndexRevision.document_id == revision.document_id,
+                    IndexRevision.status == IndexRevisionStatus.ACTIVE,
+                )
+                .with_for_update()
+            )
+            active_run = (
+                await session.get(ProcessingRun, active.processing_run_id) if active else None
+            )
+            completed_at = await _processing_now(session)
+            _require_active_lease(
+                job, worker_id=worker_id, lease_token=lease_token, now=completed_at
+            )
+            lease_expires_at = job.lease_expires_at
+            older = active is not None and (
+                (revision.document_version_number, run.created_at, str(run.id))
+                < (active.document_version_number, active_run.created_at, str(active_run.id))
+            )
+            if older:
+                revision.status = IndexRevisionStatus.SUPERSEDED
+                revision.superseded_at = completed_at
+                _mark_terminal_failure(job, run, reason="obsolete_index_revision", now=completed_at)
+            else:
+                if active is not None:
+                    active.status = IndexRevisionStatus.SUPERSEDED
+                    active.superseded_at = completed_at
+                    # Release the unique active slot before activating the replacement.
+                    await session.flush()
+                revision.status = IndexRevisionStatus.ACTIVE
+                revision.activated_at = completed_at
+                job.status = ProcessingJobStatus.COMPLETED
+                job.failure_reason = None
+                job.finished_at = completed_at
+                _clear_lease(job)
+                run.status = ProcessingStatus.COMPLETED
+                run.error_code = None
+            await session.flush()
+            if await _processing_now(session) >= lease_expires_at:
+                raise LeaseOwnershipError("processing lease expired during activation")
+            return IndexRevisionStatus(revision.status)
 
 
 async def _locked_job(session: AsyncSession, job_id: UUID) -> ProcessingJob:

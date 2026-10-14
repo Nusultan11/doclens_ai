@@ -2,6 +2,7 @@
 
 from doclens_ai.models.chunk import CanonicalChunk
 from doclens_ai.models.document import Document, DocumentVersion
+from doclens_ai.models.index_revision import IndexRevision, IndexRevisionStatus
 from doclens_ai.models.membership import WorkspaceMembership, WorkspaceRole
 from doclens_ai.models.processing import (
     ProcessingJob,
@@ -19,6 +20,8 @@ __all__ = [
     "CanonicalChunk",
     "Document",
     "DocumentVersion",
+    "IndexRevision",
+    "IndexRevisionStatus",
     "ProcessingJob",
     "ProcessingJobStatus",
     "ProcessingOperationKind",

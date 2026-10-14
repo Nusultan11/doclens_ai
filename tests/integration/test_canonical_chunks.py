@@ -40,6 +40,7 @@ from doclens_ai.services.ingestion import (
 from doclens_ai.services.processing import (
     PROCESSING_CONFIGURATION_VERSION,
     ClaimedProcessingJob,
+    InvalidProcessingTransition,
     ProcessingCoordinator,
     default_processing_configuration_fingerprint,
 )
@@ -229,6 +230,23 @@ async def _ingest_claimed(service, session_factory, run_id: UUID):
 async def _add_queued_job(session: AsyncSession, run_id: UUID) -> None:
     await session.flush()
     session.add(ProcessingJob(processing_run_id=run_id, max_attempts=3))
+
+
+async def _legacy_completed_job(factory, claim) -> None:
+    """Fixture for historical terminal rows, not a production completion entrypoint."""
+    async with factory() as session, session.begin():
+        await session.execute(
+            text(
+                "UPDATE processing_jobs SET status = 'completed', worker_id = NULL, "
+                "lease_token = NULL, lease_expires_at = NULL, next_retry_at = NULL, "
+                "failure_reason = NULL, finished_at = clock_timestamp() WHERE id = :id"
+            ),
+            {"id": claim.job_id},
+        )
+        await session.execute(
+            text("UPDATE processing_runs SET status = 'completed' WHERE id = :id"),
+            {"id": claim.processing_run_id},
+        )
 
 
 @pytest.mark.integration
@@ -580,9 +598,11 @@ def test_ownership_preflight_prevents_storage_and_extraction(
                             job_id=claim.job_id, worker_id=worker, lease_token=token, stage=stage
                         )
                     if case == "completed":
-                        await coordinator.complete(
-                            job_id=claim.job_id, worker_id=worker, lease_token=token
-                        )
+                        with pytest.raises(InvalidProcessingTransition, match="verified index"):
+                            await coordinator.complete(
+                                job_id=claim.job_id, worker_id=worker, lease_token=token
+                            )
+                        await _legacy_completed_job(factory, claim)
                 elif case == "run_status":
                     async with factory() as session, session.begin():
                         run = await session.get(ProcessingRun, run_id)
@@ -726,14 +746,16 @@ def test_revocation_or_transition_during_extraction_rolls_back(
                         10,
                     )
                 if transition == "completed":
-                    await asyncio.wait_for(
-                        coordinator.complete(
-                            job_id=claim.job_id,
-                            worker_id="canonical-worker",
-                            lease_token=claim.lease_token,
-                        ),
-                        10,
-                    )
+                    with pytest.raises(InvalidProcessingTransition, match="verified index"):
+                        await asyncio.wait_for(
+                            coordinator.complete(
+                                job_id=claim.job_id,
+                                worker_id="canonical-worker",
+                                lease_token=claim.lease_token,
+                            ),
+                            10,
+                        )
+                    await _legacy_completed_job(factory, claim)
             # Coordinator transitions finish while extraction is paused: no Job/Run locks held.
             release.set()
             expected = (

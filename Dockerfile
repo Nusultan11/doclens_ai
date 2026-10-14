@@ -48,3 +48,21 @@ RUN pip install --no-cache-dir '.[eda]'
 USER doclens
 
 CMD ["python", "-m", "doclens_ai.worker"]
+
+FROM worker AS index-worker
+
+USER root
+
+RUN pip install --no-cache-dir torch==2.8.0 --index-url https://download.pytorch.org/whl/cpu \
+    && pip install --no-cache-dir '.[dense]'
+
+ENV HF_HUB_OFFLINE=1 \
+    TRANSFORMERS_OFFLINE=1 \
+    HF_HUB_DISABLE_TELEMETRY=1 \
+    TOKENIZERS_PARALLELISM=false \
+    OMP_NUM_THREADS=4 \
+    MKL_NUM_THREADS=4
+
+USER doclens
+
+CMD ["python", "-m", "doclens_ai.index_worker"]
