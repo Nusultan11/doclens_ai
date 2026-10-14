@@ -188,8 +188,20 @@ All document routes are under `/api/v1` and require `Authorization: Bearer <acce
 
 - `POST /workspaces/{workspace_id}/documents` creates a stable document identity.
 - `POST /workspaces/{workspace_id}/documents/{document_id}/versions` accepts a multipart `file` and requires `Idempotency-Key`.
-- `GET /workspaces/{workspace_id}/documents/{document_id}` returns document/version metadata without object-storage keys or credentials.
+- `GET /workspaces/{workspace_id}/documents/{document_id}` returns document/version metadata, including a read-only `is_searchable` boolean per version, without object-storage keys or credentials.
 - `GET /jobs/{job_id}` returns sanitized processing status for users who belong to the owning workspace.
+
+`is_searchable` is derived on each read from PostgreSQL, not stored as a mutable flag.
+It is true only for the authorized document/workspace's ACTIVE index revision matching
+that version and version number, with its own Run/Job COMPLETED at INDEXING, verification
+and activation timestamps, and a positive expected point count fully verified. At most
+one version of a logical document is searchable. Fresh uploads, pending/retry/failed
+indexing and VERIFIED-only candidates are false unless that same version already has a
+valid ACTIVE revision. Reprocessing or a failed replacement leaves the old active version
+searchable until successful atomic cutover; afterward the superseded version is false.
+Metadata/readiness are fetched together without per-version queries. This contract does
+not probe Qdrant availability or guarantee compatibility with a particular search runtime;
+the Search API still validates its configured model/collection and current authorization.
 
 Example upload:
 
