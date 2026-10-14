@@ -28,8 +28,23 @@ async def lifespan(application: FastAPI) -> AsyncIterator[None]:
         # No exception details: model paths/credentials and document-derived values are private.
         logging.getLogger(__name__).warning("search_runtime_unavailable")
     try:
+        from doclens_ai.core.rag_config import RagSettings
+
+        rag_settings = RagSettings()
+        if rag_settings.enabled:
+            from doclens_ai.rag_runtime import build_rag_runtime
+
+            application.state.rag_service = build_rag_runtime(
+                application.state.retrieval_service, rag_settings
+            )
+    except Exception:
+        logging.getLogger(__name__).warning("rag_runtime_unavailable")
+    try:
         yield
     finally:
+        rag = application.state.rag_service
+        if rag is not None:
+            await rag.aclose()
         service = application.state.retrieval_service
         if service is not None:
             await service.aclose()
@@ -52,6 +67,7 @@ def create_app(
     application.state.settings = application_settings
     application.state.database = application_database
     application.state.retrieval_service = None
+    application.state.rag_service = None
     application.state.jwt_verifier = jwt_verifier or _build_jwt_verifier(application_settings)
     application.include_router(api_router, prefix="/api/v1")
     return application

@@ -136,3 +136,10 @@ def get_retrieval_service(request: Request):
     if service is None:
         raise HTTPException(status_code=503, detail="search service is unavailable")
     return service
+
+
+def get_rag_service(request: Request):
+    service = getattr(request.app.state, "rag_service", None)
+    if service is None:
+        raise HTTPException(status_code=503, detail="answer service is unavailable")
+    return service

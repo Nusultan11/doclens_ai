@@ -391,5 +391,82 @@ class RetrievalService:
         except (SQLAlchemyError, VectorFailure, OSError, TimeoutError):
             raise SearchUnavailable() from None
 
+    async def revalidate(
+        self, *, user_id: UUID, workspace_id: UUID, evidence: tuple[VerifiedResult, ...]
+    ) -> bool:
+        """Fresh PG-only check of exact previously verified evidence; no network/row locks.
+
+        False invalidates the WHOLE answer. Revoked membership still raises SearchForbidden.
+        A revocation after this check but before delivery remains outside transaction atomicity.
+        """
+        try:
+            async with asyncio.timeout(self.db_timeout):
+                async with self.factory() as session:
+                    await self._membership(session, user_id, workspace_id)
+                    if not evidence:
+                        return True
+                    if (
+                        len(evidence) > 20
+                        or len({item.chunk_id for item in evidence}) != len(evidence)
+                        or any(item.workspace_id != workspace_id for item in evidence)
+                    ):
+                        return False
+                    statement = (
+                        select(CanonicalChunk, IndexRevision, DocumentVersion, Document)
+                        .join(ProcessingRun, ProcessingRun.id == CanonicalChunk.processing_run_id)
+                        .join(IndexRevision, IndexRevision.processing_run_id == ProcessingRun.id)
+                        .join(
+                            DocumentVersion, DocumentVersion.id == ProcessingRun.document_version_id
+                        )
+                        .join(Document, Document.id == DocumentVersion.document_id)
+                        .join(
+                            WorkspaceMembership,
+                            WorkspaceMembership.workspace_id == Document.workspace_id,
+                        )
+                        .where(
+                            CanonicalChunk.id.in_([item.chunk_id for item in evidence]),
+                            IndexRevision.id.in_([item.index_revision_id for item in evidence]),
+                            IndexRevision.status == "active",
+                            ProcessingRun.status == "completed",
+                            ProcessingRun.stage == "indexing",
+                            IndexRevision.document_version_id == DocumentVersion.id,
+                            IndexRevision.document_id == Document.id,
+                            IndexRevision.workspace_id == Document.workspace_id,
+                            Document.workspace_id == workspace_id,
+                            WorkspaceMembership.user_id == user_id,
+                            WorkspaceMembership.role.in_(["owner", "editor", "viewer"]),
+                        )
+                    )
+                    rows = {
+                        (chunk.id, revision.id): (chunk, revision, version, document)
+                        for chunk, revision, version, document in (
+                            await session.execute(statement)
+                        ).all()
+                    }
+                    for item in evidence:
+                        row = rows.get((item.chunk_id, item.index_revision_id))
+                        if row is None:
+                            return False
+                        chunk, revision, version, document = row
+                        if not (
+                            self._compatible(revision)
+                            and revision.document_version_number == version.version_number
+                            and document.id == item.document_id
+                            and version.id == item.document_version_id
+                            and version.sha256_checksum == item.source_sha256
+                            and chunk.chunk_text == item.text
+                            and chunk.content_sha256
+                            == hashlib.sha256(item.text.encode()).hexdigest()
+                        ):
+                            return False
+                        try:
+                            if source_locator(chunk) != item.locator:
+                                return False
+                        except (ValueError, KeyError, TypeError):
+                            return False
+                    return True
+        except (SQLAlchemyError, OSError, TimeoutError):
+            raise SearchUnavailable() from None
+
     async def aclose(self):
         await self.vector.close()

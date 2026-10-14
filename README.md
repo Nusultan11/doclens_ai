@@ -1,10 +1,10 @@
 # DocLens AI
 
-DocLens AI currently provides the Backend Core, authenticated document intake, durable processing workers, canonical PostgreSQL chunks, versioned CPU embeddings with persistent Qdrant indexing, and an opt-in authenticated tenant-safe dense Search API. PostgreSQL remains authoritative for authorization, source text and ACTIVE revisions. RAG, LLM generation, conversations, deletion and a document READY workflow are not implemented.
+DocLens AI provides Backend Core, authenticated intake, durable processing workers, canonical PostgreSQL chunks, versioned CPU embeddings/Qdrant indexing, opt-in tenant-safe dense search, and a stateless citation-validated RAG generation baseline for an operator-managed local generator. PostgreSQL remains authoritative for authorization, source text and ACTIVE revisions. Real generator quality is not yet evaluated. Conversations, deletion and document READY workflows are not implemented.
 
 A dedicated ingestion worker consumes EXTRACTION jobs, persists canonical chunks, and hands runs
 off to EMBEDDING. The opt-in index worker embeds and verifies versioned Qdrant points before
-atomic activation/completion. RAG, generation, and READY transitions
+atomic activation/completion. Generation is separate from ingestion; READY transitions
 are not implemented. Standalone offline extraction and chunking remain engineering evaluation
 tools. The worker image installs existing `[eda]` dependencies; the API image does not.
 
@@ -547,3 +547,79 @@ only, not queries, returned text, source paths or worksheet names. Measured revi
 security tests, exact counts, latency and limitations are in
 `docs/evaluation/production_retrieval_v1.md`. E5 remains a baseline; no BM25 superiority or answer
 generation quality is claimed.
+
+## Stateless grounded answer baseline
+
+`POST /api/v1/answers` preserves OIDC/JWT and current PostgreSQL workspace permissions.
+Body: `workspace_id`, a nonblank `question` (maximum 2,000 characters), and optional unique
+`document_ids` selectors (1..50). Unknown fields, client provider/filter/tuning overrides and invalid
+types are rejected. This route sanitizes 422 errors instead of echoing private request inputs.
+
+Response always contains `answerable`, `answer`, `citations`, `reason`, and a backend-generated UUID
+`request_id`. An answer requires nonblank text and valid citations; refusal requires null answer,
+empty citations and `insufficient_evidence`, `no_relevant_context`, or `source_unavailable`.
+Missing/invalid authentication returns 401, denied workspace 403, unavailable dependencies 503.
+No prompts, provider output or document text are logged. There is no confidence score, conversation
+state, raw token streaming, tool execution, agent, reranker or generation persistence.
+
+The service uses existing dense retrieval (20 candidates), deterministically packs at most six
+authorized chunks, and bounds the serialized question/evidence JSON to 16,000 Unicode characters
+(maximum 4,000 per chunk). This is NOT a tokenizer budget. Quotes reference exactly the supplied
+prefix, not hidden truncated text. Character limits and output reserve must be validated against
+the operator's generator context window before deployment. No similarity cutoff is called calibrated.
+
+The model supplies strict JSON with chunk/version IDs, exact source quote offsets and covered answer
+spans. Backend validation rejects invented IDs, metadata, duplicates, wrong quotes, uncovered answer
+text and inconsistent answerability. Public document IDs and locators come only from verified
+PostgreSQL evidence. Invalid model JSON/citations produce a safe `insufficient_evidence` refusal;
+HTTP/protocol/timeout failures produce sanitized 503. Exact quotes are reference checks, NOT proof
+of semantic faithfulness. All packed evidence is reauthorized after inference; missing/deleted or
+superseded evidence invalidates the whole answer, including otherwise valid partial citations.
+No database locks span inference. Revocation after the final check but before delivery remains a race.
+
+### Opt-in local generator
+
+Default API remains ML-free and answers fail closed when unconfigured. Search remains independently
+available. To opt in, after existing search/index/model preflight:
+
+```powershell
+$env:RAG_ENDPOINT = 'http://192.168.1.10:8080/v1/chat/completions' # operator-managed PRIVATE runtime
+$env:RAG_MODEL_ID = 'Qwen3-8B' # must be the exact independently configured endpoint model identity
+docker compose -f compose.yaml -f compose.search.yaml -f compose.rag.yaml up --build -d
+```
+
+The IP/model above are placeholders, not a discovered or tested runtime. Endpoint must be a literal
+loopback, RFC1918 or IPv6 ULA address reachable FROM the API container, never a public hosted API.
+Loopback in Docker means the API container itself. DNS names (including `host.docker.internal`) are
+deliberately rejected to avoid DNS rebinding; use a verified private IP. HTTPS keeps normal certificate
+verification and requires the certificate to cover that IP. No redirects or environment proxies.
+The operator must ensure the private endpoint is actually local inference, not an external relay.
+
+`RAG_ENABLED` defaults false. When enabled, endpoint/model identity are required.
+Defaults: temperature 0, maximum output 1,024 tokens, total HTTP timeout 60 s (maximum 300), queue
+timeout 1 s (maximum 10), one HTTP request in flight (maximum 4), response limit 65,536 bytes
+(maximum 262,144), six evidence chunks, 16,000 context characters, 4,000 chunk characters.
+Optional `RAG_API_KEY` is a secret, never metadata. `RAG_MODEL_REVISION` (40-hex) and
+`RAG_ARTIFACT_SHA256` (64-hex) are operator declarations, NOT independently verified pinning.
+Empty optional declarations in Compose mean absent. Prompt version/hash and non-sensitive parameters
+are reported by evaluation. No weights in images/Git or runtime downloads.
+
+HTTP requests are bounded; closing/cancelling a connection cannot guarantee the inference server
+stops computing. Configure independent server concurrency/cancellation limits and ingress request/body
+budgets. Unsupported local server JSON-mode/envelope behavior fails closed; no silent fallback.
+
+### Independent RAG evaluation
+
+Retrieval Gold is not answer Gold. See `docs/evaluation/rag_gold_v1_protocol.md` and
+`docs/evaluation/rag_baseline_v1.md`. Run explicit synthetic mechanics evaluation:
+
+```powershell
+python -m doclens_ai.rag_eval --synthetic --output-dir evaluation-output/rag-new-fixture-run
+```
+
+For approved human-reviewed RAG Gold, configure existing `SEARCH_*`/`DATABASE_URL` and `RAG_*`, then
+run `python -m doclens_ai.rag_eval --gold local-evaluation/rag_gold_v1.jsonl --user-id TRUSTED_UUID
+--workspace-id AUTHORIZED_UUID --output-dir evaluation-output/rag-new-real-run` as one command.
+The runner is read-only, never filters retrieval using Gold labels, writes only aggregate metrics,
+and refuses to overwrite output directories. Private annotations and model assets remain ignored.
+No real Qwen3-8B smoke, real answer correctness, groundedness or RU/KK quality is established yet.
