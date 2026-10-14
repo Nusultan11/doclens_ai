@@ -39,6 +39,8 @@ from doclens_ai.services.ingestion import (
 )
 from doclens_ai.services.processing import (
     PROCESSING_CONFIGURATION_VERSION,
+    ClaimedProcessingJob,
+    ProcessingCoordinator,
     default_processing_configuration_fingerprint,
 )
 from doclens_ai.services.upload import (
@@ -208,6 +210,27 @@ async def _upload(
         return version.id, job.processing_run_id, version.object_storage_key
 
 
+async def _claim_run(
+    session_factory: async_sessionmaker[AsyncSession],
+    run_id: UUID,
+    *,
+    worker_id: str = "canonical-worker",
+) -> ClaimedProcessingJob:
+    claim = await ProcessingCoordinator(session_factory).claim_next(worker_id=worker_id)
+    assert claim is not None and claim.processing_run_id == run_id
+    return claim
+
+
+async def _ingest_claimed(service, session_factory, run_id: UUID):
+    claim = await _claim_run(session_factory, run_id)
+    return await service.ingest(run_id, worker_id="canonical-worker", lease_token=claim.lease_token)
+
+
+async def _add_queued_job(session: AsyncSession, run_id: UUID) -> None:
+    await session.flush()
+    session.add(ProcessingJob(processing_run_id=run_id, max_attempts=3))
+
+
 @pytest.mark.integration
 def test_pdf_docx_xlsx_persistence_idempotency_and_reprocessing_isolation(
     migrated_database_url: str,
@@ -240,16 +263,23 @@ def test_pdf_docx_xlsx_persistence_idempotency_and_reprocessing_isolation(
         ]
         service = IngestionService(session_factory, storage)
         try:
+            claim = await _claim_run(session_factory, uploaded[0][1])
             competing = await asyncio.gather(
-                service.ingest(uploaded[0][1]),
-                service.ingest(uploaded[0][1]),
+                service.ingest(
+                    uploaded[0][1], worker_id="canonical-worker", lease_token=claim.lease_token
+                ),
+                service.ingest(
+                    uploaded[0][1], worker_id="canonical-worker", lease_token=claim.lease_token
+                ),
             )
             assert {item.status for item in competing} == {
                 IngestionResultStatus.PERSISTED,
                 IngestionResultStatus.ALREADY_PERSISTED,
             }
             for _, run_id, _ in uploaded[1:]:
-                assert (await service.ingest(run_id)).status is IngestionResultStatus.PERSISTED
+                assert (
+                    await _ingest_claimed(service, session_factory, run_id)
+                ).status is IngestionResultStatus.PERSISTED
 
             async with session_factory() as session:
                 chunks_by_run: dict[UUID, tuple[CanonicalChunk, ...]] = {}
@@ -284,9 +314,9 @@ def test_pdf_docx_xlsx_persistence_idempotency_and_reprocessing_isolation(
                         .where(ProcessingRun.id == run_id)
                     )
                     assert resolved_workspace == workspace_id
-                    assert version_id == (
-                        await session.get(ProcessingRun, run_id)
-                    ).document_version_id
+                    assert (
+                        version_id == (await session.get(ProcessingRun, run_id)).document_version_id
+                    )
 
                 pdf_chunks = chunks_by_run[uploaded[0][1]]
                 assert {
@@ -314,15 +344,13 @@ def test_pdf_docx_xlsx_persistence_idempotency_and_reprocessing_isolation(
 
                 original_run = await session.get(ProcessingRun, uploaded[0][1])
                 original_job = await session.scalar(
-                    select(ProcessingJob).where(
-                        ProcessingJob.processing_run_id == uploaded[0][1]
-                    )
+                    select(ProcessingJob).where(ProcessingJob.processing_run_id == uploaded[0][1])
                 )
                 assert original_run is not None
                 assert original_job is not None
-                assert original_run.status == ProcessingStatus.QUEUED
+                assert original_run.status == ProcessingStatus.PROCESSING
                 assert original_run.stage == ProcessingStage.EXTRACTION
-                assert original_job.status == ProcessingJobStatus.QUEUED
+                assert original_job.status == ProcessingJobStatus.LEASED
 
             reprocess_run_id = uuid4()
             async with session_factory() as session, session.begin():
@@ -338,8 +366,9 @@ def test_pdf_docx_xlsx_persistence_idempotency_and_reprocessing_isolation(
                         status=ProcessingStatus.QUEUED,
                     )
                 )
+                await _add_queued_job(session, reprocess_run_id)
             assert (
-                await service.ingest(reprocess_run_id)
+                await _ingest_claimed(service, session_factory, reprocess_run_id)
             ).status is IngestionResultStatus.PERSISTED
             async with session_factory() as session:
                 original = tuple(
@@ -363,9 +392,609 @@ def test_pdf_docx_xlsx_persistence_idempotency_and_reprocessing_isolation(
                 assert [item.chunk_identity for item in original] == [
                     item.chunk_identity for item in reprocessed
                 ]
-                assert {item.id for item in original}.isdisjoint(
-                    {item.id for item in reprocessed}
+                assert {item.id for item in original}.isdisjoint({item.id for item in reprocessed})
+        finally:
+            await engine.dispose()
+
+    asyncio.run(exercise())
+
+
+@pytest.mark.integration
+def test_stale_worker_cannot_publish_after_lease_reclaimed_during_extraction(
+    migrated_database_url: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def exercise() -> None:
+        engine = create_async_engine(migrated_database_url)
+        session_factory = async_sessionmaker(engine, expire_on_commit=False)
+        storage = MemoryStorage()
+        workspace_id, document_id = await _create_document(session_factory)
+        _, run_id, _ = await _upload(
+            session_factory,
+            storage,
+            workspace_id=workspace_id,
+            document_id=document_id,
+            filename="fenced.pdf",
+            content_type=PDF_CONTENT_TYPE,
+            content=_pdf_bytes(["First worker must not publish after another worker reclaims."]),
+        )
+        coordinator = ProcessingCoordinator(session_factory)
+        first = await coordinator.claim_next(worker_id="worker-a")
+        assert first is not None and first.processing_run_id == run_id
+        service = IngestionService(session_factory, storage)
+        extracted = asyncio.Event()
+        release = asyncio.Event()
+        original = service._extract_and_chunk
+        captured = []
+
+        async def paused(source, *, suffix):
+            chunks = await original(source, suffix=suffix)
+            captured.append(
+                (
+                    source,
+                    tuple(ingestion_module.canonicalize_chunk(run_id, chunk) for chunk in chunks),
                 )
+            )
+            extracted.set()
+            await release.wait()
+            return chunks
+
+        monkeypatch.setattr(service, "_extract_and_chunk", paused)
+        task = asyncio.create_task(
+            service.ingest(run_id, worker_id="worker-a", lease_token=first.lease_token)
+        )
+        try:
+            await asyncio.wait_for(extracted.wait(), 10)
+            async with session_factory() as session, session.begin():
+                await session.execute(
+                    text(
+                        "UPDATE processing_jobs SET lease_expires_at = clock_timestamp() "
+                        "- INTERVAL '1 second' WHERE id = :id"
+                    ),
+                    {"id": first.job_id},
+                )
+            second = await asyncio.wait_for(coordinator.claim_next(worker_id="worker-b"), 10)
+            assert second is not None and second.job_id == first.job_id
+            assert second.lease_token != first.lease_token
+            release.set()
+            with pytest.raises(IngestionFailure, match="lease_ownership_lost"):
+                await asyncio.wait_for(task, 10)
+            async with session_factory() as session:
+                assert await session.scalar(select(func.count(CanonicalChunk.id))) == 0
+                job = await session.get(ProcessingJob, first.job_id)
+                assert job.worker_id == "worker-b" and job.lease_token == second.lease_token
+            result = await service.ingest(
+                run_id, worker_id="worker-b", lease_token=second.lease_token
+            )
+            assert result.status is IngestionResultStatus.PERSISTED
+            assert result.chunk_count > 0
+            assert (
+                await service.ingest(run_id, worker_id="worker-b", lease_token=second.lease_token)
+            ).status is IngestionResultStatus.ALREADY_PERSISTED
+            with pytest.raises(IngestionFailure, match="lease_ownership_lost"):
+                await service.ingest(run_id, worker_id="worker-a", lease_token=first.lease_token)
+            # Even equivalent already-published chunks cannot authorize the old lease.
+            source, chunks = captured[0]
+            with pytest.raises(IngestionFailure, match="lease_ownership_lost"):
+                await service._persist(
+                    source, chunks, worker_id="worker-a", lease_token=first.lease_token
+                )
+            async with session_factory() as session:
+                job = await session.get(ProcessingJob, second.job_id)
+                run = await session.get(ProcessingRun, run_id)
+                assert job.status == ProcessingJobStatus.LEASED
+                assert job.worker_id == "worker-b" and job.lease_token == second.lease_token
+                assert run.status == ProcessingStatus.PROCESSING
+                assert run.stage == ProcessingStage.EXTRACTION
+                assert (
+                    await session.scalar(select(func.count(CanonicalChunk.id)))
+                    == result.chunk_count
+                )
+        finally:
+            release.set()
+            if not task.done():
+                task.cancel()
+            await asyncio.gather(task, return_exceptions=True)
+            await engine.dispose()
+
+    asyncio.run(exercise())
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize(
+    "case",
+    [
+        "queued",
+        "missing_job",
+        "wrong_worker",
+        "wrong_token",
+        "blank_worker",
+        "expired",
+        "retry_wait",
+        "completed",
+        "failed",
+        "run_stage",
+        "run_status",
+        "missing_run",
+    ],
+)
+def test_ownership_preflight_prevents_storage_and_extraction(
+    migrated_database_url: str,
+    monkeypatch: pytest.MonkeyPatch,
+    case: str,
+) -> None:
+    async def exercise() -> None:
+        engine = create_async_engine(migrated_database_url)
+        factory = async_sessionmaker(engine, expire_on_commit=False)
+        storage = MemoryStorage()
+        try:
+            workspace, document = await _create_document(factory)
+            version_id, run_id, _ = await _upload(
+                factory,
+                storage,
+                workspace_id=workspace,
+                document_id=document,
+                filename="preflight.pdf",
+                content_type=PDF_CONTENT_TYPE,
+                content=_pdf_bytes(["Preflight source content must never reach the extractor."]),
+            )
+            coordinator = ProcessingCoordinator(factory)
+            worker, token = "canonical-worker", uuid4()
+            if case not in {"queued", "missing_job", "missing_run"}:
+                claim = await _claim_run(factory, run_id)
+                token = claim.lease_token
+                if case == "wrong_worker":
+                    worker = "other-worker"
+                elif case == "wrong_token":
+                    token = uuid4()
+                elif case == "blank_worker":
+                    worker = " "
+                elif case == "expired":
+                    async with factory() as session, session.begin():
+                        await session.execute(
+                            text(
+                                "UPDATE processing_jobs SET lease_expires_at = clock_timestamp() "
+                                "- INTERVAL '1 second' WHERE id = :id"
+                            ),
+                            {"id": claim.job_id},
+                        )
+                elif case in {"retry_wait", "failed"}:
+                    if case == "failed":
+                        async with factory() as session, session.begin():
+                            job = await session.get(ProcessingJob, claim.job_id)
+                            job.max_attempts = 1
+                    await coordinator.fail_attempt(
+                        job_id=claim.job_id,
+                        worker_id=worker,
+                        lease_token=token,
+                        failure_reason="test_failure",
+                    )
+                elif case in {"completed", "run_stage"}:
+                    stages = (
+                        tuple(ProcessingStage)[1:]
+                        if case == "completed"
+                        else (ProcessingStage.CLEANING,)
+                    )
+                    for stage in stages:
+                        await coordinator.advance_stage(
+                            job_id=claim.job_id, worker_id=worker, lease_token=token, stage=stage
+                        )
+                    if case == "completed":
+                        await coordinator.complete(
+                            job_id=claim.job_id, worker_id=worker, lease_token=token
+                        )
+                elif case == "run_status":
+                    async with factory() as session, session.begin():
+                        run = await session.get(ProcessingRun, run_id)
+                        run.status = ProcessingStatus.FAILED
+            if case == "missing_job":
+                async with factory() as session, session.begin():
+                    await session.execute(
+                        text("DELETE FROM processing_jobs WHERE processing_run_id = :id"),
+                        {"id": run_id},
+                    )
+            service = IngestionService(factory, storage)
+
+            async def forbidden(*args, **kwargs):
+                pytest.fail("Invalid ownership reached storage or extraction")
+
+            monkeypatch.setattr(storage, "inspect", forbidden)
+            monkeypatch.setattr(service, "_extract_and_chunk", forbidden)
+            async with factory() as session:
+                before = (
+                    await session.execute(
+                        text(
+                            "SELECT worker_id, lease_token, status, attempt_count, "
+                            "lease_expires_at, "
+                            "failure_reason FROM processing_jobs WHERE processing_run_id = :id"
+                        ),
+                        {"id": run_id},
+                    )
+                ).first()
+                original_version = (
+                    await session.execute(
+                        text("SELECT * FROM document_versions WHERE id = :id"), {"id": version_id}
+                    )
+                ).one()
+            with pytest.raises(TypeError):
+                await service.ingest(run_id)  # type: ignore[call-arg]
+            with pytest.raises(IngestionFailure) as failure:
+                await service.ingest(
+                    uuid4() if case == "missing_run" else run_id,
+                    worker_id=worker,
+                    lease_token=token,
+                )
+            expected = IngestionFailureCategory.LEASE_OWNERSHIP_LOST
+            if case in {"run_stage", "run_status"}:
+                expected = IngestionFailureCategory.PROCESSING_STATE_MISMATCH
+            elif case == "missing_run":
+                expected = IngestionFailureCategory.PROCESSING_RUN_NOT_FOUND
+            assert failure.value.category is expected and not failure.value.retryable
+            assert str(failure.value) == expected.value
+            async with factory() as session:
+                after = (
+                    await session.execute(
+                        text(
+                            "SELECT worker_id, lease_token, status, attempt_count, "
+                            "lease_expires_at, "
+                            "failure_reason FROM processing_jobs WHERE processing_run_id = :id"
+                        ),
+                        {"id": run_id},
+                    )
+                ).first()
+                assert after == before
+                assert (
+                    await session.execute(
+                        text("SELECT * FROM document_versions WHERE id = :id"), {"id": version_id}
+                    )
+                ).one() == original_version
+                assert await session.scalar(select(func.count(CanonicalChunk.id))) == 0
+        finally:
+            await engine.dispose()
+
+    asyncio.run(exercise())
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize("transition", ["retry_wait", "failed", "completed", "stage"])
+def test_revocation_or_transition_during_extraction_rolls_back(
+    migrated_database_url: str,
+    monkeypatch: pytest.MonkeyPatch,
+    transition: str,
+) -> None:
+    async def exercise() -> None:
+        engine = create_async_engine(migrated_database_url)
+        factory = async_sessionmaker(engine, expire_on_commit=False)
+        storage = MemoryStorage()
+        coordinator = ProcessingCoordinator(factory)
+        extracted, release = asyncio.Event(), asyncio.Event()
+        task = None
+        try:
+            workspace, document = await _create_document(factory)
+            _, run_id, _ = await _upload(
+                factory,
+                storage,
+                workspace_id=workspace,
+                document_id=document,
+                filename="transition.pdf",
+                content_type=PDF_CONTENT_TYPE,
+                content=_pdf_bytes(["Extraction paused before publication while job transitions."]),
+            )
+            claim = await _claim_run(factory, run_id)
+            service = IngestionService(factory, storage)
+            original = service._extract_and_chunk
+
+            async def paused(source, *, suffix):
+                chunks = await original(source, suffix=suffix)
+                extracted.set()
+                await release.wait()
+                return chunks
+
+            monkeypatch.setattr(service, "_extract_and_chunk", paused)
+            task = asyncio.create_task(
+                service.ingest(run_id, worker_id="canonical-worker", lease_token=claim.lease_token)
+            )
+            await asyncio.wait_for(extracted.wait(), 10)
+            if transition in {"failed", "retry_wait"}:
+                if transition == "failed":
+                    async with factory() as session, session.begin():
+                        job = await session.get(ProcessingJob, claim.job_id)
+                        job.max_attempts = 1
+                await asyncio.wait_for(
+                    coordinator.fail_attempt(
+                        job_id=claim.job_id,
+                        worker_id="canonical-worker",
+                        lease_token=claim.lease_token,
+                        failure_reason="test_failure",
+                    ),
+                    10,
+                )
+            else:
+                stages = (
+                    tuple(ProcessingStage)[1:]
+                    if transition == "completed"
+                    else (ProcessingStage.CLEANING,)
+                )
+                for stage in stages:
+                    await asyncio.wait_for(
+                        coordinator.advance_stage(
+                            job_id=claim.job_id,
+                            worker_id="canonical-worker",
+                            lease_token=claim.lease_token,
+                            stage=stage,
+                        ),
+                        10,
+                    )
+                if transition == "completed":
+                    await asyncio.wait_for(
+                        coordinator.complete(
+                            job_id=claim.job_id,
+                            worker_id="canonical-worker",
+                            lease_token=claim.lease_token,
+                        ),
+                        10,
+                    )
+            # Coordinator transitions finish while extraction is paused: no Job/Run locks held.
+            release.set()
+            expected = (
+                "processing_state_mismatch" if transition == "stage" else "lease_ownership_lost"
+            )
+            with pytest.raises(IngestionFailure, match=expected) as failure:
+                await asyncio.wait_for(task, 10)
+            assert not failure.value.retryable
+            async with factory() as session:
+                assert await session.scalar(select(func.count(CanonicalChunk.id))) == 0
+                job = await session.get(ProcessingJob, claim.job_id)
+                expected_status = "leased" if transition == "stage" else transition
+                assert job.status == expected_status
+        finally:
+            release.set()
+            if task is not None:
+                if not task.done():
+                    task.cancel()
+                await asyncio.gather(task, return_exceptions=True)
+            await engine.dispose()
+
+    asyncio.run(exercise())
+
+
+@pytest.mark.integration
+def test_lease_expiration_after_row_lock_wait_uses_postgres_wall_clock(
+    migrated_database_url: str,
+) -> None:
+    async def exercise() -> None:
+        engine = create_async_engine(migrated_database_url)
+        factory = async_sessionmaker(engine, expire_on_commit=False)
+        storage = MemoryStorage()
+        task = None
+        try:
+            workspace, document = await _create_document(factory)
+            _, run_id, _ = await _upload(
+                factory,
+                storage,
+                workspace_id=workspace,
+                document_id=document,
+                filename="lock-wait.pdf",
+                content_type=PDF_CONTENT_TYPE,
+                content=_pdf_bytes(
+                    ["PostgreSQL row lock wait must not freeze lease validation time."]
+                ),
+            )
+            claim = await _claim_run(factory, run_id)
+            service = IngestionService(factory, storage)
+            source = await service._resolve_source(
+                run_id, worker_id="canonical-worker", lease_token=claim.lease_token
+            )
+            chunks = tuple(
+                ingestion_module.canonicalize_chunk(run_id, chunk)
+                for chunk in await service._extract_and_chunk(source, suffix=".pdf")
+            )
+            async with factory() as blocker, blocker.begin():
+                await blocker.scalar(
+                    select(ProcessingRun).where(ProcessingRun.id == run_id).with_for_update()
+                )
+                blocker_pid = await blocker.scalar(select(func.pg_backend_pid()))
+                async with factory() as session, session.begin():
+                    deadline = await session.scalar(
+                        text(
+                            "UPDATE processing_jobs SET lease_expires_at = clock_timestamp() "
+                            "+ INTERVAL '2 seconds' WHERE id = :id RETURNING lease_expires_at"
+                        ),
+                        {"id": claim.job_id},
+                    )
+                task = asyncio.create_task(
+                    service._persist(
+                        source, chunks, worker_id="canonical-worker", lease_token=claim.lease_token
+                    )
+                )
+                # Synchronize on an actual PostgreSQL lock waiter, not a guessed sleep.
+                async with asyncio.timeout(10), factory() as monitor:
+                    while not await monitor.scalar(
+                        text(
+                            "SELECT EXISTS(SELECT 1 FROM pg_locks "
+                            "WHERE NOT granted AND :blocker = ANY(pg_blocking_pids(pid)))"
+                        ),
+                        {"blocker": blocker_pid},
+                    ):
+                        assert not task.done()
+                        await asyncio.sleep(0.01)
+                    await monitor.scalar(select(func.pg_sleep_until(deadline)))
+                    assert await monitor.scalar(select(func.clock_timestamp())) >= deadline
+                # A owns Job before waiting on Run, so reclaim skips that locked job.
+                assert (
+                    await asyncio.wait_for(
+                        ProcessingCoordinator(factory).claim_next(worker_id="worker-b"), 10
+                    )
+                    is None
+                )
+            with pytest.raises(IngestionFailure, match="lease_ownership_lost"):
+                await asyncio.wait_for(task, 10)
+            async with factory() as session:
+                assert await session.scalar(select(func.count(CanonicalChunk.id))) == 0
+            second = await _claim_run(factory, run_id, worker_id="worker-b")
+            assert second.lease_token != claim.lease_token
+            assert (
+                await service.ingest(run_id, worker_id="worker-b", lease_token=second.lease_token)
+            ).status is IngestionResultStatus.PERSISTED
+        finally:
+            if task is not None:
+                if not task.done():
+                    task.cancel()
+                await asyncio.gather(task, return_exceptions=True)
+            await engine.dispose()
+
+    asyncio.run(exercise())
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize("already_persisted", [False, True])
+def test_expiration_at_final_check_rolls_back_or_rejects_idempotence(
+    migrated_database_url: str,
+    monkeypatch: pytest.MonkeyPatch,
+    already_persisted: bool,
+) -> None:
+    async def exercise() -> None:
+        engine = create_async_engine(migrated_database_url)
+        factory = async_sessionmaker(engine, expire_on_commit=False)
+        storage = MemoryStorage()
+        try:
+            workspace, document = await _create_document(factory)
+            version_id, run_id, _ = await _upload(
+                factory,
+                storage,
+                workspace_id=workspace,
+                document_id=document,
+                filename="expiry.pdf",
+                content_type=PDF_CONTENT_TYPE,
+                content=_pdf_bytes(
+                    [
+                        "First complete canonical chunk must roll back if ownership expires.",
+                        "Second complete canonical chunk must also roll back atomically.",
+                    ]
+                ),
+            )
+            claim = await _claim_run(factory, run_id)
+            service = IngestionService(factory, storage)
+            source = await service._resolve_source(
+                run_id, worker_id="canonical-worker", lease_token=claim.lease_token
+            )
+            chunks = tuple(
+                ingestion_module.canonicalize_chunk(run_id, chunk)
+                for chunk in await service._extract_and_chunk(source, suffix=".pdf")
+            )
+            assert len(chunks) == 2
+            if already_persisted:
+                await service._persist(
+                    source, chunks, worker_id="canonical-worker", lease_token=claim.lease_token
+                )
+            async with factory() as session, session.begin():
+                await session.execute(
+                    text(
+                        "UPDATE processing_jobs SET lease_expires_at = clock_timestamp() "
+                        "+ INTERVAL '1 second' WHERE id = :id"
+                    ),
+                    {"id": claim.job_id},
+                )
+                original_version = (
+                    await session.execute(
+                        text("SELECT * FROM document_versions WHERE id = :id"), {"id": version_id}
+                    )
+                ).one()
+            original = ingestion_module._require_ingestion_ownership
+            calls = 0
+
+            async def expire_before_final_check(session, job, run, **ownership):
+                nonlocal calls
+                calls += 1
+                if calls == 2:
+                    # INSERTs have really flushed, but are not yet committed.
+                    assert await session.scalar(select(func.count(CanonicalChunk.id))) == len(
+                        chunks
+                    )
+                    await session.scalar(select(func.pg_sleep_until(job.lease_expires_at)))
+                await original(session, job, run, **ownership)
+
+            monkeypatch.setattr(
+                ingestion_module, "_require_ingestion_ownership", expire_before_final_check
+            )
+            with pytest.raises(IngestionFailure, match="lease_ownership_lost"):
+                await asyncio.wait_for(
+                    service._persist(
+                        source, chunks, worker_id="canonical-worker", lease_token=claim.lease_token
+                    ),
+                    10,
+                )
+            assert calls == 2
+            async with factory() as session:
+                assert await session.scalar(select(func.count(CanonicalChunk.id))) == (
+                    len(chunks) if already_persisted else 0
+                )
+                assert (
+                    await session.execute(
+                        text("SELECT * FROM document_versions WHERE id = :id"), {"id": version_id}
+                    )
+                ).one() == original_version
+                job = await session.get(ProcessingJob, claim.job_id)
+                assert (
+                    job.status == ProcessingJobStatus.LEASED
+                    and job.lease_token == claim.lease_token
+                )
+        finally:
+            await engine.dispose()
+
+    asyncio.run(exercise())
+
+
+@pytest.mark.integration
+def test_independent_runs_isolate_lease_failure(migrated_database_url: str) -> None:
+    async def exercise() -> None:
+        engine = create_async_engine(migrated_database_url)
+        factory = async_sessionmaker(engine, expire_on_commit=False)
+        storage = MemoryStorage()
+        try:
+            workspace, document = await _create_document(factory)
+            runs = [
+                (
+                    await _upload(
+                        factory,
+                        storage,
+                        workspace_id=workspace,
+                        document_id=document,
+                        filename=f"independent-{index}.pdf",
+                        content_type=PDF_CONTENT_TYPE,
+                        content=_pdf_bytes(
+                            [
+                                f"Independent document {index} has sufficient extraction content."
+                            ]
+                        ),
+                    )
+                )[1]
+                for index in range(2)
+            ]
+            claims = [
+                await _claim_run(factory, run, worker_id=f"worker-{index}")
+                for index, run in enumerate(runs)
+            ]
+            service = IngestionService(factory, storage)
+            results = await asyncio.gather(
+                service.ingest(
+                    runs[0], worker_id="wrong-worker", lease_token=claims[0].lease_token
+                ),
+                service.ingest(runs[1], worker_id="worker-1", lease_token=claims[1].lease_token),
+                return_exceptions=True,
+            )
+            assert isinstance(results[0], IngestionFailure)
+            assert results[0].category is IngestionFailureCategory.LEASE_OWNERSHIP_LOST
+            assert results[1].status is IngestionResultStatus.PERSISTED
+            async with factory() as session:
+                assert set(await session.scalars(select(CanonicalChunk.processing_run_id))) == {
+                    runs[1]
+                }
+                for index, claim in enumerate(claims):
+                    job = await session.get(ProcessingJob, claim.job_id)
+                    assert (
+                        job.worker_id == f"worker-{index}" and job.lease_token == claim.lease_token
+                    )
         finally:
             await engine.dispose()
 
@@ -391,7 +1020,9 @@ def test_ingestion_failure_gates_publish_no_chunks(migrated_database_url: str) -
             )
             await storage.delete(missing_key)
             with pytest.raises(IngestionFailure) as missing:
-                await IngestionService(session_factory, storage).ingest(missing_run)
+                await _ingest_claimed(
+                    IngestionService(session_factory, storage), session_factory, missing_run
+                )
             assert (missing.value.category, missing.value.retryable) == (
                 IngestionFailureCategory.SOURCE_OBJECT_MISSING,
                 False,
@@ -412,7 +1043,9 @@ def test_ingestion_failure_gates_publish_no_chunks(migrated_database_url: str) -
                 content=stored.content[:-1] + bytes([stored.content[-1] ^ 1]),
             )
             with pytest.raises(IngestionFailure) as mismatch:
-                await IngestionService(session_factory, storage).ingest(mismatch_run)
+                await _ingest_claimed(
+                    IngestionService(session_factory, storage), session_factory, mismatch_run
+                )
             assert mismatch.value.category is IngestionFailureCategory.SOURCE_IDENTITY_MISMATCH
 
             _, unavailable_run, _ = await _upload(
@@ -426,7 +1059,9 @@ def test_ingestion_failure_gates_publish_no_chunks(migrated_database_url: str) -
             )
             storage.available = False
             with pytest.raises(IngestionFailure) as unavailable:
-                await IngestionService(session_factory, storage).ingest(unavailable_run)
+                await _ingest_claimed(
+                    IngestionService(session_factory, storage), session_factory, unavailable_run
+                )
             assert (unavailable.value.category, unavailable.value.retryable) == (
                 IngestionFailureCategory.STORAGE_UNAVAILABLE,
                 True,
@@ -443,7 +1078,9 @@ def test_ingestion_failure_gates_publish_no_chunks(migrated_database_url: str) -
                 content=b"%PDF-1.7\nnot a valid pdf\n%%EOF\n",
             )
             with pytest.raises(IngestionFailure) as corrupt:
-                await IngestionService(session_factory, storage).ingest(corrupt_run)
+                await _ingest_claimed(
+                    IngestionService(session_factory, storage), session_factory, corrupt_run
+                )
             assert corrupt.value.category is IngestionFailureCategory.EXTRACTION_FAILED
             assert corrupt.value.document_error_category == "corrupt_document"
 
@@ -457,7 +1094,9 @@ def test_ingestion_failure_gates_publish_no_chunks(migrated_database_url: str) -
                 content=_docx_bytes(empty=True),
             )
             with pytest.raises(IngestionFailure) as empty:
-                await IngestionService(session_factory, storage).ingest(empty_run)
+                await _ingest_claimed(
+                    IngestionService(session_factory, storage), session_factory, empty_run
+                )
             assert empty.value.category is IngestionFailureCategory.EMPTY_CONTENT
 
             _, review_run, _ = await _upload(
@@ -470,7 +1109,9 @@ def test_ingestion_failure_gates_publish_no_chunks(migrated_database_url: str) -
                 content=_pdf_bytes(["short"]),
             )
             with pytest.raises(IngestionFailure) as review:
-                await IngestionService(session_factory, storage).ingest(review_run)
+                await _ingest_claimed(
+                    IngestionService(session_factory, storage), session_factory, review_run
+                )
             assert review.value.category is IngestionFailureCategory.EXTRACTION_NEEDS_REVIEW
 
             async with session_factory() as session:
@@ -514,7 +1155,9 @@ def test_canonical_chunk_set_rolls_back_on_persistence_failure(
         monkeypatch.setattr(ingestion_module, "canonicalize_chunk", invalid_second)
         try:
             with pytest.raises(IngestionFailure) as failure:
-                await IngestionService(session_factory, storage).ingest(run_id)
+                await _ingest_claimed(
+                    IngestionService(session_factory, storage), session_factory, run_id
+                )
             assert failure.value.category is IngestionFailureCategory.PERSISTENCE_CONFLICT
             async with session_factory() as session:
                 assert await session.scalar(select(func.count(CanonicalChunk.id))) == 0
@@ -575,15 +1218,13 @@ def test_configuration_mismatch_and_existing_chunk_conflict_fail_safely(
         service = IngestionService(session_factory, storage)
         try:
             with pytest.raises(IngestionFailure) as conflict:
-                await service.ingest(run_id)
+                await _ingest_claimed(service, session_factory, run_id)
             assert conflict.value.category is IngestionFailureCategory.PERSISTENCE_CONFLICT
             async with session_factory() as session:
                 persisted = tuple(
                     (
                         await session.scalars(
-                            select(CanonicalChunk).where(
-                                CanonicalChunk.processing_run_id == run_id
-                            )
+                            select(CanonicalChunk).where(CanonicalChunk.processing_run_id == run_id)
                         )
                     ).all()
                 )
@@ -604,8 +1245,9 @@ def test_configuration_mismatch_and_existing_chunk_conflict_fail_safely(
                         status=ProcessingStatus.QUEUED,
                     )
                 )
+                await _add_queued_job(session, mismatched_run_id)
             with pytest.raises(IngestionFailure) as mismatch:
-                await service.ingest(mismatched_run_id)
+                await _ingest_claimed(service, session_factory, mismatched_run_id)
             assert mismatch.value.category is IngestionFailureCategory.CONFIGURATION_MISMATCH
             async with session_factory() as session:
                 assert (
@@ -637,9 +1279,7 @@ def test_canonical_chunk_migration_upgrade_check_and_downgrade(
             async with engine.connect() as connection:
                 return bool(
                     await connection.scalar(
-                        text(
-                            "SELECT to_regclass('public.canonical_chunks') IS NOT NULL"
-                        )
+                        text("SELECT to_regclass('public.canonical_chunks') IS NOT NULL")
                     )
                 )
         finally:
@@ -672,7 +1312,9 @@ def test_real_minio_ingestion_persists_canonical_chunks(
             content=_docx_bytes(),
         )
         try:
-            result = await IngestionService(session_factory, storage).ingest(run_id)
+            result = await _ingest_claimed(
+                IngestionService(session_factory, storage), session_factory, run_id
+            )
             assert result.status is IngestionResultStatus.PERSISTED
             assert result.chunk_count > 0
             async with session_factory() as session:

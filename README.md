@@ -211,6 +211,21 @@ atomically publishes the complete chunk set. Canonical chunk UUIDs, content hash
 fingerprints, ordinals, and JSONB provenance support deterministic replay, citations, and future
 rebuilding of a vector index. Token counts remain `NULL` until a tokenizer is explicitly selected.
 
+Internal ingestion requires trusted ownership explicitly:
+`await ingestion.ingest(processing_run_id, worker_id=worker_id, lease_token=lease_token)`.
+The coordinator must first claim the job; ingestion accepts only its active lease and a
+`processing` run at the `extraction` stage. Preflight rejects missing, inactive, mismatched,
+or expired leases before storage access. Download and extraction hold no database row locks.
+Publication (including an identical already-persisted result) locks `ProcessingJob` then
+`ProcessingRun`, matching the coordinator, and rechecks ownership, run state, and configuration.
+Lease expiration uses PostgreSQL `clock_timestamp()` after lock waits and again just before
+commit, so a worker whose lease expired or was reclaimed during extraction cannot publish.
+`lease_ownership_lost` is a sanitized, non-retryable failure for that invocation; a stale caller
+must not fail or complete a job now owned by another worker. An unchanged active lease may
+repeat ingestion idempotently. Ingestion itself does not advance stages or mark jobs complete.
+Background worker execution, production Qdrant indexing, and the document READY transition
+remain unimplemented; this contract does not imply end-to-end production readiness.
+
 PostgreSQL rejects updates to persisted document-version rows, processing-run identity/configuration,
 and canonical chunks. Atomic job claims use row locking with skip-locked semantics; lease tokens
 fence stale workers, and retry backoff and attempts are bounded. No daemon or dummy handler consumes

@@ -25,9 +25,21 @@ from doclens_ai.chunking.models import (
 )
 from doclens_ai.extraction.models import ExtractionStatus
 from doclens_ai.extraction.parsers import SCHEMA_VERSION, ExtractionLimits, extract_file
-from doclens_ai.models import CanonicalChunk, DocumentVersion, ProcessingRun
+from doclens_ai.models import (
+    CanonicalChunk,
+    DocumentVersion,
+    ProcessingJob,
+    ProcessingRun,
+    ProcessingStage,
+    ProcessingStatus,
+)
 from doclens_ai.services.processing import (
     PROCESSING_CONFIGURATION_VERSION,
+    LeaseOwnershipError,
+    ProcessingJobNotFoundError,
+    _locked_job_and_run,
+    _processing_now,
+    _require_active_lease,
     default_processing_configuration_fingerprint,
 )
 from doclens_ai.storage.s3 import ObjectMetadata, ObjectStorageError
@@ -42,6 +54,8 @@ _MISSING_OBJECT_CODES = {"404", "NoSuchKey", "NoSuchObject", "NotFound"}
 
 class IngestionFailureCategory(StrEnum):
     PROCESSING_RUN_NOT_FOUND = "processing_run_not_found"
+    LEASE_OWNERSHIP_LOST = "lease_ownership_lost"
+    PROCESSING_STATE_MISMATCH = "processing_state_mismatch"
     CONFIGURATION_MISMATCH = "configuration_mismatch"
     SOURCE_OBJECT_MISSING = "source_object_missing"
     SOURCE_IDENTITY_MISMATCH = "source_identity_mismatch"
@@ -99,6 +113,7 @@ class ReadableObjectStorage(Protocol):
 @dataclass(frozen=True, slots=True)
 class _SourceIdentity:
     processing_run_id: UUID
+    processing_job_id: UUID
     document_version_id: UUID
     configuration_version: str
     configuration_fingerprint: str
@@ -146,8 +161,12 @@ class IngestionService:
             strategy=ChunkingStrategy.STRUCTURE_AWARE
         )
 
-    async def ingest(self, processing_run_id: UUID) -> IngestionResult:
-        source = await self._resolve_source(processing_run_id)
+    async def ingest(
+        self, processing_run_id: UUID, *, worker_id: str, lease_token: UUID
+    ) -> IngestionResult:
+        source = await self._resolve_source(
+            processing_run_id, worker_id=worker_id, lease_token=lease_token
+        )
         self._validate_processing_configuration(source)
         suffix = _SUFFIX_BY_CONTENT_TYPE.get(source.content_type)
         if suffix is None:
@@ -156,37 +175,43 @@ class IngestionService:
                 retryable=False,
             )
         chunks = await self._extract_and_chunk(source, suffix=suffix)
-        canonical = tuple(
-            canonicalize_chunk(source.processing_run_id, chunk) for chunk in chunks
-        )
-        return await self._persist(source, canonical)
+        canonical = tuple(canonicalize_chunk(source.processing_run_id, chunk) for chunk in chunks)
+        return await self._persist(source, canonical, worker_id=worker_id, lease_token=lease_token)
 
-    async def _resolve_source(self, processing_run_id: UUID) -> _SourceIdentity:
+    async def _resolve_source(
+        self, processing_run_id: UUID, *, worker_id: str, lease_token: UUID
+    ) -> _SourceIdentity:
         try:
             async with self._session_factory() as session:
                 row = (
                     await session.execute(
-                        select(ProcessingRun, DocumentVersion)
+                        select(ProcessingRun, DocumentVersion, ProcessingJob)
                         .join(
                             DocumentVersion,
                             DocumentVersion.id == ProcessingRun.document_version_id,
                         )
+                        .outerjoin(
+                            ProcessingJob, ProcessingJob.processing_run_id == ProcessingRun.id
+                        )
                         .where(ProcessingRun.id == processing_run_id)
                     )
                 ).first()
+                if row is None:
+                    raise IngestionFailure(
+                        IngestionFailureCategory.PROCESSING_RUN_NOT_FOUND, retryable=False
+                    )
+                run, version, job = row
+                await _require_ingestion_ownership(
+                    session, job, run, worker_id=worker_id, lease_token=lease_token
+                )
         except SQLAlchemyError as exc:
             raise IngestionFailure(
                 IngestionFailureCategory.PERSISTENCE_UNAVAILABLE,
                 retryable=True,
             ) from exc
-        if row is None:
-            raise IngestionFailure(
-                IngestionFailureCategory.PROCESSING_RUN_NOT_FOUND,
-                retryable=False,
-            )
-        run, version = row
         return _SourceIdentity(
             processing_run_id=run.id,
+            processing_job_id=job.id,
             document_version_id=version.id,
             configuration_version=run.configuration_version,
             configuration_fingerprint=run.configuration_fingerprint,
@@ -392,19 +417,26 @@ class IngestionService:
         self,
         source: _SourceIdentity,
         chunks: tuple[CanonicalChunkPayload, ...],
+        *,
+        worker_id: str,
+        lease_token: UUID,
     ) -> IngestionResult:
         try:
             async with self._session_factory() as session, session.begin():
-                run = await session.scalar(
-                    select(ProcessingRun)
-                    .where(ProcessingRun.id == source.processing_run_id)
-                    .with_for_update()
-                )
-                if run is None:
+                try:
+                    job, run = await _locked_job_and_run(session, source.processing_job_id)
+                except ProcessingJobNotFoundError:
                     raise IngestionFailure(
-                        IngestionFailureCategory.PROCESSING_RUN_NOT_FOUND,
+                        IngestionFailureCategory.LEASE_OWNERSHIP_LOST,
                         retryable=False,
+                    ) from None
+                if run.id != source.processing_run_id:
+                    raise IngestionFailure(
+                        IngestionFailureCategory.LEASE_OWNERSHIP_LOST, retryable=False
                     )
+                await _require_ingestion_ownership(
+                    session, job, run, worker_id=worker_id, lease_token=lease_token
+                )
                 if (
                     run.document_version_id != source.document_version_id
                     or run.configuration_version != source.configuration_version
@@ -418,10 +450,7 @@ class IngestionService:
                     (
                         await session.scalars(
                             select(CanonicalChunk)
-                            .where(
-                                CanonicalChunk.processing_run_id
-                                == source.processing_run_id
-                            )
+                            .where(CanonicalChunk.processing_run_id == source.processing_run_id)
                             .order_by(CanonicalChunk.ordinal)
                         )
                     ).all()
@@ -437,6 +466,10 @@ class IngestionService:
                     session.add_all(CanonicalChunk(**_data_mapping(item)) for item in chunks)
                     await session.flush()
                     status = IngestionResultStatus.PERSISTED
+                # Also fence expiry during flush/comparison, including idempotent returns.
+                await _require_ingestion_ownership(
+                    session, job, run, worker_id=worker_id, lease_token=lease_token
+                )
         except IngestionFailure:
             raise
         except IntegrityError as exc:
@@ -455,6 +488,32 @@ class IngestionService:
             status=status,
             chunk_count=len(chunks),
         )
+
+
+async def _require_ingestion_ownership(
+    session: AsyncSession,
+    job: ProcessingJob | None,
+    run: ProcessingRun,
+    *,
+    worker_id: str,
+    lease_token: UUID,
+) -> None:
+    if job is None:
+        raise IngestionFailure(IngestionFailureCategory.LEASE_OWNERSHIP_LOST, retryable=False)
+    try:
+        _require_active_lease(
+            job,
+            worker_id=worker_id,
+            lease_token=lease_token,
+            now=await _processing_now(session),
+        )
+    except (LeaseOwnershipError, ValueError):
+        # A stale caller must not fail/complete a job now owned by someone else.
+        raise IngestionFailure(
+            IngestionFailureCategory.LEASE_OWNERSHIP_LOST, retryable=False
+        ) from None
+    if run.status != ProcessingStatus.PROCESSING or run.stage != ProcessingStage.EXTRACTION:
+        raise IngestionFailure(IngestionFailureCategory.PROCESSING_STATE_MISMATCH, retryable=False)
 
 
 def canonical_chunk_uuid(processing_run_id: UUID, chunk_identity: str) -> UUID:

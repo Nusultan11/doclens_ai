@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
 
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from doclens_ai.chunking.models import (
@@ -155,9 +155,9 @@ class ProcessingCoordinator:
         now: datetime | None = None,
     ) -> ClaimedProcessingJob | None:
         _validate_worker_id(worker_id)
-        claimed_at = _coerce_now(now)
         async with self._session_factory() as session, session.begin():
             while True:
+                claimed_at = await _processing_now(session, now)
                 row = (
                     await session.execute(
                         select(ProcessingJob, ProcessingRun)
@@ -180,12 +180,14 @@ class ProcessingCoordinator:
                         )
                         .order_by(ProcessingJob.created_at, ProcessingJob.id)
                         .limit(1)
-                        .with_for_update(skip_locked=True)
+                        .with_for_update(of=ProcessingJob, skip_locked=True)
                     )
                 ).first()
                 if row is None:
                     return None
                 job, run = row
+                job, run = await _locked_job_and_run(session, job.id)
+                claimed_at = await _processing_now(session, now)
                 if job.attempt_count >= job.max_attempts:
                     _mark_terminal_failure(
                         job,
@@ -230,9 +232,9 @@ class ProcessingCoordinator:
         lease_token: UUID,
         now: datetime | None = None,
     ) -> datetime:
-        heartbeat_at = _coerce_now(now)
         async with self._session_factory() as session, session.begin():
             job = await _locked_job(session, job_id)
+            heartbeat_at = await _processing_now(session, now)
             _require_active_lease(
                 job,
                 worker_id=worker_id,
@@ -253,9 +255,9 @@ class ProcessingCoordinator:
         stage: ProcessingStage,
         now: datetime | None = None,
     ) -> None:
-        transition_at = _coerce_now(now)
         async with self._session_factory() as session, session.begin():
             job, run = await _locked_job_and_run(session, job_id)
+            transition_at = await _processing_now(session, now)
             _require_active_lease(
                 job,
                 worker_id=worker_id,
@@ -277,9 +279,9 @@ class ProcessingCoordinator:
         now: datetime | None = None,
     ) -> ProcessingJobStatus:
         _validate_safe_code(failure_reason)
-        failed_at = _coerce_now(now)
         async with self._session_factory() as session, session.begin():
             job, run = await _locked_job_and_run(session, job_id)
+            failed_at = await _processing_now(session, now)
             _require_active_lease(
                 job,
                 worker_id=worker_id,
@@ -306,9 +308,9 @@ class ProcessingCoordinator:
         lease_token: UUID,
         now: datetime | None = None,
     ) -> None:
-        completed_at = _coerce_now(now)
         async with self._session_factory() as session, session.begin():
             job, run = await _locked_job_and_run(session, job_id)
+            completed_at = await _processing_now(session, now)
             _require_active_lease(
                 job,
                 worker_id=worker_id,
@@ -340,17 +342,26 @@ async def _locked_job_and_run(
     session: AsyncSession,
     job_id: UUID,
 ) -> tuple[ProcessingJob, ProcessingRun]:
-    row = (
-        await session.execute(
-            select(ProcessingJob, ProcessingRun)
-            .join(ProcessingRun, ProcessingRun.id == ProcessingJob.processing_run_id)
-            .where(ProcessingJob.id == job_id)
-            .with_for_update()
-        )
-    ).first()
-    if row is None:
+    # All coordinator and canonical-ingestion writers acquire Job before Run.
+    job = await _locked_job(session, job_id)
+    run = await session.scalar(
+        select(ProcessingRun)
+        .where(ProcessingRun.id == job.processing_run_id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+    if run is None:
         raise ProcessingJobNotFoundError("processing job does not exist")
-    return row
+    return job, run
+
+
+async def _processing_now(session: AsyncSession, value: datetime | None = None) -> datetime:
+    """Sample wall-clock time after locks; explicit coordinator times support existing tests."""
+    if value is not None:
+        return _coerce_now(value)
+    current = await session.scalar(select(func.clock_timestamp()))
+    assert current is not None
+    return current
 
 
 def _require_active_lease(
@@ -395,7 +406,7 @@ def _clear_lease(job: ProcessingJob) -> None:
 
 
 def _validate_worker_id(worker_id: str) -> None:
-    if not worker_id.strip() or len(worker_id) > 255:
+    if not isinstance(worker_id, str) or not worker_id.strip() or len(worker_id) > 255:
         raise ValueError("worker identity must contain 1 to 255 characters")
 
 
