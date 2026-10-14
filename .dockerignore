@@ -12,3 +12,47 @@ build
 dist
 *.egg-info
 tests
+
+# Private source documents, retrieval/RAG Gold, and generated evaluation artifacts.
+# ** also covers zero directories, matching the root and nested copies.
+**/local-corpus
+**/local-evaluation
+**/evaluation-output
+**/eda-output
+**/.eda-output
+**/reports/eda
+**/extraction-output
+**/.extraction-output
+**/chunking-output
+**/.chunking-output
+**/reports/extraction
+**/reports/chunking
+
+# Local model stores are root-only: src/doclens_ai/models is application code.
+# Model assets are supplied by read-only runtime mounts, never Dockerfile COPY.
+models
+model-weights
+weights
+checkpoints
+hf-cache
+.huggingface
+**/.cache/huggingface
+**/*.safetensors
+**/*.gguf
+**/*.ggml
+**/*.ckpt
+**/*.pt
+**/*.pth
+**/*.onnx
+**/pytorch_model*.bin
+**/adapter_model*.bin
+
+# Temporary output, logs and platform metadata; do not exclude source/data formats.
+tmp
+temp
+.tmp
+**/*.tmp
+**/*.bak
+**/*.log
+**/.DS_Store
+**/Thumbs.db
