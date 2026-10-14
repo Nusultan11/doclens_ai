@@ -2,6 +2,7 @@ services:
   api:
     build:
       context: .
+      target: api
     environment:
       APP_NAME: DocLens AI
       DATABASE_URL: postgresql+asyncpg://doclens:doclens-local@postgres:5432/doclens
@@ -21,6 +22,30 @@ services:
       S3_SECURE: "false"
     ports:
       - "8000:8000"
+    depends_on:
+      minio-init:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+
+  worker:
+    build:
+      context: .
+      target: worker
+    restart: unless-stopped
+    stop_grace_period: 5m
+    environment:
+      DATABASE_URL: postgresql+asyncpg://doclens:doclens-local@postgres:5432/doclens
+      LOG_LEVEL: INFO
+      S3_ACCESS_KEY: doclens-local
+      S3_BUCKET_NAME: doclens-documents
+      S3_ENDPOINT_URL: http://minio:9000
+      S3_SECRET_KEY: doclens-local-secret
+      S3_SECURE: "false"
+      WORKER_POLL_INTERVAL_SECONDS: ${WORKER_POLL_INTERVAL_SECONDS:-1}
+      WORKER_HEARTBEAT_INTERVAL_SECONDS: ${WORKER_HEARTBEAT_INTERVAL_SECONDS:-10}
+      WORKER_LEASE_SECONDS: ${WORKER_LEASE_SECONDS:-120}
+      WORKER_DB_TIMEOUT_SECONDS: ${WORKER_DB_TIMEOUT_SECONDS:-5}
     depends_on:
       minio-init:
         condition: service_completed_successfully

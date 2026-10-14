@@ -16,6 +16,7 @@ from doclens_ai.chunking.models import (
     config_as_dict,
 )
 from doclens_ai.models import (
+    CanonicalChunk,
     ProcessingJob,
     ProcessingJobStatus,
     ProcessingOperationKind,
@@ -79,9 +80,7 @@ def default_processing_configuration_fingerprint() -> str:
     """Fingerprint the frozen offline contracts selected for the initial pipeline."""
 
     payload = {
-        "chunking": config_as_dict(
-            ChunkingConfig(strategy=ChunkingStrategy.STRUCTURE_AWARE)
-        ),
+        "chunking": config_as_dict(ChunkingConfig(strategy=ChunkingStrategy.STRUCTURE_AWARE)),
         "extraction_contract_version": "1.0",
         "pipeline_version": PROCESSING_CONFIGURATION_VERSION,
     }
@@ -148,11 +147,16 @@ class ProcessingCoordinator:
         self._session_factory = session_factory
         self._policy = policy or ProcessingPolicy()
 
+    @property
+    def lease_duration(self) -> timedelta:
+        return self._policy.lease_duration
+
     async def claim_next(
         self,
         *,
         worker_id: str,
         now: datetime | None = None,
+        stage: ProcessingStage | None = None,
     ) -> ClaimedProcessingJob | None:
         _validate_worker_id(worker_id)
         async with self._session_factory() as session, session.begin():
@@ -166,6 +170,7 @@ class ProcessingCoordinator:
                             ProcessingRun.id == ProcessingJob.processing_run_id,
                         )
                         .where(
+                            ProcessingRun.stage == stage if stage is not None else True,
                             or_(
                                 ProcessingJob.status == ProcessingJobStatus.QUEUED,
                                 (
@@ -176,7 +181,7 @@ class ProcessingCoordinator:
                                     (ProcessingJob.status == ProcessingJobStatus.LEASED)
                                     & (ProcessingJob.lease_expires_at <= claimed_at)
                                 ),
-                            )
+                            ),
                         )
                         .order_by(ProcessingJob.created_at, ProcessingJob.id)
                         .limit(1)
@@ -188,6 +193,8 @@ class ProcessingCoordinator:
                 job, run = row
                 job, run = await _locked_job_and_run(session, job.id)
                 claimed_at = await _processing_now(session, now)
+                if stage is not None and run.stage != stage:
+                    return None
                 if job.attempt_count >= job.max_attempts:
                     _mark_terminal_failure(
                         job,
@@ -277,6 +284,7 @@ class ProcessingCoordinator:
         lease_token: UUID,
         failure_reason: str,
         now: datetime | None = None,
+        retryable: bool = True,
     ) -> ProcessingJobStatus:
         _validate_safe_code(failure_reason)
         async with self._session_factory() as session, session.begin():
@@ -288,7 +296,7 @@ class ProcessingCoordinator:
                 lease_token=lease_token,
                 now=failed_at,
             )
-            if job.attempt_count >= job.max_attempts:
+            if not retryable or job.attempt_count >= job.max_attempts:
                 _mark_terminal_failure(job, run, reason=failure_reason, now=failed_at)
                 return ProcessingJobStatus.FAILED
 
@@ -299,6 +307,52 @@ class ProcessingCoordinator:
             run.status = ProcessingStatus.RETRY_WAIT
             run.error_code = failure_reason
             return ProcessingJobStatus.RETRY_WAIT
+
+    async def handoff_extraction(
+        self,
+        *,
+        job_id: UUID,
+        worker_id: str,
+        lease_token: UUID,
+    ) -> None:
+        """Publish one atomic EXTRACTION -> EMBEDDING stage boundary, not completion."""
+        async with self._session_factory() as session, session.begin():
+            job, run = await _locked_job_and_run(session, job_id)
+            _require_active_lease(
+                job,
+                worker_id=worker_id,
+                lease_token=lease_token,
+                now=await _processing_now(session),
+            )
+            if run.status != ProcessingStatus.PROCESSING or run.stage != ProcessingStage.EXTRACTION:
+                raise InvalidProcessingTransition("extraction handoff requires an extraction run")
+            if not await session.scalar(
+                select(CanonicalChunk.id).where(CanonicalChunk.processing_run_id == run.id).limit(1)
+            ):
+                raise InvalidProcessingTransition("extraction handoff requires canonical chunks")
+            _require_active_lease(
+                job,
+                worker_id=worker_id,
+                lease_token=lease_token,
+                now=await _processing_now(session),
+            )
+            # Cleaning and chunking already succeeded within the fenced ingestion contract.
+            lease_expires_at = job.lease_expires_at
+            # Reset the per-stage attempt budget only on a successful durable boundary.
+            run.stage = ProcessingStage.EMBEDDING
+            run.status = ProcessingStatus.QUEUED
+            run.error_code = None
+            job.status = ProcessingJobStatus.QUEUED
+            job.attempt_count = 0
+            job.next_retry_at = None
+            job.failure_reason = None
+            job.finished_at = None
+            job.leased_at = None
+            job.last_heartbeat_at = None
+            _clear_lease(job)
+            await session.flush()
+            if await _processing_now(session) >= lease_expires_at:
+                raise LeaseOwnershipError("processing lease expired during handoff")
 
     async def complete(
         self,

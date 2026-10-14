@@ -41,7 +41,7 @@ dense = [
 where = ["src"]
 
 [tool.pytest.ini_options]
-addopts = "-ra"
+addopts = "-ra --import-mode=importlib"
 testpaths = ["tests"]
 markers = [
     "integration: requires a real PostgreSQL instance configured by TEST_DATABASE_URL",

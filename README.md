@@ -2,12 +2,10 @@
 
 DocLens AI currently provides the Backend Core, PostgreSQL document domain, authenticated document intake, a durable PostgreSQL processing control plane, and an internal production extraction service with canonical PostgreSQL chunk persistence. This stage includes a FastAPI service, OIDC JWT verification, PostgreSQL workspace authorization, async PostgreSQL connectivity, health endpoints, immutable document versions, private S3-compatible storage, upload-session coordination, and lease-based processing jobs.
 
-Actual background workers, embeddings, Qdrant, retrieval, RAG, and LLM features are not implemented
-yet. New processing jobs remain queued until a real worker invokes the internal ingestion service.
-The service does not consume jobs or mark runs/jobs complete. Standalone offline extraction and
-chunking commands remain engineering evaluation tools and are not connected to the queue.
-The future worker environment that invokes ingestion must install the existing `[eda]` optional
-dependencies; they are intentionally not added to the API image in this step.
+A dedicated ingestion worker consumes EXTRACTION jobs, persists canonical chunks, and hands runs
+off to EMBEDDING. Production embeddings, Qdrant indexing, retrieval, RAG, and READY transitions
+are not implemented. Standalone offline extraction and chunking remain engineering evaluation
+tools. The worker image installs existing `[eda]` dependencies; the API image does not.
 
 ## Prerequisites
 
@@ -22,6 +20,18 @@ docker compose up --build
 The API is available at `http://localhost:8000`. MinIO's development console is available at `http://localhost:9001`. Compose uses development-only PostgreSQL and MinIO credentials and persists both services in named volumes. Because current MinIO Community Edition is source-only, the Docker build compiles the pinned upstream `RELEASE.2025-09-07T16-13-09Z` source instead of relying on a mutable third-party binary mirror. The one-shot `minio-init` service creates the private `doclens-documents` bucket idempotently; rerunning it is safe.
 
 The health endpoints start when OIDC settings are absent, but every protected endpoint fails closed with `503` until all three trusted values (`OIDC_ISSUER`, `OIDC_AUDIENCE`, and `OIDC_JWKS_URL`) are configured. Compose passes these settings from the host environment and does not provide an authentication bypass.
+
+Apply migrations before enabling the worker on a new or upgraded database:
+
+```bash
+docker compose up -d postgres minio minio-init
+docker compose run --rm api python -m alembic upgrade head
+docker compose up --build -d
+docker compose logs -f worker
+```
+
+Compose startup does not apply migrations automatically. An unavailable database or missing schema
+causes sanitized polling failures and retries, never a false successful processing state.
 
 Health endpoints:
 
@@ -223,13 +233,65 @@ commit, so a worker whose lease expired or was reclaimed during extraction canno
 `lease_ownership_lost` is a sanitized, non-retryable failure for that invocation; a stale caller
 must not fail or complete a job now owned by another worker. An unchanged active lease may
 repeat ingestion idempotently. Ingestion itself does not advance stages or mark jobs complete.
-Background worker execution, production Qdrant indexing, and the document READY transition
-remain unimplemented; this contract does not imply end-to-end production readiness.
+The ingestion worker uses this contract, but production Qdrant indexing and the document READY
+transition remain unimplemented; this contract does not imply end-to-end production readiness.
 
 PostgreSQL rejects updates to persisted document-version rows, processing-run identity/configuration,
 and canonical chunks. Atomic job claims use row locking with skip-locked semantics; lease tokens
-fence stale workers, and retry backoff and attempts are bounded. No daemon or dummy handler consumes
-these jobs, and nothing marks a document ready or complete. File bytes remain in the private object
+fence stale workers, and retry backoff and attempts are bounded. The ingestion worker consumes only
+EXTRACTION jobs; nothing marks a document ready or complete. File bytes remain in the private object
 bucket; embeddings and vector state are not persisted. Character limits are not token limits, and
 documents requiring extraction review are rejected rather than silently published. Future schema
 changes must be new Alembic revisions rather than edits to migration history.
+
+## Ingestion worker
+
+For local execution, configure the existing `DATABASE_URL` and `S3_*` settings, initialize the
+private bucket, apply migrations, and install parsing dependencies:
+
+```bash
+python -m pip install -e '.[eda]'
+python -m alembic upgrade head
+python -m doclens_ai.worker
+```
+
+Each process generates an opaque UUID-based worker identity and processes one document at a time.
+Multiple processes compete through PostgreSQL skip-locked claims. The stage filter applies before
+claiming, so queued EMBEDDING work remains untouched. Original documents and canonical chunks stay
+in their existing storage layers; no model download, vector indexing, or new queue is introduced.
+
+Configuration is loaded from the environment or `.env`:
+
+| Variable | Default | Bounds |
+| --- | --- | --- |
+| `WORKER_POLL_INTERVAL_SECONDS` | 1 | > 0, <= 60 |
+| `WORKER_HEARTBEAT_INTERVAL_SECONDS` | 10 | > 0, <= 60 |
+| `WORKER_LEASE_SECONDS` | 120 | > 0, <= 3600 |
+| `WORKER_DB_TIMEOUT_SECONDS` | 5 | > 0, <= 60 |
+
+All values must be finite. Heartbeat interval plus DB timeout must be strictly below half the lease
+TTL, and the worker and coordinator use the same TTL. Local timers schedule polling/heartbeats;
+PostgreSQL `clock_timestamp()` determines whether ownership is valid. A heartbeat runs throughout
+download, extraction, and chunking without keeping a database transaction open. Heartbeat or DB
+failure prevents handoff/failure routing through uncertain ownership; fenced persistence remains
+the final authority. Logs contain only fixed operational codes, not exception details or content.
+
+Retryable ingestion failures use existing bounded per-stage attempts and exponential backoff.
+Permanent errors fail immediately through the fenced coordinator. Unexpected ingestion exceptions
+use `worker_unexpected_failure` with safe retry. Ownership loss never changes the current owner's
+job. A failed document does not stop unrelated jobs. A crash consumes an attempt; after lease expiry
+a replacement can replay ingestion idempotently (subject to the existing attempt limit), including
+the crash window after canonical persistence but before handoff.
+
+Successful handoff locks Job then Run, validates active ownership and EXTRACTION state, and checks
+for canonical chunks. CLEANING/CHUNKING have already succeeded inside ingestion; the transaction
+records their completed boundary by advancing directly to EMBEDDING without exposing intermediate
+committed states. Run/job become `queued`, the lease is cleared, and `attempt_count` resets to zero
+for the next stage while `max_attempts` remains unchanged. Sequential `advance_stage()` still
+requires one-step transitions for other callers. No COMPLETED or READY state is set.
+
+SIGINT/SIGTERM stops new polling and drains the current document with heartbeat cleanup. An
+already-started claim may finish. Task cancellation also drains the parser thread before cleanup
+and skips handoff. Compose allows five minutes to drain; a forced kill beyond that grace period
+uses lease-expiry recovery. This worker does not impose a hard CPU parser timeout or run an
+embedding/indexing worker; EMBEDDING jobs intentionally remain queued.

@@ -38,3 +38,13 @@ USER doclens
 EXPOSE 8000
 
 CMD ["uvicorn", "doclens_ai.main:app", "--host", "0.0.0.0", "--port", "8000"]
+
+FROM api AS worker
+
+USER root
+
+RUN pip install --no-cache-dir '.[eda]'
+
+USER doclens
+
+CMD ["python", "-m", "doclens_ai.worker"]
