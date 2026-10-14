@@ -623,3 +623,31 @@ run `python -m doclens_ai.rag_eval --gold local-evaluation/rag_gold_v1.jsonl --u
 The runner is read-only, never filters retrieval using Gold labels, writes only aggregate metrics,
 and refuses to overwrite output directories. Private annotations and model assets remain ignored.
 No real Qwen3-8B smoke, real answer correctness, groundedness or RU/KK quality is established yet.
+
+## Offline extraction fidelity benchmark
+
+This evaluator uses unchanged structured extraction and structure-aware chunking, with no services,
+model weights, formula execution or production parser switch. Install the existing `[eda]` extras
+in the local development environment. See `docs/eda/extraction_fidelity_protocol_v1.md` for strict
+private Gold fields, metric denominators and review/resource limitations, and
+`docs/eda/extraction_fidelity_benchmark_v1.md` for measured Corpus v1 findings.
+
+```powershell
+python -m doclens_ai.extraction.fidelity_eval --corpus local-corpus --manifest docs/eda/corpus_v1_manifest.csv --output-dir evaluation-output/fidelity-new-run --annotation-template local-evaluation/extraction_fidelity_new_draft.jsonl --experiments
+```
+
+The template is intentionally unreviewed and rejected by the validator. Compare originals locally,
+populate text/order/table/cell expectations, remove unreviewed records and honestly record human
+review before freezing Gold. Real excerpts stay in ignored `local-evaluation/`. To score that Gold:
+
+```powershell
+python -m doclens_ai.extraction.fidelity_eval --corpus local-corpus --manifest docs/eda/corpus_v1_manifest.csv --gold local-evaluation/extraction_fidelity_v1.jsonl --output-dir evaluation-output/fidelity-new-reviewed-run
+```
+
+Always use a new output directory/template name: existing files are not overwritten. Optional
+`--omit-runtime` excludes timing observations; compare `deterministic_fingerprint` and every field
+other than runtime across identical runs. Reports contain allowlisted metadata only, not document
+text, private paths, filenames, worksheet names, formulas or values. Missing reviewed Gold means
+`NOT_EVALUATED`, not inferred quality. Synthetic tests require explicit `--allow-synthetic` and
+are labeled synthetic; they must never be presented as real fidelity. No display-value or retrieval
+improvement is claimed from status counts or parser layout experiments.
