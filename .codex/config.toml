@@ -1,0 +1,5 @@
+# Project configuration is loaded only after each developer trusts this checkout.
+# Public documentation access; no local runtime or committed credentials required.
+# Keep any authenticated overrides in developer-local configuration, not Git.
+[mcp_servers.context7]
+url = "https://mcp.context7.com/mcp"
