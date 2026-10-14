@@ -1,10 +1,10 @@
 # DocLens AI
 
-DocLens AI currently provides the Backend Core, PostgreSQL document domain, authenticated document intake, durable processing workers, canonical PostgreSQL chunks, and opt-in versioned CPU embeddings with persistent Qdrant indexing. This stage includes OIDC JWT verification, PostgreSQL workspace authorization, health endpoints, immutable document versions, private S3-compatible storage, upload coordination, and lease-fenced extraction/indexing. Search API, RAG, LLM generation, and a document READY workflow are not implemented.
+DocLens AI currently provides the Backend Core, authenticated document intake, durable processing workers, canonical PostgreSQL chunks, versioned CPU embeddings with persistent Qdrant indexing, and an opt-in authenticated tenant-safe dense Search API. PostgreSQL remains authoritative for authorization, source text and ACTIVE revisions. RAG, LLM generation, conversations, deletion and a document READY workflow are not implemented.
 
 A dedicated ingestion worker consumes EXTRACTION jobs, persists canonical chunks, and hands runs
 off to EMBEDDING. The opt-in index worker embeds and verifies versioned Qdrant points before
-atomic activation/completion. Retrieval, RAG, and READY transitions
+atomic activation/completion. RAG, generation, and READY transitions
 are not implemented. Standalone offline extraction and chunking remain engineering evaluation
 tools. The worker image installs existing `[eda]` dependencies; the API image does not.
 
@@ -433,7 +433,117 @@ these are point-in-time samples, not peak memory or representative corpus benchm
 
 Fault/concurrency integration tests use an explicitly fake deterministic embedding provider with
 real PostgreSQL, MinIO and Qdrant; they test persistence/protocol/fencing, not real-model quality.
-The separate Docker smoke uses actual pinned weights. Existing
+The separate indexing Docker smoke uses actual pinned weights. Existing
 `docs/evaluation/dense_retrieval_baseline_v1.md` remains the retrieval-quality evidence: E5 is a
-baseline candidate, not a demonstrated BM25 improvement. This step adds no Search API, retrieval
-ranking, RAG, LLM generation, fine-tuning, reranker or hybrid retrieval.
+baseline candidate, not a demonstrated BM25 improvement. That indexing step added no Search API;
+the following independent retrieval step adds dense search without RAG, generation or reranking.
+
+## Authenticated production dense search
+
+`POST /api/v1/search` uses the same OIDC issuer/JWKS verification and PostgreSQL memberships as
+document intake. Example authenticated body:
+
+```json
+{
+  "workspace_id": "00000000-0000-0000-0000-000000000003",
+  "query": "What amount is shown in the document?",
+  "top_k": 20,
+  "limit": 10
+}
+```
+
+Optional `document_ids` is a nonempty, unique list of at most 50 UUID selectors; foreign/missing IDs
+are excluded without disclosing whether they exist. The backend derives the authorized ACTIVE
+revision/document intersection, not client Qdrant filters. Queries are nonblank strings of at most
+2,000 characters. Candidate `top_k` is 1..20, final `limit` is 1..20 and cannot exceed `top_k`.
+Booleans/coercible numeric strings and unknown request fields are rejected. Membership roles
+owner/editor/viewer allow search; missing/invalid token is 401, unauthorized workspace 403,
+invalid input 422, and unavailable/unconfigured model, Qdrant or database returns sanitized 503.
+An empty verified result is 200 with `{"results": []}`; it does not establish unanswerability.
+
+Results contain `chunk_id`, `document_id`, `document_version_id`, finite cosine `score`, canonical
+PostgreSQL `text`, and `source_locator` with format and normalized source spans. PDF page,
+DOCX block/table/row/column, and XLSX sheet name/index and cell/range locators are preserved where
+available. The current extraction contract does not carry DOCX heading/section titles; search does
+not invent them. Worksheet names and source text are returned only after authorization. No storage
+keys, model paths, credentials, raw error messages or unverified Qdrant payloads are exposed.
+There is no existing request-ID contract, so this step does not introduce one.
+
+### Optional same-application ML runtime
+
+Default API remains lightweight and starts without model assets or Torch/Transformers/EDA parsers.
+Search fails closed when its runtime is absent. `search-api` is an opt-in Docker target for the same
+FastAPI application, reusing the CPU dependencies from `index-worker`, not a new microservice.
+After the existing verified indexing workflow and model preflight:
+
+```powershell
+$env:DOCLENS_E5_MODEL_DIR = 'C:/private/doclens-models/multilingual-e5-small'
+docker compose --profile ml up -d qdrant index-worker
+docker compose -f compose.yaml -f compose.search.yaml up --build -d
+```
+
+The overlay activates the existing persistent Qdrant service and mounts pinned model files
+read-only with `create_host_path: false`. It preserves OIDC, database and upload settings. Apply
+migrations and provision trusted memberships before use. It caps the ML API at four CPUs/4 GiB.
+Local Compose credentials/HTTP are development-only; production requires private network access,
+appropriate OIDC provisioning and TLS/secret configuration. Qdrant is not published to the host.
+
+Search loads E5 once during application lifespan, verifies the same five pinned file hashes and
+model revision as indexing, and uses `query: `, not `passage: `. Exact full configuration and runtime
+library fingerprint must match every selected ACTIVE revision/collection; incompatible or mixed
+scopes fail closed. No downloads or remote model code are allowed. Defaults intentionally match
+indexing: batch 2, CPU threads 4, float32, 384 dimensions, 512 tokens, mean pooling, L2 normalization.
+
+| Search environment setting | Default / bound |
+| --- | --- |
+| `SEARCH_ENABLED` | false |
+| `SEARCH_MODEL_DIR` | required when enabled |
+| `SEARCH_QDRANT_URL` | private `http://qdrant:6333` |
+| `SEARCH_QDRANT_API_KEY` | optional secret |
+| `SEARCH_COLLECTION_PREFIX` | `doclens_e5_v1`; must match indexing |
+| `SEARCH_BATCH_SIZE`, `SEARCH_CPU_THREADS` | 2 / 1..8; 4 / 1..8 |
+| `SEARCH_INFERENCE_CONCURRENCY` | 1 / 1..2 |
+| `SEARCH_QUEUE_TIMEOUT_SECONDS` | 1 / >0..10, finite |
+| `SEARCH_QDRANT_TIMEOUT_SECONDS`, `SEARCH_DB_TIMEOUT_SECONDS` | 5 / >0..30, finite |
+| `SEARCH_MAX_ACTIVE_REVISIONS` | 128 / 1..512 |
+
+Inference runs off the event loop under a bounded semaphore. Queue timeout produces 503;
+cancellation retains the permit until the CPU thread drains, preventing abandoned inference from
+creating unbounded concurrency. There is no unsafe hard thread-kill timeout. Deployment ingress
+must also bound overall request/body/concurrency budgets. Queries are never logged.
+
+### Authorization freshness and evaluation
+
+Qdrant receives workspace, ACTIVE revision IDs and optional authorized document IDs from PostgreSQL,
+with exact dense nearest-neighbor search and at most 20 candidates. It returns metadata/scores only,
+never source text or full-corpus scores. Invalid payloads are dropped; malformed protocol/scores
+fail closed. Duplicate point IDs are removed, and equal scores are ordered deterministically within
+the bounded returned candidate set. Ties at the candidate boundary can still depend on Qdrant's
+selected subset; this is not a global full-score ordering guarantee.
+
+Each hit is resolved through canonical chunk -> ProcessingRun -> DocumentVersion -> Document and
+still-ACTIVE IndexRevision, with current membership, requested scope, configuration, deterministic
+point identity and source hash validation. A separate fresh transaction repeats authorization and
+ACTIVE checks immediately before producing results. No business row locks span inference/network.
+Revocation or cutover after the final database check but before/during network delivery remains an
+unavoidable residual boundary; the API does not claim network-level atomicity or a tombstone workflow.
+
+The standalone runner validates all approved corpus hashes/sizes, reproduces canonical source-anchor
+alignment using actual version UUIDs, then calls this service with query text/workspace only. Gold
+labels, source-document identities, categories and splits never choose candidates or filters.
+Default evaluation is read-only against a specified existing workspace/user:
+
+```powershell
+python -m doclens_ai.retrieval_eval --model-dir 'C:/private/doclens-models/multilingual-e5-small' `
+  --user-id TRUSTED_USER_UUID --workspace-id AUTHORIZED_WORKSPACE_UUID `
+  --output-dir evaluation-output/production-retrieval-new-run
+```
+
+Explicit `--prepare-corpus` instead provisions the approved complete corpus through existing upload,
+extraction and indexing services, only on an empty disposable `doclens_eval_<32 hex>` database.
+Initialize its private S3 bucket and apply migrations first. It never prepares a production domain,
+edits migrations or silently overwrites a previous output directory. Private outputs contain metrics
+only, not queries, returned text, source paths or worksheet names. Measured reviewed-Gold results,
+security tests, exact counts, latency and limitations are in
+`docs/evaluation/production_retrieval_v1.md`. E5 remains a baseline; no BM25 superiority or answer
+generation quality is claimed.

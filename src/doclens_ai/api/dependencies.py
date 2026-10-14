@@ -65,7 +65,7 @@ async def get_current_user(
                 User.subject == identity.subject,
             )
         )
-    except SQLAlchemyError as error:
+    except (SQLAlchemyError, OSError) as error:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="database is unavailable",
@@ -98,7 +98,7 @@ async def require_workspace_access(
                 WorkspaceMembership.workspace_id == workspace_id,
             )
         )
-    except SQLAlchemyError as error:
+    except (SQLAlchemyError, OSError) as error:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="database is unavailable",
@@ -128,4 +128,11 @@ def get_upload_service(request: Request) -> UploadService:
             detail="object storage is unavailable",
         ) from error
     request.app.state.upload_service = service
+    return service
+
+
+def get_retrieval_service(request: Request):
+    service = getattr(request.app.state, "retrieval_service", None)
+    if service is None:
+        raise HTTPException(status_code=503, detail="search service is unavailable")
     return service

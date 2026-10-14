@@ -1,0 +1,27 @@
+# Explicit overlay for the same API; default compose.yaml remains ML-free.
+services:
+  api:
+    build:
+      target: search-api
+    cpus: 4
+    mem_limit: 4g
+    stop_grace_period: 5m
+    environment:
+      SEARCH_ENABLED: "true"
+      SEARCH_MODEL_DIR: /models/e5
+      SEARCH_QDRANT_URL: http://qdrant:6333
+      SEARCH_BATCH_SIZE: ${INDEX_BATCH_SIZE:-2}
+      SEARCH_CPU_THREADS: ${INDEX_CPU_THREADS:-4}
+      SEARCH_INFERENCE_CONCURRENCY: "1"
+    volumes:
+      - type: bind
+        source: ${DOCLENS_E5_MODEL_DIR:-./evaluation-output/dense-v1-model}
+        target: /models/e5
+        read_only: true
+        bind:
+          create_host_path: false
+    depends_on:
+      qdrant:
+        condition: service_started
+  qdrant:
+    profiles: !reset []

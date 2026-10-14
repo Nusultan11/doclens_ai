@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
@@ -14,8 +15,24 @@ from doclens_ai.security import JwtVerifier
 @asynccontextmanager
 async def lifespan(application: FastAPI) -> AsyncIterator[None]:
     try:
+        from doclens_ai.core.search_config import SearchSettings
+
+        settings = SearchSettings()
+        if settings.enabled:
+            from doclens_ai.search_runtime import build_search_runtime
+
+            application.state.retrieval_service = await build_search_runtime(
+                application.state.database.session_factory, settings
+            )
+    except Exception:
+        # No exception details: model paths/credentials and document-derived values are private.
+        logging.getLogger(__name__).warning("search_runtime_unavailable")
+    try:
         yield
     finally:
+        service = application.state.retrieval_service
+        if service is not None:
+            await service.aclose()
         verifier: JwtVerifier | None = application.state.jwt_verifier
         if verifier is not None:
             await verifier.aclose()
@@ -34,6 +51,7 @@ def create_app(
     application = FastAPI(title=application_settings.app_name, lifespan=lifespan)
     application.state.settings = application_settings
     application.state.database = application_database
+    application.state.retrieval_service = None
     application.state.jwt_verifier = jwt_verifier or _build_jwt_verifier(application_settings)
     application.include_router(api_router, prefix="/api/v1")
     return application

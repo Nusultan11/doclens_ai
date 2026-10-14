@@ -66,3 +66,7 @@ ENV HF_HUB_OFFLINE=1 \
 USER doclens
 
 CMD ["python", "-m", "doclens_ai.index_worker"]
+
+FROM index-worker AS search-api
+
+CMD ["uvicorn", "doclens_ai.main:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -40,6 +40,13 @@ class VectorPoint:
     payload: dict[str, str]
 
 
+@dataclass(frozen=True, slots=True)
+class SearchHit:
+    id: str
+    score: float
+    payload: dict[str, str]
+
+
 class ProductionQdrant:
     """Persistent collection, lease-revision-scoped points; never delete/recreate on close."""
 
@@ -240,6 +247,110 @@ class ProductionQdrant:
             return count
         except (DenseError, KeyError, TypeError, ValueError, AttributeError):
             raise VectorFailure("candidate_verification_failed", retryable=False) from None
+
+    async def search(
+        self,
+        vector: Vector,
+        *,
+        workspace_id: UUID,
+        revision_ids: Sequence[UUID],
+        document_ids: Sequence[UUID] = (),
+        limit: int = 20,
+    ) -> tuple[SearchHit, ...]:
+        if (
+            not isinstance(workspace_id, UUID)
+            or not revision_ids
+            or len(revision_ids) > 512
+            or any(not isinstance(value, UUID) for value in (*revision_ids, *document_ids))
+            or len(document_ids) > 50
+            or type(limit) is not int
+            or not 1 <= limit <= 20
+        ):
+            raise VectorFailure("invalid_search_scope", retryable=False)
+        try:
+            query = validate_vectors([vector], count=1, dimensions=self.dimensions)[0]
+        except (DenseError, TypeError, ValueError):
+            raise VectorFailure("invalid_query_vector", retryable=False) from None
+        # Read-only: unlike indexing ensure_collection, search never creates a missing collection.
+        root = await self._request("GET", "/")
+        if root.get("version") != QDRANT_VERSION:
+            raise VectorFailure("qdrant_version_mismatch", retryable=False)
+        await self._collection_details()
+        must = [
+            {"key": "workspace_id", "match": {"value": str(workspace_id)}},
+            {"key": "index_revision_id", "match": {"any": sorted({str(v) for v in revision_ids})}},
+        ]
+        if document_ids:
+            must.append(
+                {"key": "document_id", "match": {"any": sorted({str(v) for v in document_ids})}}
+            )
+        body = await self._request(
+            "POST",
+            self.path + "/points/query",
+            json={
+                "query": query,
+                "filter": {"must": must},
+                "limit": limit,
+                "params": {"exact": True},
+                "with_payload": True,
+                "with_vector": False,
+            },
+        )
+        try:
+            points = body["result"]["points"]
+            if not isinstance(points, list) or len(points) > limit:
+                raise ValueError("invalid bounded search response")
+            hits = {}
+            for item in points:
+                if not isinstance(item, dict):
+                    raise ValueError("invalid search hit")
+                score = item["score"]
+                if (
+                    isinstance(score, bool)
+                    or not isinstance(score, int | float)
+                    or not math.isfinite(score)
+                    or not -1.00001 <= score <= 1.00001
+                ):
+                    raise ValueError("invalid cosine score")
+                try:
+                    identity = str(UUID(item["id"]))
+                    payload = item["payload"]
+                    required = {
+                        "workspace_id",
+                        "document_id",
+                        "document_version_id",
+                        "processing_run_id",
+                        "index_revision_id",
+                        "chunk_id",
+                        "embedding_revision",
+                        "embedding_configuration_fingerprint",
+                    }
+                    if not isinstance(payload, dict) or set(payload) != required:
+                        continue
+                    for key in required - {
+                        "embedding_revision",
+                        "embedding_configuration_fingerprint",
+                    }:
+                        if str(UUID(payload[key])) != payload[key]:
+                            raise ValueError("invalid scope UUID")
+                    if (
+                        payload["workspace_id"] != str(workspace_id)
+                        or UUID(payload["index_revision_id"]) not in revision_ids
+                        or (document_ids and UUID(payload["document_id"]) not in document_ids)
+                        or not re.fullmatch(r"[0-9a-f]{40}", payload["embedding_revision"])
+                        or not re.fullmatch(
+                            r"[0-9a-f]{64}", payload["embedding_configuration_fingerprint"]
+                        )
+                    ):
+                        continue
+                except (ValueError, TypeError, AttributeError, KeyError):
+                    continue
+                hit = SearchHit(identity, float(score), dict(payload))
+                if identity not in hits or hit.score > hits[identity].score:
+                    hits[identity] = hit
+            return tuple(sorted(hits.values(), key=lambda hit: (-hit.score, hit.id)))
+        except (ValueError, KeyError, TypeError, AttributeError):
+            raise VectorFailure("invalid_search_response", retryable=False) from None
 
     async def close(self) -> None:
         if self._owned:
