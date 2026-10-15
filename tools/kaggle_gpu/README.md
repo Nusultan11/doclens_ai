@@ -250,3 +250,161 @@ privacy/GPU/internet/input checks. The original CUDA smoke remains version 1,
 `COMPLETE`, with matching source hash and its previously measured valid CUDA result.
 No production HTTP endpoint, PostgreSQL/Qdrant retrieval, corpus or reviewed RAG
 Gold was exercised. Human-reviewed RAG quality remains `NOT_EVALUATED`.
+
+## Prompt-only contract A/B
+
+Hypothesis: explicit format instructions improve strict compatibility. Candidate
+appends a field/type/offset checklist and one synthetic example to the production
+prompt; weights, evidence, sampling, decoder and validators are unchanged.
+`json_object` alone does not convey the Python `ModelAnswer` schema to the server.
+
+The previous v2/v3 captures have identical observed defects: `positive-label` has a
+free-text reason instead of null; `positive-value` copies four prohibited evidence
+fields and omits five citation fields, also with an invalid reason; `missing-date`
+mixes answerable=true with null answer/empty citations; `injection` additionally has
+a literal quote/offset mismatch, out-of-bounds answer range and an incorrect answer
+to the synthetic question. `missing-budget` is valid. These are overlapping raw
+diagnostics, not repaired `ModelAnswer` instances. No unknown IDs, invalid JSON or
+uncovered in-bounds answer span were observed in those captures. Citation mismatches
+were diagnosed literally even though production already rejected the schema.
+
+Freeze v1 contains the original 5 development cases plus 14 independent held-out
+cases (9 positives, 5 refusals): words, integers, decimals, identifiers, punctuation,
+Cyrillic/emoji Unicode code points, multi-chunk scope selection, irrelevant/missing
+information, evidence injection, unsupported premises and conflicting facts. Labels
+are authored synthetic exact-answer checks, **not human-reviewed RAG Gold**.
+Before inference, acceptance requires in **each** repeat: strict held-out schema and
+expected behavior both improve; each reaches at least 13/14; all 5 held-out refusals
+are correct; zero incorrect accepted held-out answers, no increase overall, no
+per-case expected-behavior regressions (including development), and no candidate
+HTTP failures. Both repeats pass => `PROMOTE_FOR_FURTHER_EVALUATION`; disagreement
+=> `INCONCLUSIVE`; otherwise `REJECT`. None authorizes production promotion.
+
+Baseline prompt hash: `33622b5889415d5ec23df5995dfa647d4d8b0b3369838f03934b355be052ec89`.
+Candidate hash: `05af33a23d469753031b894712c592a8d0da24f1591cfa9142ade612ec0a5db3`.
+Held-out fingerprint: `6bc8dd17010eb18abee9e06eda2454b5a7cfab511ac7b14f299f843782204488`.
+Final configuration fingerprint: `ed92b960021a747856aa4c3732d1213c9f8a85062f8b140344d85d40959da807`.
+The candidate, labels and thresholds are not revised after viewing held-out outputs.
+
+The exact hash-pinned old runner is reused via case/configuration hooks and an
+ASCII-only log reader, not copied into a second implementation. Packaging includes
+only that runner and the new benchmark in one generated `code_file`. Original
+files/captures stay unchanged. Both prompts share one model/server/T4 and original
+limits. First variant alternates by scenario, with identical order across repeats.
+Prompt length/prefix cache confound latency; memory peaks are shared-run cost.
+
+```powershell
+python tools/kaggle_gpu/llm_contract_ab/benchmark.py --prepare tools/kaggle_gpu/outputs/contract-ab-frozen-v2
+kaggle kernels push -p tools/kaggle_gpu/outputs/contract-ab-frozen-v2 --accelerator NvidiaTeslaT4
+kaggle kernels status nurs2005/doclens-llm-contract-ab
+kaggle kernels logs nurs2005/doclens-llm-contract-ab --follow
+kaggle kernels output nurs2005/doclens-llm-contract-ab -p tools/kaggle_gpu/outputs/contract-ab-run-1 --file-pattern '^(contract_ab\.json|llama-server\.log)$'
+```
+
+Preparation refuses an existing directory. Reuse the **unchanged** bundle for run 2
+after run 1 is complete/downloaded; save into `outputs/contract-ab-run-2`. Do not
+push the implementation directory. Private metadata uses only existing dataset
+`/1`; the pre-inference freeze pins the payload. Download only filtered JSON/logs.
+
+```powershell
+$env:DOCLENS_KAGGLE_AB_REPORTS = 'tools/kaggle_gpu/outputs/contract-ab-run-1/contract_ab.json;tools/kaggle_gpu/outputs/contract-ab-run-2/contract_ab.json'
+$env:DOCLENS_KAGGLE_AB_FREEZE = 'tools/kaggle_gpu/outputs/contract-ab-frozen-v2/freeze.json'
+python -m pytest -q -s -p no:cacheprovider tests/integration/test_kaggle_llm_contract_ab.py
+Remove-Item Env:DOCLENS_KAGGLE_AB_REPORTS, Env:DOCLENS_KAGGLE_AB_FREEZE
+```
+
+Replay uses exact messages/raw bodies with production `LocalGenerator`, `strict_json`,
+`ModelAnswer`, `pack_context` and citation checks. Raw ID matches are independent;
+exact-answer errors are not automatically hallucination. Unsupported accepted
+answers are counted separately. Default tests are offline and skip capture replay.
+Generated metrics/captures are ignored; no default job, authentication or LLM load.
+
+Diagnostic v1 completed 38 HTTP captures but failed post-run on invalid UTF-8 debug
+log bytes. Its failure/raw files are preserved, not relabelled. Bundle v2 fixes only
+the adapter's ASCII marker read; a regression reproduces split-token log bytes.
+Prompts, labels and thresholds remain identical to freeze v1; no held-out tuning.
+
+### Measured A/B outcome (2026-10-15)
+
+Kernel versions **2 and 3: COMPLETE**, 38 scored requests each; both decisions
+are **REJECT**. All 38 generated texts and all per-case verdicts match between
+repeats; raw envelopes differ. Both runs verified the model/archive/server hashes
+listed above and single T4 CUDA0 offload. Payload SHA-256:
+`126db3b72d5a8cecacd093585597540a90e44919078c543d90b6fc78f0dd323f`;
+benchmark source SHA-256:
+`70162b81fffdf86159e4c3d0b5cf1b8e1205acab8cef99dc0ebe0f10c369cf7d`.
+
+Counts below are **per repeat**, identical in both runs. ID matches are raw,
+nonempty citation-list identity checks, not valid quotations or semantic fidelity.
+
+| Metric | Dev baseline / candidate (5) | Held-out baseline / candidate (14) |
+| --- | ---: | ---: |
+| Valid JSON | 5 / 5 | 14 / 14 |
+| Strict schema | 1 / 5 | 5 / 13 |
+| Nonempty reference ID matches | 3 / 2 | 11 / 11 |
+| Correct accepted positives | 0 / 2 | 0 / 0 |
+| Correct accepted refusals | 1 / 3 | 2 / 3 |
+| Expected behavior | 1 / 5 | 2 / 3 |
+| Incorrect / unsupported accepted | 0 / 0 | 0 / 0 |
+| Invalid-output rejections | 4 / 0 | 12 / 11 |
+| HTTP failures | 0 / 0 | 0 / 0 |
+
+Held-out candidate has 10 citation-stage rejections and one schema rejection
+(`heldout-scoped-number`). None of the nine positive cases is usable. Candidate
+raw quote/offset mismatches increase 4 -> 9: newly present in `heldout-word`,
+`heldout-identifier`, `heldout-multiple`, `heldout-unsupported` and
+`heldout-scoped-number`; an uncovered answer span appears in `heldout-unsupported`.
+The `other` diagnostic category is predominantly out-of-bounds answer ranges.
+`heldout-unicode` also has an incorrect exact synthetic answer; `heldout-unsupported`
+and `heldout-conflict` do not produce correct refusals. These generated answers
+remain rejected, so zero incorrect **accepted** answers does not mean no incorrect
+answers were generated. No schema or accepted expected-behavior per-case regressions
+were observed; raw citation symptoms nevertheless worsened as listed.
+
+| Cost (19 requests per variant) | Run v2 | Run v3 |
+| --- | ---: | ---: |
+| Baseline P50 / P95, seconds | 2.051247 / 2.460120 | 1.973858 / 2.362351 |
+| Candidate P50 / P95, seconds | 1.495571 / 1.726909 | 1.448150 / 1.656214 |
+| Startup / separate cold generation, seconds | 41.570657 / 22.994677 | 39.612018 / 21.796303 |
+| Shared server-tree RSS peak, bytes | 2170347520 | 2170298368 |
+| Shared primary GPU used peak, MiB | 2381 | 2381 |
+| Baseline generation tokens/sec, min–max | 85.9205–95.2562 | 89.8304–97.1484 |
+| Candidate generation tokens/sec, min–max | 82.1852–92.1712 | 86.1617–94.0846 |
+
+Per repeat, baseline/candidate input tokens total 10260/21565 (+595 per candidate
+request); generated tokens total 2681/1752. Candidate latency is lower with fewer
+output tokens, but input cost is higher and decoding tokens/sec is lower. Peaks
+are sampled shared-run measurements, not separately attributable to either prompt;
+528/510 successful samples, zero failed samples. There are no HTTP/runtime failures
+in the two final runs. Both use Python 3.13.15, httpx 0.28.1, psutil 5.9.5 and the
+same Kaggle image. Cold generation and deliberate limit probes are excluded from
+the scored 38 requests. This small synthetic result cannot establish production
+performance, semantic faithfulness or whole-RAG quality.
+
+The narrow schema hypothesis is supported, but reliability criteria fail:
+held-out expected behavior is 3/14 (required >=13) and refusals 3/5 (required 5).
+Neither prompt is reliable on this set. No promotion or production change is made.
+The held-out set is now observed; it must not be used for iterative prompt tuning.
+
+Actual verification, repository `.venv/Scripts/python.exe`, exit 0:
+
+```powershell
+python -m ruff check src tests alembic tools/kaggle_gpu
+python -m pytest -q -p no:cacheprovider tests/unit tests/integration/test_kaggle_llm_contract_ab.py tests/integration/test_kaggle_llm_smoke.py
+# 453 passed, 2 explicit opt-in skips
+```
+
+With the A/B environment variables above and `DOCLENS_KAGGLE_LLM_REPORTS` pointing
+to the two unchanged original captures, replay plus existing RAG regressions:
+
+```powershell
+python -m pytest -q -s -p no:cacheprovider tests/integration/test_kaggle_llm_contract_ab.py tests/integration/test_kaggle_llm_smoke.py tests/unit/test_rag.py
+# 60 passed; experimental decision REJECT, not a compatibility PASS
+```
+
+Python syntax, private/offline metadata, payload/artifact fingerprints, original
+capture byte hashes and Git diff/privacy checks passed. Normal pytest never starts
+a remote job. Raw captures, payloads, freeze manifests and generated metrics remain
+ignored; only this sanitized summary and benchmark/test source belong in Git.
+The final combined full-unit command with both replay opt-ins enabled passed
+455 tests (no skips); the default-safe run above separately verified both skips.

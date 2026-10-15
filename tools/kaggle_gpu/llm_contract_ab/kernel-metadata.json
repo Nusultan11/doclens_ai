@@ -1,0 +1,15 @@
+{
+  "id": "nurs2005/doclens-llm-contract-ab",
+  "title": "DocLens LLM Contract AB",
+  "code_file": "benchmark.py",
+  "language": "python",
+  "kernel_type": "script",
+  "is_private": true,
+  "enable_gpu": true,
+  "enable_internet": false,
+  "machine_shape": "NvidiaTeslaT4",
+  "dataset_sources": ["nurs2005/doclens-qwen3-q8-llama-b11617/1"],
+  "competition_sources": [],
+  "kernel_sources": [],
+  "model_sources": []
+}
