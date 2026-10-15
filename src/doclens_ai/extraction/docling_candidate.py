@@ -62,6 +62,43 @@ MODEL_FILES = (
 
 
 @dataclass(frozen=True)
+class BenchmarkProfile:
+    gold_sha256: str
+    gold_fingerprint: str
+    reviewed_ids: frozenset[str]
+    primary_ids: frozenset[str]
+    control_ids: frozenset[str]
+
+    @property
+    def pdf_ids(self) -> frozenset[str]:
+        return self.primary_ids | self.control_ids
+
+
+_LEGACY_REVIEWED_IDS = PDF_IDS | frozenset(
+    {"c1-0006", "c1-0007", "c1-0008", "c1-0062", "c1-0067", "c1-0071", "c1-0081"}
+)
+_FRESH_PDF_IDS = frozenset(
+    {"c1-0031", "c1-0032", "c1-0033", "c1-0035", "c1-0040", "c1-0043", "c1-0048", "c1-0049"}
+)
+PROFILES = {
+    "legacy-v1": BenchmarkProfile(
+        "30cfdcf31f1036f1e6f813fad34266fa347b5368ee140be7304eb942f0e0d353",
+        GOLD_FINGERPRINT,
+        _LEGACY_REVIEWED_IDS,
+        PDF_IDS,
+        frozenset(),
+    ),
+    "expanded-v1": BenchmarkProfile(
+        "f372f54d65916b57994ee62ce1fc00fdc536bcdd459b384c6d6e11e9f114bfaf",
+        "50b37582e35382055515a16a2163f83a31ae8dcdd74e80729c499c04e65b815e",
+        _LEGACY_REVIEWED_IDS | _FRESH_PDF_IDS,
+        _FRESH_PDF_IDS,
+        PDF_IDS,
+    ),
+}
+
+
+@dataclass(frozen=True)
 class CandidateConfig:
     artifacts: Path
     artifact_fingerprint: str
@@ -409,9 +446,9 @@ def extract_candidate(
     )
 
 
-def _worker(channel, path: Path, config: CandidateConfig, record) -> None:
+def _worker(channel, path: Path, config: CandidateConfig, record, include_metadata=False) -> None:
     """Return only metadata across IPC; no extraction payload is persisted."""
-    from doclens_ai.extraction.fidelity_eval import score_record
+    from doclens_ai.extraction.fidelity_eval import _observations, normalize, score_record
     from doclens_ai.extraction.fidelity_gold import fingerprint
     from doclens_ai.extraction.parsers import extract_file
 
@@ -437,6 +474,27 @@ def _worker(channel, path: Path, config: CandidateConfig, record) -> None:
                     "extraction_fingerprint": fingerprint(result.to_dict()),
                     "latency_ms": elapsed,
                 }
+                if include_metadata:
+                    counts: Counter[str] = Counter()
+                    for warning in result.warnings:
+                        counts[str(getattr(warning.code, "value", warning.code))] += warning.count
+                    outcomes[name]["warning_counts"] = dict(sorted(counts.items()))
+                    outcomes[name]["eligible_by_status"] = result.status == ExtractionStatus.SUCCESS
+                    hits = None
+                    if result.status != ExtractionStatus.FAILED:
+                        fields = [normalize(item.text) for item in _observations(result)]
+                        hits = {
+                            anchor.anchor_id: any(
+                                normalize(anchor.text) in field for field in fields
+                            )
+                            for anchor in record.anchors
+                        }
+                        if (
+                            sum(hits.values())
+                            != outcomes[name]["scores"]["metrics"]["required_text_recall"]["passed"]
+                        ):
+                            raise CandidateError("Anchor observation mismatch")
+                    outcomes[name]["required_anchor_hits"] = hits
                 if name == "docling" and diagnostics:
                     outcomes[name]["diagnostics"] = diagnostics
                 channel.put({name: outcomes[name]})
@@ -445,12 +503,15 @@ def _worker(channel, path: Path, config: CandidateConfig, record) -> None:
         channel.put({"blocked": "worker_failure"})
 
 
-def _isolated(path: Path, config: CandidateConfig, record) -> dict:
+def _isolated(path: Path, config: CandidateConfig, record, *, include_metadata=False) -> dict:
     import psutil  # Experimental environment only; normal unit tests use fakes.
 
     context = multiprocessing.get_context("spawn")
     channel = context.Queue()
-    child = context.Process(target=_worker, args=(channel, path, config, record))
+    args = (channel, path, config, record)
+    if include_metadata:
+        args += (True,)
+    child = context.Process(target=_worker, args=args)
     started = time.perf_counter()
     peak = 0
     result = {"blocked": "worker_failure"}
@@ -500,12 +561,22 @@ def _isolated(path: Path, config: CandidateConfig, record) -> dict:
 
 
 def evaluate_candidate(
-    corpus: Path, manifest: Path, gold: Path, output: Path, config: CandidateConfig
+    corpus: Path,
+    manifest: Path,
+    gold: Path,
+    output: Path,
+    config: CandidateConfig,
+    *,
+    profile: str = "legacy-v1",
 ) -> dict:
+    from doclens_ai.evaluation.gold import _load_jsonl
     from doclens_ai.extraction.fidelity_eval import _read_sources, verify_corpus
     from doclens_ai.extraction.fidelity_gold import fingerprint, load_gold
     from doclens_ai.extraction.parsers import ExtractionLimits
 
+    if profile not in PROFILES:
+        raise CandidateError("Unknown frozen benchmark profile")
+    selected = PROFILES[profile]
     if output.exists() or corpus.resolve() in output.resolve().parents:
         raise CandidateError("New output outside corpus required")
     # Full integrity audit MUST precede subset selection or model initialization.
@@ -515,11 +586,16 @@ def evaluate_candidate(
     matched = verify_corpus(corpus, sources, ExtractionLimits())
     if len(matched) != 90:
         raise CandidateError("Frozen ninety-source corpus required")
-    records = load_gold(gold, sources)
     gold_bytes_sha256 = _digest(gold)
+    if gold_bytes_sha256 != selected.gold_sha256:
+        raise CandidateError("Gold byte pin mismatch")
+    _load_jsonl(gold, kind="Fidelity Gold")  # Reject duplicate keys before Pydantic loading.
+    records = load_gold(gold, sources)
     if (
-        len(records) != 11
-        or fingerprint([r.model_dump(mode="json") for r in records]) != GOLD_FINGERPRINT
+        len(records) != len(selected.reviewed_ids)
+        or {r.document_id for r in records} != selected.reviewed_ids
+        or {r.document_id for r in records if r.document_format == "pdf"} != selected.pdf_ids
+        or fingerprint([r.model_dump(mode="json") for r in records]) != selected.gold_fingerprint
     ):
         raise CandidateError("Gold pin mismatch")
     inventory = artifact_inventory(config.artifacts)
@@ -529,9 +605,12 @@ def evaluate_candidate(
     documents = []
     runtime = []
     for record in records:
-        if record.document_id not in PDF_IDS:
+        if record.document_id not in selected.pdf_ids:
             continue
-        outcome = _isolated(matched[record.document_id], config, record)
+        if profile == "legacy-v1":
+            outcome = _isolated(matched[record.document_id], config, record)
+        else:
+            outcome = _isolated(matched[record.document_id], config, record, include_metadata=True)
         runtime.append(
             {
                 "document_id": record.document_id,
@@ -542,7 +621,22 @@ def evaluate_candidate(
         for name in ("baseline", "docling"):
             if name in outcome:
                 runtime[-1][name + "_latency_ms"] = outcome[name].pop("latency_ms")
-        documents.append({"document_id": record.document_id, **outcome})
+        document = {"document_id": record.document_id, **outcome}
+        if profile == "expanded-v1":
+            document["population"] = (
+                "fresh" if record.document_id in selected.primary_ids else "control"
+            )
+            document["label_counts"] = {
+                name: len(getattr(record, name))
+                for name in (
+                    "anchors",
+                    "order_pairs",
+                    "table_cells",
+                    "table_relationships",
+                    "cells",
+                )
+            }
+        documents.append(document)
     if verify_corpus(corpus, sources, ExtractionLimits()) != matched:
         raise CandidateError("Corpus changed")
     if fingerprint(artifact_inventory(config.artifacts)) != config.artifact_fingerprint:
@@ -555,7 +649,7 @@ def evaluate_candidate(
         "version": VERSION,
         "candidate_sha256": _digest(Path(__file__)),
         "manifest_sha256": MANIFEST_SHA256,
-        "gold_fingerprint": GOLD_FINGERPRINT,
+        "gold_fingerprint": selected.gold_fingerprint,
         "gold_bytes_sha256": gold_bytes_sha256,
         "code_sha256": {
             name: _digest(Path(__file__).with_name(name))
@@ -578,6 +672,14 @@ def evaluate_candidate(
         ],
         "documents": documents,
     }
+    if profile == "expanded-v1":
+        report["benchmark_profile"] = profile
+        report["population"] = {
+            "reviewed_documents": len(selected.reviewed_ids),
+            "evaluated_pdf_ids": sorted(selected.pdf_ids),
+            "fresh_pdf_ids": sorted(selected.primary_ids),
+            "control_pdf_ids": sorted(selected.control_ids),
+        }
     report["deterministic_fingerprint"] = fingerprint(report)
     report["runtime"] = runtime
     output.mkdir(parents=True)
@@ -587,6 +689,27 @@ def evaluate_candidate(
     return report
 
 
+def _execution_complete(report: dict, profile: str) -> bool:
+    if len(report["documents"]) != len(PROFILES[profile].pdf_ids):
+        return False
+    for doc in report["documents"]:
+        if profile == "expanded-v1" and "baseline" not in doc:
+            return False
+        if profile == "expanded-v1" and doc.get("blocked") in {"timeout", "memory_limit"}:
+            # A monitored limit after baseline observation is a measured failed attempt,
+            # not missing infrastructure. Keep missing candidate scores null and retain
+            # its full Gold denominators; never silently drop the document.
+            continue
+        if (
+            "blocked" in doc
+            or "docling" not in doc
+            or doc["docling"]["error_category"] == "missing_dependency"
+            or doc["docling"].get("diagnostics", {}).get("failure_phase") == "model_initialization"
+        ):
+            return False
+    return True
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ("corpus", "manifest", "gold", "output-dir", "artifacts"):
@@ -594,6 +717,7 @@ def main() -> int:
     parser.add_argument("--artifact-fingerprint", required=True)
     parser.add_argument("--timeout-seconds", type=float, default=180)
     parser.add_argument("--max-process-mib", type=int, default=2048)
+    parser.add_argument("--profile", choices=tuple(PROFILES), default="legacy-v1")
     args = parser.parse_args()
     try:
         report = evaluate_candidate(
@@ -607,17 +731,12 @@ def main() -> int:
                 args.timeout_seconds,
                 args.max_process_mib * 1024**2,
             ),
+            profile=args.profile,
         )
     except Exception:
         print("BLOCKED: candidate preflight rejected; inspect local inputs privately")
         return 1
-    complete = len(report["documents"]) == 4 and all(
-        "blocked" not in doc
-        and "docling" in doc
-        and doc["docling"]["error_category"] != "missing_dependency"
-        and doc["docling"].get("diagnostics", {}).get("failure_phase") != "model_initialization"
-        for doc in report["documents"]
-    )  # A measured candidate document failure is not an infrastructure success claim.
+    complete = _execution_complete(report, args.profile)
     print(
         json.dumps(
             {
