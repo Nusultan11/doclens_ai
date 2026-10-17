@@ -185,6 +185,106 @@ def test_empty_and_unrepresented_pictures_require_review(config):
     assert len(result.blocks) == 1
 
 
+def picture_document(*children):
+    """Model native preorder traversal, including captions visible in both modes."""
+    caption = text("text/caption", "caption")
+    nested = NS(self_ref="picture/inner", label="picture", children=list(children))
+    picture = NS(self_ref="picture/outer", label="picture", children=[caption, nested])
+
+    def iterate_items(*, with_groups, traverse_pictures):
+        assert with_groups is False
+
+        def visit(item, level=0):
+            yield item, level
+            for child in getattr(item, "children", []):
+                if item.label != "picture" or traverse_pictures or child is caption:
+                    yield from visit(child, level + 1)
+
+        yield from visit(picture)
+        yield caption, 0  # Repeated identity must not duplicate a caption.
+        yield text("text/after", "after", 2), 0
+
+    return NS(pages={1: NS(), 2: NS()}, iterate_items=iterate_items)
+
+
+def normalize_picture(config, *children):
+    return candidate.normalize_document(
+        picture_document(*children),
+        source_sha256="b" * 64,
+        source_size_bytes=100,
+        config=config,
+    )
+
+
+def test_picture_descendants_preserve_identity_order_locations_and_warnings(config):
+    first = text("text/first", "same")
+    split = text("text/split", "one two")
+    split.prov = [NS(page_no=1, charspan=(0, 3)), NS(page_no=2, charspan=(4, 7))]
+    result = normalize_picture(config, first, first, text("text/second", "same", 2), split)
+    assert [
+        (b.order, b.text, b.source.page_number, b.source.block_index) for b in result.blocks
+    ] == [
+        (0, "caption", 1, 0),
+        (1, "same", 1, 0),
+        (2, "same", 2, 1),
+        (3, "one", 1, 0),
+        (4, "two", 2, 1),
+        (5, "after", 2, 1),
+    ]
+    assert result.status == ExtractionStatus.NEEDS_REVIEW
+    assert [(w.code, w.count) for w in result.warnings] == [("drawings_not_extracted", 2)]
+    assert (
+        result.to_dict()
+        == normalize_picture(config, first, first, text("text/second", "same", 2), split).to_dict()
+    )
+
+
+@pytest.mark.parametrize("fault", ["missing", "unknown", "ambiguous", "overlap", "gap"])
+def test_picture_descendant_provenance_fails_closed(config, fault):
+    child = text(value="one two")
+    if fault == "missing":
+        child.prov = []
+    elif fault == "unknown":
+        child.prov = [NS(page_no=3)]
+    elif fault == "ambiguous":
+        child.prov = [NS(page_no=1), NS(page_no=2)]
+    elif fault == "overlap":
+        child.prov = [NS(page_no=1, charspan=(0, 4)), NS(page_no=2, charspan=(3, 7))]
+    else:
+        child.prov = [NS(page_no=1, charspan=(0, 2)), NS(page_no=2, charspan=(4, 7))]
+    with pytest.raises((candidate.CandidateError, AttributeError)):
+        normalize_picture(config, child)
+
+
+@pytest.mark.parametrize(
+    "limit,bound",
+    [("max_blocks", 4), ("max_cells", 1), ("max_characters", 12), ("max_pages", 1)],
+)
+def test_picture_descendants_obey_existing_limits(config, limit, bound):
+    # Without children, caption + after use only 12 characters and four identities.
+    with pytest.raises(candidate.CandidateError):
+        normalize_picture(replace(config, **{limit: bound}), text(), table())
+
+
+def test_invalid_picture_child_is_isolated_without_private_output(config, tmp_path, capsys):
+    child = text(value="PRIVATE synthetic descendant")
+    child.prov = []
+    path = pdf(tmp_path)
+    diagnostics = {}
+    failed = candidate.extract_candidate(
+        path, config, converter=fake_converter(picture_document(child)), diagnostics=diagnostics
+    )
+    recovered = candidate.extract_candidate(
+        path, config, converter=fake_converter(picture_document(text()))
+    )
+    assert failed.status == ExtractionStatus.FAILED
+    assert not failed.blocks
+    assert diagnostics == {"reason": "unsupported_provenance", "failure_phase": "normalization"}
+    assert "PRIVATE" not in str(failed.to_dict())
+    assert recovered.status == ExtractionStatus.NEEDS_REVIEW
+    assert capsys.readouterr() == ("", "")
+
+
 def test_missing_optional_dependency_without_docling(config, tmp_path, monkeypatch):
     def missing(_config):
         raise ImportError("SECRET dependency detail")

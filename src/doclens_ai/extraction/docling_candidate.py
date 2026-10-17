@@ -248,7 +248,9 @@ def normalize_document(
     pages = document.pages
     if len(pages) > config.max_pages:
         raise CandidateError("Candidate page limit exceeded")
-    for item, _level in document.iterate_items(with_groups=False, traverse_pictures=False):
+    # Native picture children use the same identity, provenance and safety gates.
+    # Pictures themselves still require review; recovering text does not extract drawings.
+    for item, _level in document.iterate_items(with_groups=False, traverse_pictures=True):
         reference = item.self_ref
         if not isinstance(reference, str) or not reference:
             raise CandidateError("Missing item identity")
