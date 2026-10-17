@@ -1,19 +1,51 @@
 ---
 name: doclens-ingestion-change
-description: Change DocLens document ingestion behavior, including parsing, extraction, cleaning, chunking, embeddings, indexing, retries, processing state, deletion, or reindexing. Do not use for document features that leave ingestion unchanged.
+description: Change DocLens upload, parsing, cleaning, chunking, embeddings, indexing, jobs, retries or delete/reindex behavior. Not for offline parser or RAG quality evaluation without ingestion changes.
 ---
 
 # DocLens ingestion changes
 
-Map the affected flow into explicit pipeline stages and preserve clear handoffs among upload, extraction/parsing, cleaning/validation, chunking, embeddings, and indexing.
+## Apply and inspect
 
-Before implementation, inspect the relevant persistence model, processing states, retry path, vector metadata, and targeted tests. Then ensure:
+Use for lifecycle implementation. Read AGENTS.md and only affected functions in
+services/upload.py, processing.py, ingestion.py or indexing.py under src/doclens_ai,
+their models/configuration, persistence boundaries and focused tests. Consult
+architecture sections 5–9 for changed boundaries, not as a full-repository prerequisite.
+Use extraction-benchmark or rag-evaluation separately when making quality claims.
 
-- PostgreSQL remains authoritative and consistent across success, retry, partial failure, and cancellation.
-- Repeating a request is safe: stable identities or uniqueness constraints prevent duplicate documents, chunks, and vectors.
-- One document's failure is isolated from unrelated work; external-service failures cannot leave business state falsely complete.
-- Chunk boundaries are deterministic for the same inputs and configuration. Persist or expose the chunking configuration and embedding model/revision needed to reproduce indexed data.
-- Qdrant remains rebuildable from authoritative state. Backend-owned scope metadata and filters preserve workspace/document isolation.
-- Deletion and reindex operations define cleanup, replacement, partial-failure, and retry behavior without orphaning authoritative or indexed records.
+## Invariants and workflow
 
-Add focused unit tests for deterministic logic and retry/state transitions. Add integration coverage where persistence, Qdrant, or another service boundary is material. Exercise relevant failures and repeated ingestion, then report the exact checks and results.
+1. Map upload -> extraction -> validation/safe cleaning -> canonical chunks ->
+   embeddings -> verified index. Distinguish actual enums/checkpoints from target stages.
+2. Preserve immutable RAW bytes in S3/MinIO; verify size/SHA and DB references.
+   Keep workspace/document Idempotency-Key identity, replay and conflict semantics.
+3. Define ProcessingRun/Job transitions, lease/token/DB-clock fencing, heartbeat,
+   cancellation, bounded retry and terminal failure. A stale owner cannot publish
+   or change another worker's job. Keep external work outside long DB locks.
+4. Preserve deterministic chunk identities, complete atomic chunk publication,
+   lineage and source/parser/chunker/model/configuration fingerprints. Safe cleaning
+   must retain facts and genuine provenance; never fabricate structure/coordinates.
+5. Verify Qdrant points and canonical linkage before transactional ACTIVE cutover.
+   Keep partial/stale candidate revisions unsearchable and the previous verified
+   revision intact on failure. PostgreSQL is authoritative; Qdrant is rebuildable.
+6. Define delete/reindex and recovery before changing behavior: authorized scope,
+   obsolete revision fencing, retry, reference-checked orphan cleanup and rebuild.
+   Existing upload/index code does not establish a delivered deletion lifecycle.
+
+## Failure modes
+
+Exercise duplicate/interrupted ingestion, hash mismatch, corrupt/unsupported input,
+parser/embedding/storage/Qdrant failure, cancellation, reclaimed leases, partial
+upserts and concurrent versions. One source must not corrupt unrelated processing.
+Keep failed/needs_review explicit and prevent cross-workspace leakage.
+
+## Verify and report
+
+Run targeted deterministic/state/retry tests first; use real persistence/storage/
+Qdrant integration where the changed boundary requires it. Evaluate fidelity or
+retrieval on fixed Gold if affected; implementation tests are not ML quality evidence.
+Report actual transitions, unchanged invariants, commands/results, fingerprint
+changes, rollback/cleanup implications and missing checks under AGENTS.md.
+
+Accept only when the changed lifecycle, applicable fidelity and tenant-isolation
+checks pass; unresolved critical publication/recovery failures block completion.

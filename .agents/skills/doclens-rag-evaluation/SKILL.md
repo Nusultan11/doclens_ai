@@ -1,21 +1,57 @@
 ---
 name: doclens-rag-evaluation
-description: Evaluate DocLens changes to retrieval-affecting chunking, embeddings, dense/sparse/hybrid retrieval, metadata filters, top-k, fusion, reranking, context construction, grounded generation, or quality-sensitive RAG prompts. Do not use for unrelated LLM or document work.
+description: Evaluate DocLens retrieval, embeddings/chunking effects, context packing, grounded generation or quality-sensitive prompts. Not for parser fidelity, dataset readiness alone or GPU execution mechanics.
 ---
 
-# DocLens RAG evaluation
+# DocLens retrieval and RAG evaluation
 
-Define the quality hypothesis and failure modes before changing the pipeline. When claiming improvement, compare before and after on a fixed evaluation dataset with identical corpus, queries, relevance judgments, environment, and measurement settings except for the variable under test.
+## Apply and inspect
 
-Use metrics appropriate to the changed stage:
+Read AGENTS.md, the changed stage, its focused tests, selected Gold protocol and
+baseline report. Relevant code is services/retrieval.py and services/rag.py under
+src/doclens_ai; inspect packing/validators only as needed. Architecture sections
+10 and 12–14 separate retrieval, evidence and semantic quality. Use the data-quality
+skill for dataset readiness and the experiment skill for a new comparison protocol.
 
-- retrieval Recall@k or hit rate;
-- MRR or nDCG when graded or ranked judgments exist;
-- citation precision/recall and source traceability;
-- unsupported-claim or faithfulness rate;
-- abstention/refusal behavior for insufficient evidence;
-- latency, with ingestion/query costs separated where useful.
+## Invariants and workflow
 
-Include regressions and relevant workspace/metadata-filter isolation checks. Record dataset/version, configuration, model revisions, seeds where applicable, sample size, and commands so the comparison is reproducible.
+1. Freeze reviewed Retrieval Gold separately from RAG Answer Gold, corpus/chunks,
+   families/splits, champion/configuration/model revisions and authorized scope.
+   Gold selects scoring/splits, never retrieval filters, packed evidence or answers.
+2. State one hypothesis and stage-specific thresholds. Compare identical conditions
+   except the registered variable. Keep failures, invalid output and refusals in
+   denominators. Do not tune on sealed test or relabel exposed data as fresh test.
+3. Diagnose six separate stages:
+   - Candidate discovery: Hit/Recall@5/10, MRR, nDCG@10 and bounded ranking horizon.
+   - Relevant evidence inside retrieved chunks: complete anchors/relationships,
+     including numbers, table headings and provenance, not chunk presence alone.
+   - Packing survival: retrieved -> packed anchors, truncation, deduplication,
+     character versus tokenizer budget, with fixed candidate pools for packing A/B.
+   - Answer factual correctness against independently reviewed evidence.
+   - Groundedness/semantic citation support and unsupported claims.
+   - Correct refusals, refusal precision/recall and unsafe accepted answers.
+4. Separate HTTP/runtime, strict JSON, ModelAnswer, citation identity/offset/coverage,
+   semantic support and production-release counts. Structural validity or exact
+   quotes never proves entailment; invalid output is not a correct refusal.
+5. Include negative and adversarial cases: insufficient evidence, negation,
+   conflicting sources, wrong entity and document prompt injection. Preserve
+   document-scoped negative labels; do not infer workspace-wide truth from them.
+6. Preserve backend-derived Qdrant filters and PostgreSQL source/ACL/ACTIVE
+   verification before context and after inference. Test revocation, stale revisions
+   and cross-tenant attempts; document the residual post-validation delivery race.
 
-Qualitative examples may explain measured results but cannot establish improvement by themselves. Diagnose retrieval failures in retrieval; do not start fine-tuning to compensate for missing or irrelevant evidence. State uncertainty and tradeoffs when metrics disagree.
+## Failure modes and acceptance
+
+Reject unsafe accepted answers, critical evidence loss or authorization regressions.
+No model/prompt/binder promotion solely from schema, quote offsets or citation
+coverage. Human-reviewed semantics and AI-assisted diagnostics are different
+evidence classes. Mark unsupported semantic/language slices NOT_EVALUATED.
+Diagnose upstream retrieval/context failures before fine-tuning or adding rerankers.
+
+## Verify and report
+
+Run changed-stage tests and fixed offline evaluation when claiming quality change.
+Report numerators/denominators by split/language/format/category, negative safety,
+context survival, citations, P50/P95/resources, actual commands, pins and limits.
+Qualitative examples only explain measurements. Separate experiment decision
+from production promotion/rollback; follow AGENTS.md completion format.

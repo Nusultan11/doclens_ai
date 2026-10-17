@@ -1,57 +1,58 @@
 ---
 name: doclens-extraction-benchmark
-description: Benchmark DocLens PDF, DOCX or XLSX extraction fidelity, or compare an offline parser candidate against a frozen baseline. Not for ingestion implementation, retrieval/RAG evaluation or database migrations.
+description: Compare frozen DocLens PDF, DOCX or XLSX parser fidelity, or diagnose extraction benchmark regressions. Not for ingestion implementation, database migrations or retrieval/RAG evaluation.
 ---
 
-# Extraction fidelity benchmark
+# DocLens extraction fidelity
 
-Use the existing extraction contract and fidelity evaluator; evaluate candidates
-offline without promoting them into production. Read only the relevant protocol,
-baseline report and evaluator interfaces needed for the requested experiment.
+## Apply and inspect
 
-## Freeze the comparison
+Read AGENTS.md, the selected protocol/baseline report and relevant extraction
+contract, scorer, Gold validator and candidate functions. Architecture section 7
+defines extraction constraints; sections 12–14 define data/evaluation gates.
+Read private originals/Gold only locally as authorized; never export their text.
 
-1. Validate the task-selected, independently human-reviewed Gold with the strict
-   Gold contract and frozen corpus manifest. Verify source hashes, sizes, formats
-   and identities; record Gold and corpus fingerprints. Preserve the approved
-   records byte-for-byte. If reviewed labels or originals are unavailable, stop
-   at the review/data gate; never derive approved labels from parser output.
-2. State the hypothesis, acceptance criteria and resource budgets before running.
-   Pair baseline and candidate on identical originals, Gold, scoring rules and
-   evaluation conditions. Include unsuccessful and needs-review sources, plus
-   independent regression controls. Do not select only favorable successes.
-3. Record code revision, parser/dependency versions, configuration, model revisions
-   and hashes, seeds where applicable, hardware and concurrency. Isolate optional
-   candidate dependencies and model artifacts from the production environment.
+## Invariants and workflow
 
-## Measure and reproduce
+1. Verify immutable corpus manifest, original SHA/size/format/identity and strict
+   human-reviewed Extraction Fidelity Gold. Freeze byte and normalized hashes,
+   cohort, independent regression controls, scoring rules, models/configurations
+   and split provenance.
+   Missing critical inputs means BLOCKED; never derive approved labels from output.
+2. For a new experiment, pre-register one hypothesis, thresholds and CPU/RAM/time
+   budgets. Compare baseline/candidate on identical inputs. Keep pypdf as production
+   PDF baseline; optional Docling/OCR remains offline until separate approval.
+   Keep candidate dependencies and model artifacts isolated from production runtime.
+3. Measure required-anchor presence by opaque identity, reading order, table cells/
+   spans/relationships and exact locators/provenance. For DOCX expose ancillary
+   content limitations; for XLSX separate stored values, formulas, caches and display.
+   Never execute formulas or fabricate unavailable locators or table links.
+4. Keep all failed/needs_review sources in denominators; missing observations are
+   UNKNOWN, not invented zero scores. Extraction success is not evidence fidelity.
+   Report per-document/difficult/control results and full attempted/eligible coverage.
+5. New paired comparisons run twice into new ignored directories. Compare every
+   non-runtime field and deterministic fingerprint; retain both actual timings.
+   Record dependencies/model revisions/hashes, Git SHA, seeds, hardware/concurrency,
+   cold initialization/conversion scope and peak-memory method/units/process tree.
+6. For diagnosis-only tasks, reuse captured metadata first. Perform only explicitly
+   bounded read-only inspections if needed; do not rerun full experiments or tune.
+   Compare inspected extraction fingerprints to frozen outputs. Separate observed
+   omission/fragmentation/order/locator/status mechanisms from hypotheses/UNKNOWN.
 
-4. Use the unchanged evaluator to report required-text recall, reading order,
-   table-cell/span and relationship fidelity, value/formula/cache fidelity where
-   relevant, provenance, missing evidence and extraction failures. Never execute
-   spreadsheet formulas. Show numerators and denominators per format and source
-   group; mark metrics without sufficient labels as NOT_EVALUATED.
-5. Measure baseline and candidate latency and memory, specifying sample counts,
-   cold initialization versus conversion/end-to-end time, peak-memory method,
-   units and process scope. Record timeouts and resource failures. Mark unavailable
-   measurements explicitly; never substitute zero or guessed values.
-6. Run the paired evaluation twice into new ignored output directories. Compare
-   deterministic fingerprints and every non-runtime report field; report any
-   nondeterminism. Keep timing and memory observations separate from equality
-   checks and retain both runs' actual measurements.
-7. Compare per-record scores and failure/status/eligibility behavior against the
-   frozen baseline, separately for difficult cases and controls. Verify unchanged
-   labels and applicable unit/regression tests. Pooled gains must not hide a
-   control regression; narrative controls alone do not establish table fidelity.
+## Failure modes and acceptance
 
-## Report the decision
+Critical baseline-present anchor loss, control regression, new eligibility/failure
+regression, fabricated provenance or unsafe behavior forces REJECT under the
+registered gate. Pooled table gains cannot cancel critical evidence loss.
+Use INCONCLUSIVE for insufficient/non-reproducible evidence and NOT_EVALUATED for
+unlabelled dimensions. Unknown measurements are never guessed. Distinguish
+execution success from candidate quality and from production approval.
 
-8. Report paired deltas, coverage, resource trade-offs, regressions, limitations
-   and actual commands/results. Conclude accept, reject or inconclusive against
-   the stated criteria; label environmental blockers explicitly. A pilot does
-   not establish whole-corpus semantic fidelity or retrieval/RAG superiority.
-9. Keep originals, raw annotations and extracted content in ignored local storage.
-   Share only sanitized metadata and measured aggregates: no source excerpts,
-   private paths, filenames, worksheet names or sensitive cell values. Send only
-   public library/version questions to documentation MCP servers, never Gold or
-   document content. Follow AGENTS.md for verification, Git and completion format.
+## Verify and report
+
+Run existing focused extraction/candidate tests; recheck input/code/model pins and
+per-anchor score agreement. No subjective examples establish generalization.
+Report counts, status transitions, fingerprints, resources, actual commands/results,
+regressions and advancement verdict. Keep originals, raw annotations and extracted
+content ignored; publish only sanitized aggregates/opaque IDs, never filenames,
+private paths, excerpts or values. No parser promotion is implied.
