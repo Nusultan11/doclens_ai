@@ -1,6 +1,6 @@
 ---
 name: doclens-ml-experiment
-description: Design or audit a DocLens ML comparison protocol, model experiment or reproducibility/promotion decision. Stage-specific extraction and RAG skills own their scoring; this skill owns shared experiment controls.
+description: Design or audit DocLens ML comparison protocols, reproducibility and experimental promotion. Use stage skills for extraction or RAG scoring.
 ---
 
 # DocLens ML experiment protocol
@@ -32,10 +32,9 @@ Delegate GPU mechanics to doclens-kaggle-gpu only when actual GPU work is author
 
 ## Metrics and decisions
 
-- Extraction: fidelity, opaque anchors, order, tables and exact locators/provenance.
-- Retrieval: Hit@5/10, Recall@5/10, MRR, nDCG@10 and evidence-in-chunk coverage.
-- Generation: correctness, groundedness, supported citations, unsupported claims,
-  refusal precision/recall and unsafe acceptance; structure is measured separately.
+Use doclens-extraction-benchmark for fidelity metrics and doclens-rag-evaluation
+for retrieval/context/semantic answer metrics; this skill owns shared controls.
+
 - Operations: P50/P95 latency, RAM/VRAM, cold versus steady scope and failures.
 
 Use PROMOTE, REJECT or INCONCLUSIVE against registered thresholds; essential input
