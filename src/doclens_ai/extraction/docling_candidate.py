@@ -45,6 +45,18 @@ from doclens_ai.extraction.models import (
 )
 
 VERSION = "1.0"
+_CHECKPOINT_PHASES = frozenset(
+    {
+        "baseline_extraction",
+        "baseline_metadata",
+        "input_validation",
+        "model_initialization",
+        "conversion",
+        "normalization",
+        "source_integrity",
+        "candidate_metadata",
+    }
+)
 PDF_IDS = frozenset({"c1-0041", "c1-0044", "c1-0045", "c1-0050"})
 GOLD_FINGERPRINT = "896ce2c0e99b74683a8b15869c7ab72b94a27dd06fce66896db4ec8652c75b6c"
 MANIFEST_SHA256 = "c3a91af4bf789400f23821a30c6468040334bdd65135460b96dc21bb64d335c0"
@@ -378,17 +390,38 @@ def normalize_document(
     )
 
 
+def _checkpoint(channel: Any | None, phase: str) -> None:
+    """Best-effort, content-free observability must not change extraction outcomes."""
+    if channel is not None and type(phase) is str and phase in _CHECKPOINT_PHASES:
+        with contextlib.suppress(OSError, EOFError):
+            channel.send(phase)
+
+
+def _received_phase(channel: Any | None, latest: str) -> str:
+    if channel is not None:
+        try:
+            while channel.poll():
+                phase = channel.recv()
+                if type(phase) is str and phase in _CHECKPOINT_PHASES:
+                    latest = phase
+        except (OSError, EOFError):
+            pass  # Retain only the last valid value actually received.
+    return latest
+
+
 def extract_candidate(
     path: Path,
     config: CandidateConfig,
     *,
     converter: Any | None = None,
     diagnostics: dict | None = None,
+    checkpoints: Any | None = None,
 ) -> ExtractionResult:
     """File-isolated optional candidate; errors contain no private input details."""
     digest = size = None
     category = ErrorCategory.EXTRACTION_FAILED
     phase = "input_validation"
+    _checkpoint(checkpoints, phase)
     try:
         if path.is_symlink():
             category = ErrorCategory.SYMLINK_NOT_ALLOWED
@@ -403,8 +436,11 @@ def extract_candidate(
             raise CandidateError("PDF required")
         with _private_offline():
             phase = "model_initialization"
+            _checkpoint(checkpoints, phase)
             active = converter if converter is not None else _converter(config)
             phase = "conversion"
+            # Lazy native model loading may occur inside convert; no internal phase is inferred.
+            _checkpoint(checkpoints, phase)
             conversion = active.convert(
                 path,
                 raises_on_error=False,
@@ -414,10 +450,12 @@ def extract_candidate(
             if getattr(conversion.status, "value", conversion.status) != "success":
                 raise CandidateError("Incomplete conversion")
             phase = "normalization"
+            _checkpoint(checkpoints, phase)
             result = normalize_document(
                 conversion.document, source_sha256=digest, source_size_bytes=size, config=config
             )
         phase = "source_integrity"
+        _checkpoint(checkpoints, phase)
         if _digest(path) != digest or path.stat().st_size != size:
             raise CandidateError("Source changed during conversion")
         return result
@@ -448,7 +486,9 @@ def extract_candidate(
     )
 
 
-def _worker(channel, path: Path, config: CandidateConfig, record, include_metadata=False) -> None:
+def _worker(
+    channel, path: Path, config: CandidateConfig, record, include_metadata=False, checkpoints=None
+) -> None:
     """Return only metadata across IPC; no extraction payload is persisted."""
     from doclens_ai.extraction.fidelity_eval import _observations, normalize, score_record
     from doclens_ai.extraction.fidelity_gold import fingerprint
@@ -460,11 +500,21 @@ def _worker(channel, path: Path, config: CandidateConfig, record, include_metada
             diagnostics = {}
             for name, call in (
                 ("baseline", lambda: extract_file(path)),
-                ("docling", lambda: extract_candidate(path, config, diagnostics=diagnostics)),
+                (
+                    "docling",
+                    lambda: extract_candidate(
+                        path, config, diagnostics=diagnostics, checkpoints=checkpoints
+                    ),
+                ),
             ):
+                if name == "baseline":
+                    _checkpoint(checkpoints, "baseline_extraction")
                 started = time.perf_counter()
                 result = call()
                 elapsed = (time.perf_counter() - started) * 1000
+                _checkpoint(
+                    checkpoints, "baseline_metadata" if name == "baseline" else "candidate_metadata"
+                )
                 outcomes[name] = {
                     "status": result.status.value,
                     "error_category": (
@@ -503,6 +553,10 @@ def _worker(channel, path: Path, config: CandidateConfig, record, include_metada
             channel.put({"complete": True})
     except Exception:
         channel.put({"blocked": "worker_failure"})
+    finally:
+        if checkpoints is not None:
+            with contextlib.suppress(OSError):
+                checkpoints.close()
 
 
 def _isolated(path: Path, config: CandidateConfig, record, *, include_metadata=False) -> dict:
@@ -510,16 +564,26 @@ def _isolated(path: Path, config: CandidateConfig, record, *, include_metadata=F
 
     context = multiprocessing.get_context("spawn")
     channel = context.Queue()
-    args = (channel, path, config, record)
-    if include_metadata:
-        args += (True,)
+    phase_reader = phase_writer = None
+    try:
+        phase_reader, phase_writer = context.Pipe(duplex=False)
+    except OSError:
+        pass  # Checkpoint IPC unavailable: resource outcomes will explicitly say UNKNOWN.
+    args = (channel, path, config, record, include_metadata, phase_writer)
     child = context.Process(target=_worker, args=args)
     started = time.perf_counter()
     peak = 0
     result = {"blocked": "worker_failure"}
-    child.start()
+    last_phase = "UNKNOWN"
+    launched = False
     try:
+        child.start()
+        launched = True
+        if phase_writer is not None:
+            with contextlib.suppress(OSError):
+                phase_writer.close()
         while True:
+            last_phase = _received_phase(phase_reader, last_phase)
             try:
                 info = psutil.Process(child.pid).memory_info()
                 peak = max(peak, getattr(info, "peak_wset", info.rss))
@@ -527,9 +591,11 @@ def _isolated(path: Path, config: CandidateConfig, record, *, include_metadata=F
                 pass
             if peak > config.max_process_bytes:
                 result["blocked"] = "memory_limit"
+                result["last_observed_phase"] = last_phase
                 break
             if time.perf_counter() - started > config.timeout_seconds:
                 result["blocked"] = "timeout"
+                result["last_observed_phase"] = last_phase
                 break
             try:
                 message = channel.get(timeout=0.05)
@@ -550,13 +616,18 @@ def _isolated(path: Path, config: CandidateConfig, record, *, include_metadata=F
                         pass
                     break
     finally:
-        if child.is_alive():
-            child.terminate()
-        child.join(timeout=5)
-        if child.is_alive():
-            child.kill()
-            child.join()
+        if launched:
+            if child.is_alive():
+                child.terminate()
+            child.join(timeout=5)
+            if child.is_alive():
+                child.kill()
+                child.join()
         channel.close()
+        for endpoint in (phase_reader, phase_writer):
+            if endpoint is not None:
+                with contextlib.suppress(OSError):
+                    endpoint.close()
     result["peak_process_bytes"] = peak or None
     result["wall_ms"] = (time.perf_counter() - started) * 1000
     return result

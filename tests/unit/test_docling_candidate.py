@@ -820,19 +820,25 @@ def test_worker_warning_counts_and_eligibility_never_export_content(
             assert "required_anchor_hits" not in outcome
 
 
+@pytest.mark.parametrize("phase", ["conversion", "UNKNOWN"])
 @pytest.mark.parametrize(
     "reason,complete", [("timeout", True), ("memory_limit", True), ("worker_failure", False)]
 )
-def test_expanded_resource_failure_keeps_denominators(frozen_runner, monkeypatch, reason, complete):
+def test_expanded_resource_failure_keeps_denominators(
+    frozen_runner, monkeypatch, reason, complete, phase
+):
     f = frozen_runner
 
     def limited(*_args, **_kwargs):
-        return {
+        outcome = {
             "blocked": reason,
             "baseline": {"latency_ms": 0.1},
             "peak_process_bytes": 1,
             "wall_ms": 2.0,
         }
+        if reason in {"timeout", "memory_limit"}:
+            outcome["last_observed_phase"] = phase
+        return outcome
 
     monkeypatch.setattr(candidate, "_isolated", limited)
     report = candidate.evaluate_candidate(
@@ -846,6 +852,8 @@ def test_expanded_resource_failure_keeps_denominators(frozen_runner, monkeypatch
     assert len(report["documents"]) == 12
     assert sum(d["label_counts"]["anchors"] for d in report["documents"]) == 12
     assert all(d["blocked"] == reason and "docling" not in d for d in report["documents"])
+    if reason in {"timeout", "memory_limit"}:
+        assert all(d["last_observed_phase"] == phase for d in report["documents"])
     assert candidate._execution_complete(report, "expanded-v1") is complete
 
 
@@ -946,8 +954,152 @@ def test_legacy_limits_keep_original_execution_classification():
     assert not candidate._execution_complete({"documents": [doc] * 4}, "legacy-v1")
 
 
-@pytest.mark.parametrize("stop", ["complete", "memory", "timeout"])
-def test_isolated_monitor_preserves_baseline_and_cleans_own_child(config, monkeypatch, stop):
+def test_extraction_checkpoints_precede_operations_and_preserve_results(
+    config, tmp_path, monkeypatch
+):
+    path = pdf(tmp_path)
+    native = document(text(value="SECRET native text"))
+    ordinary = candidate.extract_candidate(path, config, converter=fake_converter(native))
+    phases = []
+
+    def convert(*_args, **_kwargs):
+        assert phases[-1] == "conversion"
+        return NS(status="success", document=native)
+
+    def initialize(_config):
+        assert phases[-1] == "model_initialization"
+        return NS(convert=convert)
+
+    original = candidate.normalize_document
+
+    def normalize_with_phase(*args, **kwargs):
+        assert phases[-1] == "normalization"
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(candidate, "_converter", initialize)
+    monkeypatch.setattr(candidate, "normalize_document", normalize_with_phase)
+    observed = candidate.extract_candidate(path, config, checkpoints=NS(send=phases.append))
+    assert observed.to_dict() == ordinary.to_dict()
+    assert phases == [
+        "input_validation",
+        "model_initialization",
+        "conversion",
+        "normalization",
+        "source_integrity",
+    ]
+    assert "SECRET" not in str(phases)
+
+
+@pytest.mark.parametrize("error", [OSError, EOFError])
+def test_checkpoint_send_failure_does_not_change_extraction(config, tmp_path, capsys, error):
+    def fail(_phase):
+        raise error("SECRET IPC details")
+
+    path = pdf(tmp_path)
+    converter = fake_converter(document(text()))
+    ordinary = candidate.extract_candidate(path, config, converter=converter)
+    observed = candidate.extract_candidate(
+        path, config, converter=converter, checkpoints=NS(send=fail)
+    )
+    assert observed.to_dict() == ordinary.to_dict()
+    assert observed.status == ExtractionStatus.SUCCESS
+    assert capsys.readouterr() == ("", "")
+
+
+def test_real_checkpoint_pipe_filters_payloads_and_retains_value_at_eof():
+    reader, writer = candidate.multiprocessing.get_context("spawn").Pipe(duplex=False)
+    try:
+        for value in ("SECRET source/path.pdf", "native_build", {"phase": "conversion"}):
+            candidate._checkpoint(writer, value)
+        assert not reader.poll()
+        candidate._checkpoint(writer, "conversion")
+        writer.send({"phase": "normalization", "SECRET": "native payload"})
+        writer.send("SECRET exception details")
+        candidate._checkpoint(writer, "normalization")
+        writer.close()
+        assert candidate._received_phase(reader, "UNKNOWN") == "normalization"
+        assert candidate._received_phase(reader, "normalization") == "normalization"
+    finally:
+        writer.close()
+        reader.close()
+
+
+@pytest.mark.parametrize("failed", [False, True])
+def test_worker_checkpoints_leave_result_ipc_unchanged(
+    config, tmp_path, monkeypatch, capsys, failed
+):
+    from doclens_ai.extraction import fidelity_eval, parsers
+
+    result = normalize(config, text(value="SECRET native text"))
+
+    def baseline(_path):
+        if failed:
+            raise ValueError("SECRET parser exception")
+        return result
+
+    monkeypatch.setattr(parsers, "extract_file", baseline)
+    monkeypatch.setattr(
+        candidate,
+        "_converter",
+        lambda _: fake_converter(document(text(value="SECRET native text"))),
+    )
+    monkeypatch.setattr(
+        fidelity_eval,
+        "score_record",
+        lambda *_: {"metrics": {"required_text_recall": {"passed": 1}}},
+    )
+    monkeypatch.setattr(candidate.time, "perf_counter", lambda: 0.0)
+    path = pdf(tmp_path)
+    record = NS(anchors=[NS(anchor_id="a1", text="SECRET native text")])
+    ordinary, observed, phases, closed = [], [], [], []
+    candidate._worker(NS(put=ordinary.append), path, config, record, True)
+    candidate._worker(
+        NS(put=observed.append),
+        path,
+        config,
+        record,
+        True,
+        NS(send=phases.append, close=lambda: closed.append(True)),
+    )
+    assert ordinary == observed
+    assert closed == [True]
+    if failed:
+        assert phases == ["baseline_extraction"]
+        assert observed == [{"blocked": "worker_failure"}]
+    else:
+        assert phases == [
+            "baseline_extraction",
+            "baseline_metadata",
+            "input_validation",
+            "model_initialization",
+            "conversion",
+            "normalization",
+            "source_integrity",
+            "candidate_metadata",
+        ]
+        assert observed[-1] == {"complete": True}
+    assert "SECRET" not in str(observed) + str(phases)
+    assert capsys.readouterr() == ("", "")
+
+
+@pytest.mark.parametrize(
+    "checkpoint_mode",
+    [
+        "valid",
+        "normalization",
+        "missing",
+        "invalid",
+        "invalid_only",
+        "read_failed",
+        "eof",
+        "setup_failed",
+        "close_failed",
+    ],
+)
+@pytest.mark.parametrize("stop", ["complete", "memory", "timeout", "both"])
+def test_isolated_monitor_preserves_baseline_and_cleans_own_child(
+    config, monkeypatch, stop, checkpoint_mode
+):
     import queue
 
     messages = [
@@ -956,38 +1108,136 @@ def test_isolated_monitor_preserves_baseline_and_cleans_own_child(config, monkey
         {"complete": True},
     ]
     closed = []
+    delivered = [0]
 
     def get(**_):
         if messages:
+            delivered[0] += 1
             return messages.pop(0)
         raise queue.Empty
 
     channel = NS(get=get, close=lambda: closed.append("queue"))
+    phases = {
+        0: ["baseline_extraction"],
+        1: ["model_initialization", "conversion"],
+        2: ["normalization"],
+    }
+    if checkpoint_mode == "normalization":
+        phases[1].append("normalization")
+    elif checkpoint_mode == "missing":
+        phases = {}
+    elif checkpoint_mode in {"invalid", "invalid_only"}:
+        phases = {
+            0: [
+                "SECRET source.pdf",
+                {"phase": "normalization", "SECRET": "payload"},
+                ["conversion"],
+                True,
+                "native_build",
+            ]
+        }
+        if checkpoint_mode == "invalid":
+            phases[0].insert(0, "baseline_extraction")
+
+    def poll():
+        if checkpoint_mode == "read_failed" and delivered[0]:
+            raise OSError("SECRET transport details")
+        return checkpoint_mode == "eof" or bool(phases.get(delivered[0]))
+
+    def recv():
+        if checkpoint_mode == "eof":
+            raise EOFError("SECRET transport details")
+        return phases[delivered[0]].pop(0)
+
+    def close(name):
+        closed.append(name)
+        if checkpoint_mode == "close_failed":
+            raise OSError("SECRET close details")
+
+    reader = NS(poll=poll, recv=recv, close=lambda: close("reader"))
+    writer = NS(close=lambda: close("writer"))
+
+    def pipe(*, duplex):
+        assert duplex is False
+        if checkpoint_mode == "setup_failed":
+            raise OSError("SECRET pipe setup")
+        return reader, writer
+
     alive = [True]
+    killed = []
+    stubborn = checkpoint_mode == "valid" and stop == "both"
     child = NS(
         pid=1,
         start=lambda: None,
         is_alive=lambda: alive[0],
-        terminate=lambda: alive.__setitem__(0, False),
+        terminate=lambda: None if stubborn else alive.__setitem__(0, False),
+        kill=lambda: (killed.append(True), alive.__setitem__(0, False)),
         join=lambda **_: None,
     )
-    context = NS(Queue=lambda: channel, Process=lambda **_: child)
+
+    def process(*, target, args):
+        assert target is candidate._worker
+        assert args == (
+            channel,
+            config.artifacts,
+            active,
+            None,
+            False,
+            None if checkpoint_mode == "setup_failed" else writer,
+        )
+        return child
+
+    context = NS(Queue=lambda: channel, Pipe=pipe, Process=process)
     monkeypatch.setattr(candidate.multiprocessing, "get_context", lambda _: context)
-    peaks = iter([1, 20] if stop == "memory" else [1] * 10)
+    peaks = iter([1, 20] if stop in {"memory", "both"} else [1] * 10)
     fake_psutil = NS(
         Process=lambda _: NS(memory_info=lambda: NS(rss=next(peaks))),
         NoSuchProcess=ProcessLookupError,
     )
     monkeypatch.setitem(sys.modules, "psutil", fake_psutil)
-    clock = iter([0, 0, 2, 3] if stop == "timeout" else range(10))
+    clock = iter([0, 0, 2, 3] if stop in {"timeout", "both"} else range(10))
     monkeypatch.setattr(candidate.time, "perf_counter", lambda: next(clock))
-    active = replace(config, max_process_bytes=10, timeout_seconds=1 if stop == "timeout" else 100)
+    active = replace(
+        config, max_process_bytes=10, timeout_seconds=1 if stop in {"timeout", "both"} else 100
+    )
     outcome = candidate._isolated(config.artifacts, active, None)
     assert outcome["baseline"]["status"] == "success"
-    assert closed == ["queue"] and alive == [False]
+    assert set(closed) == (
+        {"queue"} if checkpoint_mode == "setup_failed" else {"queue", "reader", "writer"}
+    )
+    assert alive == [False] and bool(killed) is stubborn
+    assert "SECRET" not in str(outcome)
     if stop == "complete":
         assert "blocked" not in outcome
         assert outcome["docling"]["status"] == "success"
+        assert set(outcome) == {"baseline", "docling", "peak_process_bytes", "wall_ms"}
     else:
-        assert outcome["blocked"] == ("memory_limit" if stop == "memory" else "timeout")
+        assert outcome["blocked"] == ("memory_limit" if stop in {"memory", "both"} else "timeout")
         assert "docling" not in outcome
+        expected = "conversion" if checkpoint_mode in {"valid", "close_failed"} else "UNKNOWN"
+        if checkpoint_mode == "normalization":
+            expected = "normalization"
+        if checkpoint_mode in {"invalid", "read_failed"}:
+            expected = "baseline_extraction"
+        assert outcome["last_observed_phase"] == expected
+
+
+def test_checkpoint_endpoints_close_if_worker_cannot_start(config, monkeypatch, capsys):
+    closed = []
+
+    def fail():
+        raise OSError("synthetic start failure")
+
+    context = NS(
+        Queue=lambda: NS(close=lambda: closed.append("queue")),
+        Pipe=lambda **_: tuple(
+            NS(close=lambda name=name: closed.append(name)) for name in ("reader", "writer")
+        ),
+        Process=lambda **_: NS(start=fail),
+    )
+    monkeypatch.setattr(candidate.multiprocessing, "get_context", lambda _: context)
+    monkeypatch.setitem(sys.modules, "psutil", NS())
+    with pytest.raises(OSError, match="synthetic start failure"):
+        candidate._isolated(config.artifacts, config, None)
+    assert set(closed) == {"queue", "reader", "writer"}
+    assert capsys.readouterr() == ("", "")
