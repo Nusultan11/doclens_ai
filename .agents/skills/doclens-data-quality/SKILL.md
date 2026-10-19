@@ -11,7 +11,8 @@ Use before dataset preparation/model changes or for a dataset-readiness audit.
 Read AGENTS.md, the task-selected corpus/Gold protocol, manifest schema and existing
 gate/report. Relevant entrypoints are src/doclens_ai/eda/data_quality_gate.py and
 docs/eda/data_quality_gate_v3.md; inspect only the validators/labels in scope.
-Use architecture sections 12–14 for data contracts. Private inputs stay local.
+Use [ML data contracts](../../../DocLens_AI_ML_Quality_Strategy.md#ML-DATA) and
+[QG-00](../../../DocLens_AI_Project_Goals_and_Quality_Policy-1.md#QUALITY-GATES). Private inputs stay local.
 
 ## Invariants and workflow
 

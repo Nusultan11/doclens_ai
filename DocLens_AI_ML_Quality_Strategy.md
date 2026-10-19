@@ -1,129 +1,121 @@
-# DocLens ML and RAG quality strategy
+# DocLens AI — ML/RAG стратегия v4
 
-AVAILABLE LOCAL EDITORIAL SPECIFICATION, reconstructed 19 October 2026 from
-architecture v3 §§8, 10–15, 23, the reconstruction brief and project skills.
-Not a recovered historical original. Owns ML methodology; acceptance belongs to
-[Quality Policy](DocLens_AI_Project_Goals_and_Quality_Policy-1.md#QUALITY-GATES).
-Extraction methods belong to [Extraction Strategy](DocLens_AI_Extraction_Strategy.md);
-GPU mechanics belong to [GPU Playbook](DocLens_AI_Kaggle_GPU_Playbook.md).
+19.10.2026. Владелец EDA/Gold, cleaning/chunking methods, моделей, retrieval,
+context/generation evaluation и experiment methodology. Acceptance — только
+[Quality Policy](DocLens_AI_Project_Goals_and_Quality_Policy-1.md);
+lineage/security — [архитектура](Doclens_AI-architecture.md).
 
 <a id="ML-DATA"></a>
-## [ML-DATA] Data and reviewed Gold
+## EDA и reviewed Gold
 
-Verify legal provenance, permitted use/transfer/annotation, sensitivity, immutable
-RAW SHA-256/size/version manifests and source identities. EDA precedes model work:
-report formats/languages/sizes, corrupt/unsupported sources, missingness, exact
-duplicates, near-duplicates, versions and families. Do not discard meaningful
-versions or infer rights from a matching hash. Private source/Gold stays local
-unless explicitly authorized for a defined transfer.
+До оптимизации фиксировать rights/license/transfer/annotation scope, sensitivity,
+immutable RAW SHA/size/source version. EDA: grain, format/language/size/structure,
+missing/corrupt/unsupported, exact/near duplicates, translations, versions/families.
+Не удалять meaningful versions и не выводить права из SHA. Private corpus/Gold
+локальны без отдельно разрешённого transfer scope.
 
-Maintain distinct human-reviewed Extraction, Retrieval and Answer Gold. Draft
-machine labels remain unreviewed until attested against originals; record reviewer,
-adjudication, revision and unresolved judgments. Keep training separate from
-evaluation. Split train/dev/sealed-test by family, including translations,
-versions and near-duplicates. Record seed/split revision and review decisions.
-No sealed-test tuning; exposed tests cannot be relabeled fresh blind evaluation.
-Report RU/KK/EN, format and difficult/negative coverage under the quality policy.
+Extraction, Retrieval и Answer Gold раздельны; reviewer/revision/source anchors,
+adjudication/unresolved labels явны. Machine draft не reviewed Gold.
+Train/dev/sealed-test разделяются по family, включая translations/versions/near-duplicates;
+фиксировать split revision/seed/review. Нет sealed-test tuning или переименования
+exposed test в blind. RU/KK/EN и negative coverage — по Quality Policy;
+multilingual model не доказывает покрытие данных.
 
 <a id="ML-CHUNK"></a>
-## [ML-CHUNK] Chunk evidence
+## Safe cleaning и chunks
 
-Use the frozen structure-aware character baseline as comparator; architecture §8
-records 1200 characters/120 overlap at its snapshot. These are baseline parameters,
-not token budgets or proven optima; verify actual configuration for a new run.
-Preserve facts, negation, identifiers, units, header/value links, table rows and
-genuine locators. Token-aware and table/row-aware variants are candidates.
+Transforms версионированы, сохраняют оригинал и verified source-offset map.
+Unicode/whitespace normalization допустима без изменения facts; нельзя молча менять
+decimal separators/currencies/dates/leading zeros/negation/units/formulas либо удалять
+«шумные» factual строки. Неоднозначность → review.
 
-Measure complete Gold evidence-in-chunk, broken rows/relationships, duplicate
-overlap, length/token distribution, latency and index size on fixed extraction/Gold.
-Separate extraction loss from chunking loss. A relevant chunk ID alone does not
-prove its text retains the complete supporting fact. Preserve deterministic
-identity and configuration lineage under the architecture's persistence contract.
+Comparator: structure-aware character baseline, `chunking/models.py`, size 1200,
+overlap 120; это characters, не tokens и не optimum. Fixed/token/table/row-aware
+варианты — CANDIDATE. PDF сохраняет verified page/block/table order; DOCX — body/table
+order с честной границей headings/sections; XLSX — ranges/rows с headers.
+Полная header/row/value/unit/period связь важнее длины. Нельзя скрыто обрывать факт;
+повтор headers сохраняет provenance.
+
+На fixed extraction/Gold измерять complete evidence-in-chunk, broken relations,
+duplicates, length/token distribution, latency/index size. Отделять extraction loss
+от chunk loss. Stable identities/config lineage — контракт архитектуры.
 
 <a id="ML-RETRIEVAL"></a>
-## [ML-RETRIEVAL] Embeddings and ranking
+## Embeddings и ranking
 
-Repository baseline: `intfloat/multilingual-e5-small`, revision
-`614241f622f53c4eeff9890bdc4f31cfecc418b3`, 384-dimensional normalized dense vectors.
-The provider in `src/doclens_ai/dense_baseline/embeddings.py` defines artifact hashes
-and configuration. Query/passage instructions, tokenizer, normalization and runtime
-must match the indexed space. Verify loaded bytes; a model name is not provenance.
-BM25 remains an offline lexical comparator; production lexical/hybrid integration
-is not established. E5 is not a demonstrated general improvement over BM25.
+Baseline: `intfloat/multilingual-e5-small`, revision
+`614241f622f53c4eeff9890bdc4f31cfecc418b3`, 384d, cosine/L2 normalization,
+`query:`/`passage:` instructions. Loaded artifacts/config сверять с
+`src/doclens_ai/dense_baseline/embeddings.py`; model name недостаточен.
+Tokenizer/truncation/pooling/instructions совпадают с indexed space.
+Cache key: content hash + exact model/config/instructions/normalization,
+с безопасным scope/invalidation; spaces не смешиваются.
 
-Evaluate Hit/Recall@5,@10, MRR and nDCG@10 with documented ranking horizon/ties,
-full attempted coverage and eligible denominators. Include numeric, multilingual,
-cross-lingual, table and negative cases. Gold selects scoring/splits, never backend
-candidate filters or context. Scope comparisons to identical authorized corpora
-and upstream representations; do not conflate bounded production top-k with old
-offline full-pool scores. Test tenant/freshness safety under architecture §§9–10, 16.
-New embeddings/hybrid/rerankers require measured error analysis, complementary or
-ranking need, paired gains and acceptable latency/resources before advancement.
+BM25 — OFFLINE BASELINE/comparator, не production hybrid. На совместимом scope
+сравнивать frozen BM25/E5; historical EN results не обобщать на RU/KK.
+Hit/Recall@5/10, MRR, nDCG@10 требуют ranking horizon/ties/attempted/eligible counts.
+Gold выбирает scoring/splits, не filters/candidates/context. Bounded production
+top-k не равен old full-pool protocol. Hybrid/fusion, reranker/alternative embeddings
+требуют observed error/complementarity, paired gains и acceptable latency/resources.
 
 <a id="ML-EVIDENCE"></a>
-## [ML-EVIDENCE] Selection and packing
+## Context packing
 
-Trace complete reviewed evidence through discovery, retrieved chunk contents,
-selection, deduplication and truncation into the actual serialized context.
-Measure evidence-in-context and retrieved-to-packed survival, table/header/unit
-retention, lost anchors, budget utilization and latency. Keep retrieved candidate
-pools and generator fixed for packing A/B. Character caps are not tokenizer limits;
-validate measured token use and output reserve against the selected model window.
-The current runtime's score-order/prefix packing is a baseline, not proven optimal.
-Never retrieve extra evidence using Gold labels to improve measured packing.
+Трассировать discovery → facts внутри retrieved chunks → selection/dedupe/truncation
+→ actual serialized prompt. Chunk ID hit не доказывает complete support.
+Измерять evidence-in-context/retrieved-to-packed survival, anchors/headers/units,
+token/character utilization и latency. Packing A/B держит candidate pool и generator
+постоянными. Score-order/prefix runtime — baseline, не optimum. Character cap не
+заменяет measured tokenizer window/output reserve. Gold не подмешивается в prompt.
 
 <a id="ML-GENERATION"></a>
-## [ML-GENERATION] Grounded answers and refusal
+## Generation, citations и refusal
 
-Apply [truthful-answer requirements](DocLens_AI_Project_Goals_and_Quality_Policy-1.md#TRUTHFUL-LLM).
-Evaluate factual correctness, groundedness, semantic citation support precision/recall,
-unsupported claims and refusal precision/recall/F1 using independent reviewed
-Answer Gold. Separate runtime/HTTP success, JSON/schema validity, source IDs,
-quotes/offsets/coverage, semantic support and production release counts.
-Invalid output is a contract failure, not a correct refusal; exact quotes do not
-prove entailment. AI-assisted diagnostics are not independent human semantic review.
+[Политика достоверности](DocLens_AI_Project_Goals_and_Quality_Policy-1.md#TRUTHFUL-LLM)
+задаёт допустимый ответ. Раздельно оценивать runtime/HTTP, JSON/schema, source identity,
+quotes/offsets/coverage, factual correctness, groundedness, semantic citation
+precision/recall, unsupported claims, refusal precision/recall/F1 и unsafe acceptance.
+Нужен independent reviewed Answer Gold; AI-assisted diagnostics — другой evidence class.
+Negative probes: wrong entity/negation/conflicts/no-evidence/injection/multilingual/numeric.
+Document-scoped negative не доказывает workspace unanswerability.
 
-Include negation, wrong entity, conflicting sources, no-evidence, document injection,
-cross-lingual and numeric probes. A document-scoped negative does not establish
-workspace-wide unanswerability. Reauthorize all packed evidence after inference;
-respect the architecture's residual final-check-to-delivery race. No external
-sensitive inference without explicit authorization. Rejected model/configurations
-remain rejected in their measured scope; no automatic validator weakening or
-offline-binder production integration. Historical outcomes remain in primary reports.
+Все packed sources повторно авторизуются после inference по архитектуре.
+Исторические rejected generators остаются отклонёнными в измеренном scope:
+[real baseline](docs/evaluation/rag_real_baseline_v1.md),
+[model comparison](docs/evaluation/rag_model_compare_dev_v1.md),
+[schema candidate](docs/evaluation/rag_schema_dev_v1.md).
+[Quote binder](docs/evaluation/rag_quote_binding_dev_v1.md) — offline structural
+CANDIDATE, semantic support NOT_EVALUATED; не подключать автоматически и не ослаблять
+validator. Open-weight generators/serving alternatives не выбраны roadmap.
 
 <a id="ML-FINETUNE"></a>
-## [ML-FINETUNE] Optional training
+## Необязательное обучение
 
-Do not train to memorize private document contents. LoRA/QLoRA needs evidence that
-retrieval/context provide correct support while the base generator systematically
-fails, plus error analysis and a separately authorized experiment. Require lawful,
-reviewed SFT data excluding evaluation families, frozen base-model/configuration,
-untuned held-out quality/safety checks and resource budgets. Public QA datasets are
-not automatically document-RAG Gold or approved training data. No specific model,
-rank, quantization or training sweep is selected by this strategy.
+LoRA/QLoRA — отдельно разрешённый эксперимент после достаточного lawful reviewed
+SFT Gold, family isolation и generation-specific failure при правильном retrieval/context.
+Нужны frozen base/config, comparative untuned held-out quality/safety/resource evidence.
+Не обучать запоминанию private documents. Public QA не становится автоматически
+RAG Gold/SFT. Обязательного раннего training stage нет.
 
 <a id="ML-EXPERIMENT"></a>
-## [ML-EXPERIMENT] Reproducibility and decisions
+## Общий протокол
 
-Before execution, register one hypothesis/failure category and changed variable,
-champion/candidate, immutable cohort/Gold/family splits, metrics/approved thresholds,
-guardrails, stopping rules, resource budgets and comparison scope. Freeze Git SHA,
-source/model artifact hashes, revisions, parser/chunker/prompt/packing configuration,
-dependencies, seeds, hardware and concurrency. Freeze other stages or disclose
-unavoidable differences. Use stage skills for execution and scoring details.
+До run зарегистрировать hypothesis/changed variable, baseline/candidate, immutable
+manifest/Gold/family split, metrics/approved thresholds/guardrails, stopping rules,
+resource budgets. Зафиксировать Git SHA, data/code/model hashes/revisions,
+parser/cleaner/chunker/retrieval/packing/prompt/schema configs, dependencies/seeds,
+hardware/concurrency. Freeze другие stages либо раскрыть unavoidable differences.
 
-Retain every failed/needs_review attempt and excluded observation with reason;
-report population coverage and conditional eligible quality separately. Unknown
-measurements are not invented zeros. Pair comparable observations; reproduce new
-comparisons and compare deterministic fields while retaining actual timings.
-Report per-split/language/format/difficulty metrics, sample sizes and uncertainty,
-P50/P95 latency, cold/startup versus steady inference, peak RAM/VRAM and failures.
-State units, sampling/process-tree scope and missing resource observations.
+Paired runs на тех же inputs; воспроизвести comparisons/deterministic fields.
+Сохранять failures/needs_review/excluded с причинами в attempted denominator;
+conditional eligible quality отдельно. Unknown не zero. Independent scoring по
+document/split/language/format/difficulty, sample size/uncertainty обязательны;
+small purposive samples/zero observed errors не доказывают safety.
+Latency P50/P95 (P99 при необходимости), cold/steady scope, RAM/VRAM peak units,
+sampling/process tree, timeouts/missing observations показывают стоимость.
 
-PROMOTE means advancement only within the registered experimental scope;
-REJECT follows failed guardrails, critical evidence/security regression or unsafe
-accepted answers; INCONCLUSIVE means insufficient defensible comparative evidence.
-Missing essential execution inputs means task BLOCKED. Gate verdicts are owned by
-the quality policy; a completed experiment is not a release PASS. Production rollout
-requires separate authorization, independent quality/security/operational gates,
-rollback and recovery evidence. Do not automatically start the next experiment.
+Execution PASS/FIX/BLOCKED; quality PASS/FAIL/NOT_EVALUATED по policy.
+Experiment PROMOTE — продвижение только внутри registered scope;
+REJECT — failed guardrail/critical regression; INCONCLUSIVE — insufficient evidence.
+Production authorization отдельно с release gates/rollback. Следующий experiment
+автоматически не начинать. GPU mechanics — [playbook](DocLens_AI_Kaggle_GPU_Playbook.md).

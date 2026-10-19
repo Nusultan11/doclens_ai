@@ -9,7 +9,7 @@ description: Add, review or debug DocLens PostgreSQL schema migrations and their
 
 Use for Alembic/schema work. Read AGENTS.md, the affected model, current migration
 head and relevant revisions, callers of changed fields and focused DB tests.
-Inspect only those paths; architecture section 4 is needed only for a changed invariant.
+Inspect only those paths; [architecture data contract](../../../Doclens_AI-architecture.md#ARCH-DATA) is needed only for a changed invariant.
 
 ## Invariants and workflow
 

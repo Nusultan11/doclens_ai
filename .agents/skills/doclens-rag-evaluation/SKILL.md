@@ -9,8 +9,8 @@ description: Evaluate DocLens retrieval, embeddings/chunking effects, context pa
 
 Read AGENTS.md, the changed stage, its focused tests, selected Gold protocol and
 baseline report. Relevant code is services/retrieval.py and services/rag.py under
-src/doclens_ai; inspect packing/validators only as needed. Architecture sections
-10 and 12–14 separate retrieval, evidence and semantic quality. Use the data-quality
+src/doclens_ai; inspect packing/validators only as needed. [ML Strategy](../../../DocLens_AI_ML_Quality_Strategy.md#ML-RETRIEVAL) separates
+retrieval, evidence and semantic methods; [Quality Policy](../../../DocLens_AI_Project_Goals_and_Quality_Policy-1.md#QUALITY-GATES) owns acceptance. Use the data-quality
 skill for dataset readiness and the experiment skill for a new comparison protocol.
 
 ## Invariants and workflow

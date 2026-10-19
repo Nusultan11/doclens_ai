@@ -10,7 +10,7 @@ description: Change DocLens upload, parsing, cleaning, chunking, embeddings, ind
 Use for lifecycle implementation. Read AGENTS.md and only affected functions in
 services/upload.py, processing.py, ingestion.py or indexing.py under src/doclens_ai,
 their models/configuration, persistence boundaries and focused tests. Consult
-architecture sections 5–9 for changed boundaries, not as a full-repository prerequisite.
+[architecture upload/jobs/index contracts](../../../Doclens_AI-architecture.md#ARCH-UPLOAD) for changed boundaries, not as a full-repository prerequisite.
 Use extraction-benchmark or rag-evaluation separately when making quality claims.
 
 ## Invariants and workflow

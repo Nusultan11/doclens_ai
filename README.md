@@ -4,8 +4,10 @@ DocLens AI provides Backend Core, authenticated intake, durable processing worke
 
 For engineering instructions and specification ownership, start with
 [AGENTS.md](AGENTS.md) and the [documentation source map](README_SOURCE_MAP.md).
-The architecture is a dated specification; its targets and historical measurements
-do not establish current implementation or production readiness.
+The maintained [architecture v4](Doclens_AI-architecture.md) defines target contracts;
+its implementation inventory and historical evidence do not establish production readiness.
+The [v3 DOCX](Doclens_AI-architecture.docx) remains a historical reference.
+See [documentation migration](docs/DOCS_REVIEW_AND_MIGRATION.md) for reconciliation.
 
 A dedicated ingestion worker consumes EXTRACTION jobs, persists canonical chunks, and hands runs
 off to EMBEDDING. The opt-in index worker embeds and verifies versioned Qdrant points before

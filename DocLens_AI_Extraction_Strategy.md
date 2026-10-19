@@ -1,109 +1,84 @@
-# DocLens extraction strategy
+# DocLens AI — стратегия извлечения v4
 
-AVAILABLE LOCAL EDITORIAL SPECIFICATION, reconstructed 19 October 2026 from
-architecture v3 §§7–8, 13, the reconstruction brief and extraction skill.
-Not a recovered original or a parser promotion. Owns extraction representation,
-format limitations and fidelity methods. Acceptance belongs to
-[QG-01/QG-02](DocLens_AI_Project_Goals_and_Quality_Policy-1.md#QUALITY-GATES);
-worker/storage lifecycle remains owned by architecture §§5–6, 9.
+19.10.2026. Владелец format-specific representation, методов, локаторов и parser
+experiments. Приёмка: [QG-01](DocLens_AI_Project_Goals_and_Quality_Policy-1.md#QUALITY-GATES).
+Lifecycle/trust: [архитектура](Doclens_AI-architecture.md).
 
 <a id="EX-ARCH"></a>
-## [EX-ARCH] Unified extraction contract
+## Native-first и представление
 
-Keep production baselines pypdf, python-docx and openpyxl; dependency ranges are
-in `pyproject.toml`, not fixed installed-version attestations. The production PDF
-baseline remains pypdf; the frozen expanded Docling configuration is REJECTED.
-Other Docling/OCR/ancillary adapters remain candidates until separately evaluated.
+Production baseline: `pypdf`, `python-docx`, `openpyxl`; ranges в `pyproject.toml`,
+actual versions фиксируются в run. `extraction/parsers.py` и `extraction/models.py`
+определяют runtime, не весь TARGET ниже.
 
-Target representation: source/document/version identity, RAW SHA-256, parser and
-configuration revision, original text or typed value, genuine locator, reading
-order, table/header/value relationships, warnings and immutable provenance.
-Distinguish target fields from the current ExtractionResult/canonical span schema;
-do not claim every format currently supplies every field. Mark unavailable
-dimensions explicitly rather than inventing structure or coordinates.
-
-Keep success / needs_review / failed separate from measured fidelity. Ambiguous
-structure or lost critical evidence requires review/failure under the applicable
-policy; success is never proof of completeness. Preserve signs, numbers, precision,
-dates, identifiers/leading zeros, units, negations, formulas and relationships.
-Safe Unicode/whitespace cleaning must retain original facts and a verified offset
-mapping when positions change; do not silently repair semantic values.
-
-Never execute Office macros, formulas, external references or document instructions.
-Apply input/MIME/signature/size/archive limits and isolate parser failures. Resource
-caps, hard timeouts and OS/egress isolation are requirements to verify, not guarantees
-established by parser-library use or this document.
+Сохранять original text/typed values, source/version/SHA, parser/config identity,
+настоящий locator, order, warnings и verified table/header/value relationships.
+Не выдумывать missing fields/coordinates. `success/needs_review/failed` — status,
+не fidelity. Сохранять signs/numbers/precision/dates/IDs/leading zeros/formulas/units.
+Candidate observations отделены до independent verification; VLM не может скрыто
+«исправлять» текст, числа или структуру. Library не доказывает hard timeout/sandbox;
+это проверяемые architecture TARGET.
 
 <a id="EX-PDF"></a>
-## [EX-PDF] PDF and selective OCR
+## PDF
 
-Preserve genuine page numbers and ordered source spans. Layout/table/column
-relationships require verified parser evidence; plain text proximity does not
-establish a table. Preserve numbers/signs and header/value links, including units.
-Native extraction can miss text encoded as shapes/images, unusual fonts or broken
-text layers, and can misorder rotated/multi-column/complex layouts.
+Сначала native page text с genuine 1-based pages и source spans. Proximity не
+доказывает table/grid/order. Проверять columns/rotation/fonts/encoding/images,
+пропуски и header/value/unit links по оригиналу. При наблюдаемом дефекте выбирать
+минимальный page/region OCR или table/layout candidate; low-text flag не доказывает scan.
+Pin engine/model/languages/DPI/selector/routing/fallback/limits; full OCR по умолчанию нет.
 
-Selective OCR is an evaluated candidate for explicitly selected pages after triage
-and original-page review. Scans need OCR; a heuristic low-text flag is not proof of
-a scan. Pin engine/model/languages/DPI, routing, resource limits and fallback.
-Do not silently OCR all pages or merge conflicting native/OCR outputs. Define
-deduplication, order and locator mapping before mixed-document routing. Fallback
-must expose degradation/needs_review rather than imply equal quality.
-
-The DOCX's 17 October statement that OCR is unevaluated is historical. Later offline
-work does not itself authorize production OCR. Consult selected current reports
-without treating an old snapshot as a current experiment status ledger.
+Native/OCR merge требует verified mapping/dedupe/order policy; conflicts и degraded
+fallback явно needs_review. Locator — страница и реальный region, если доступен;
+не синтезировать cell provenance из plain text.
 
 <a id="EX-DOCX"></a>
-## [EX-DOCX] DOCX and OOXML references
+## DOCX
 
-Current production scope is ordered body paragraphs/tables; complete section and
-ancillary coverage is not promised. Required extended representation preserves
-package part, relationship and element identity, section membership where genuine,
-ordered paragraphs, merges, nested tables, notes and headers/footers. Distinguish
-body reading order from ancillary parts rather than inventing a global page order.
+Baseline: ordered body paragraphs/tables; complete headings/sections/ancillary parts —
+TARGET. OOXML extension сохраняет package part, relationship/element identity,
+genuine section membership, nested/merged tables, notes/references. Body order и
+ancillary parts не превращать в выдуманный global page order. Word page numbers
+без verified layout engine запрещены.
 
-Resolve internal references against actual package parts and element addresses;
-verify target existence, type, bounds and linkage to the immutable source version.
-Shared headers/footers or repeated note references need explicit deduplication and
-reference semantics. Missing/ambiguous references are warnings/review, not invented
-text locations. Never fabricate Word page numbers without a verified layout engine.
-An address validation is not independent reviewed locator correctness.
-
-[ML-21](docs/eda/docx_footnote_candidate_v1.md) is an offline footnote candidate,
-not production support for all ancillary OOXML. Validate notes, nested tables and
-other parts independently, with unchanged body/table regression controls.
+Проверять target part/type/bounds/version linkage, repeated note refs/shared headers
+с явной dedupe semantics. Missing/ambiguous ref — warning/review.
+[Footnote candidate](docs/eda/docx_footnote_candidate_v1.md) не означает production
+support всех parts; address validator не заменяет reviewed locator Gold.
 
 <a id="EX-XLSX"></a>
-## [EX-XLSX] XLSX values and tables
+## XLSX
 
-Preserve workbook/version, sheet identity (name/index), cell/range coordinates,
-typed stored values and numeric precision. Retain formula text separately from
-cached results and record missing caches explicitly. Never claim an absent cache
-was calculated; never execute formulas/macros/external workbook links.
-
-Display number formats, date interpretation, merged ranges, headers, units and
-table membership are distinct dimensions. Stored numeric values are not necessarily
-rendered display strings. An unavailable display value is NOT_EVALUATED, not a
-guessed formatted number. Sparse/merged cells need explicit anchors; don't duplicate
-values or invent row/header relationships. Cross-sheet joins, charts and formula
-recalculation are not promised by the baseline. Sheet names can be sensitive.
+Сохранять workbook/version, sheet identity, cell/range, typed stored value/precision,
+formula expression отдельно от cached value; missing cache явно маркировать.
+Не выполнять formulas/macros/external links. Display format/date interpretation,
+merges/headers/units/table membership — отдельные измерения; stored number не равен
+display string. Не угадывать formatted value и не дублировать merged values.
+Сохранять row/header/value/unit/period links и sparse anchors.
+Cross-sheet joins/charts/recalculation baseline не обещает; sheet names чувствительны.
 
 <a id="EX-EXPERIMENT"></a>
-## [EX-EXPERIMENT] Fidelity comparisons and diagnosis
+## Сравнения и решения
 
-Use [shared experiment controls](DocLens_AI_ML_Quality_Strategy.md#ML-EXPERIMENT)
-and the extraction-benchmark skill. Pair baseline/candidate on identical frozen
-bytes, reviewed anchors and independent regression controls; record every attempt.
-Measure exact text/anchor recall, reading order, table-cell/span/relationship and
-locator fidelity, formula/cache preservation and evidence-in-chunk downstream.
-OCR adds reviewed page-level CER/WER by language. Report eligibility/status changes,
-failures, cold/warm latency and peak RAM with measurement scope.
+[ML protocol](DocLens_AI_ML_Quality_Strategy.md#ML-EXPERIMENT) и
+[extraction skill](.agents/skills/doclens-extraction-benchmark/SKILL.md): paired frozen
+bytes, reviewed Extraction Gold, independent controls. Метрики: anchors/order,
+cells/spans/relations/locators, formula/cache, eligibility/failures, evidence-in-chunk,
+cold/warm time/peak RAM. OCR: reviewed page-level CER/WER по языкам.
+Новые comparisons — два paired run в свежих ignored dirs; сверить все non-runtime
+fields/fingerprints и сохранить actual timings. Диагноз отделяет omission/traversal/
+fragmentation/order/locator mismatch от unknown cause. Extra characters не доказывают fidelity.
+Critical baseline loss не компенсируется table gains. Unreviewed dimensions NOT_EVALUATED.
 
-Run new paired comparisons twice in fresh ignored output directories; compare
-deterministic fingerprints and every non-runtime field. Preserve actual timings.
-Separate observed native-parser omissions, adapter traversal, order, fragmentation
-and locator mismatch from unknown root causes. Critical baseline evidence loss or
-fabricated provenance forces REJECT; table gains cannot compensate. No reviewed
-Gold means the corresponding fidelity dimension is NOT_EVALUATED. No parser/OCR
-promotion follows from successful execution or additional characters alone.
+| Frozen конфигурация | Историческое решение, без нового run |
+| --- | --- |
+| Docling expanded | REJECTED: [report](docs/eda/docling_pdf_expanded_benchmark_v1.md) |
+| Vector-grid | REJECTED: [report](docs/eda/pdf_table_candidate_v1.md) |
+| pdfplumber table | REJECTED: [report](docs/eda/pdfplumber_table_candidate_v1.md) |
+| Expanded selective OCR | INCONCLUSIVE: [report](docs/eda/pdf_selective_ocr_expanded_eval_v1.md) |
+| MinerU 4.0 `basic` | Future offline CANDIDATE, NOT_EVALUATED на DocLens; version/API/license проверить до run |
+
+Идеи для изучения: RAGFlow stage/evidence separation, Docling typed provenance,
+Marker layout conversion, MinerU selective pipeline. Это не импорт платформ и не
+результаты DocLens. [Official sources/caveats](DocLens_AI_Engineering_Sources.md#EXTERNAL-EXTRACTION).
+Никакой production replacement без reviewed Gold, paired evidence и отдельного допуска.

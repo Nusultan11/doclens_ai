@@ -10,8 +10,8 @@ description: Prepare, run or audit an explicitly authorized temporary DocLens Ka
 Read AGENTS.md, tools/kaggle_gpu/README.md and only the selected existing runner,
 metadata, staging manifest and experiment protocol. Check actual CLI/runtime
 versions before using version-sensitive official APIs. GPU-01 is
-https://www.kaggle.com/docs/notebooks; P-GPU requirements come from the user's
-brief unless an actual playbook is supplied. Do not claim to read missing attachments.
+https://www.kaggle.com/docs/notebooks; P-GPU is the maintained
+[GPU Playbook](../../../DocLens_AI_Kaggle_GPU_Playbook.md). Do not claim to read missing attachments.
 
 ## Modes and invariants
 

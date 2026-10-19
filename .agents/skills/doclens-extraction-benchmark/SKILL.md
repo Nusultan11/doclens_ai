@@ -8,8 +8,9 @@ description: Compare frozen DocLens PDF, DOCX or XLSX parser fidelity, or diagno
 ## Apply and inspect
 
 Read AGENTS.md, the selected protocol/baseline report and relevant extraction
-contract, scorer, Gold validator and candidate functions. Architecture section 7
-defines extraction constraints; sections 12–14 define data/evaluation gates.
+contract, scorer, Gold validator and candidate functions. [Extraction Strategy](../../../DocLens_AI_Extraction_Strategy.md) defines methods;
+[Quality Policy](../../../DocLens_AI_Project_Goals_and_Quality_Policy-1.md#QUALITY-GATES) owns acceptance;
+[ML protocol](../../../DocLens_AI_ML_Quality_Strategy.md#ML-EXPERIMENT) owns shared controls.
 Read private originals/Gold only locally as authorized; never export their text.
 
 ## Invariants and workflow

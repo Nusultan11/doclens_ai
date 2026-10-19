@@ -9,8 +9,8 @@ description: Audit or qualify DocLens operational/release readiness through real
 
 Use when release qualification, an operational audit or a production gate is requested.
 Read AGENTS.md, relevant README operating sections, Compose/profile configuration,
-current migrations and selected integration/E2E reports/tests. Inspect architecture
-sections 16–20 for security, observability and Definition of Done. Do not infer
+current migrations and selected integration/E2E reports/tests. Inspect [architecture security/operations](../../../Doclens_AI-architecture.md#ARCH-SECURITY)
+and [Quality Policy production acceptance](../../../DocLens_AI_Project_Goals_and_Quality_Policy-1.md#PRODUCTION-DOD). Do not infer
 gates passed from code presence or historical tests alone.
 
 ## Invariants and workflow

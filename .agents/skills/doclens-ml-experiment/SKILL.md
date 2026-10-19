@@ -8,9 +8,9 @@ description: Design or audit DocLens ML comparison protocols, reproducibility an
 ## Apply and inspect
 
 Read AGENTS.md, the previous step verdict, selected baseline report and only the
-runner/configuration/Gold interfaces required by the changed stage. Architecture
-sections 13–15 define experiment and training gates. Do not load all earlier reports.
-Delegate GPU mechanics to doclens-kaggle-gpu only when actual GPU work is authorized.
+runner/configuration/Gold interfaces required by the changed stage. [ML Strategy](../../../DocLens_AI_ML_Quality_Strategy.md#ML-EXPERIMENT)
+defines experiment/training methods; [Quality Policy](../../../DocLens_AI_Project_Goals_and_Quality_Policy-1.md) owns acceptance. Do not load all earlier reports.
+Use doclens-kaggle-gpu for GPU mechanics only when actual GPU work is authorized.
 
 ## Invariants and workflow
 

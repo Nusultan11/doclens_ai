@@ -1,75 +1,58 @@
-# DocLens Kaggle GPU playbook
+# DocLens AI — Kaggle GPU playbook v4
 
-AVAILABLE LOCAL EDITORIAL SPECIFICATION, reconstructed 19 October 2026 from the
-reconstruction brief, architecture §11, project GPU skill and existing
-[runner guide](tools/kaggle_gpu/README.md). Not a recovered original, cloud-run
-authorization or production qualification. Owns temporary GPU operations;
-[ML strategy](DocLens_AI_ML_Quality_Strategy.md#ML-EXPERIMENT) owns experiments
-and [quality policy](DocLens_AI_Project_Goals_and_Quality_Policy-1.md#QUALITY-GATES)
-owns acceptance. Follow the GPU skill for task-specific execution checks.
+19.10.2026. Владелец только временного явно разрешённого GPU execution.
+[ML protocol](DocLens_AI_ML_Quality_Strategy.md#ML-EXPERIMENT) определяет experiment;
+[Quality Policy](DocLens_AI_Project_Goals_and_Quality_Policy-1.md) — acceptance.
+Документ не разрешает cloud run/transfer. Команды поддерживает
+[runner guide](tools/kaggle_gpu/README.md), процедура —
+[GPU skill](.agents/skills/doclens-kaggle-gpu/SKILL.md).
 
 <a id="GPU-MODE"></a>
-## [GPU-MODE] Boundaries and preflight
+## Границы и preflight
 
-Backend/API, database, migrations and Docker development remain local. Kaggle is
-temporary explicitly authorized experiment compute, never production hosting.
-Establish workload, device/concurrency, duration/storage/resource limits, authorized
-inputs, expected artifacts and stopping rules before submission. Check actual
-account availability, quotas and CLI/runtime versions; no account-specific IDs,
-credentials, hardware allocation or remote connection is assumed here.
+Backend/API/DB/migrations/Docker остаются локальными; Kaggle не production hosting.
+До submission определить workload authorization, hardware/concurrency, quotas/cost,
+duration/storage/resource limits, allowed inputs/outputs/stopping rules.
+Проверить actual account/CLI/runtime/devices; account IDs/remote connection не подразумеваются.
 
-Stage only an explicit allowlist of necessary source and permitted public assets
-with hashes. Keep credentials outside Git/staging/logs. Private RAW, proprietary
-documents, protected Gold, sensitive prompts and document-derived embeddings need
-explicit scoped transfer authorization, privacy/retention controls and recipient
-review; private visibility alone is not authorization. Inspect exact staged files
-and remote collaborators/visibility before transfer. Never upload the repository
-by glob or mount production data for convenience.
+Staging — точный allowlist source/public assets с hashes; credentials вне Git/logs.
+Private RAW/Gold/prompts/embeddings требуют explicit transfer scope, recipients,
+privacy/retention review. Private visibility не заменяет authorization.
+Проверить exact files/collaborators/visibility перед transfer; repository glob и
+production mount запрещены.
 
 <a id="GPU-A"></a>
-## [GPU-A] Interactive Jupyter execution
+## Mode A: interactive
 
-Use the official notebook interface, or a supported verified editor connection
-when available. Do not assume remote VS Code access exists or expose an unauthenticated
-server/tunnel. Capture final notebook/source, cell execution order, Git/config/model/
-input revisions, dependencies, seeds and device placement. Restart/run the frozen
-workflow cleanly; out-of-order notebook state is not reproducible evidence.
-Export sanitized logs and JSON/CSV metrics with run identity, failures and timings.
-Keep private intermediate outputs in approved protected storage.
+Official notebook либо supported verified editor connection; не предполагать remote
+VS Code и не открывать unauthenticated server/tunnel. Сохранить final code/cell order,
+input/model/config/source revisions, dependencies/seeds/device placement.
+Clean restart/run frozen workflow; out-of-order state не воспроизводим.
+Экспортировать sanitized logs/JSON/CSV с run identity/failures.
 
 <a id="GPU-B"></a>
-## [GPU-B] Versioned CLI benchmarks
+## Mode B: versioned CLI
 
-Use the existing runner guide rather than inventing a second command sequence.
-Check installed `kaggle --version` and relevant subcommand help before using
-version-sensitive metadata/flags; resolve only explicitly authorized notebook IDs.
-Freeze staged source hashes, metadata, model bytes and inputs before submission.
-Record submission/version identity, poll status to terminal completion and retrieve
-that exact version's logs and declared artifacts. Reject stale or mismatched outputs.
-
-Preserve failed submissions, queue/startup/inference timing and terminal errors.
-Bound retries under the registered protocol; no overlapping runs or selective
-retries of rejected answers unless preregistered. Submission/download/HTTP 200 is
-not successful inference. Cleanup only explicitly owned temporary resources after
-retaining required evidence; never delete shared datasets or local source originals.
+Использовать runner guide, сверив `kaggle --version` и subcommand help.
+Только разрешённые notebook IDs; frozen staged hashes/metadata/model bytes/inputs.
+Зафиксировать submission/version ID, дождаться terminal status, получить именно его
+logs/artifacts; stale/mismatched outputs отклонять. Сохранить failed submissions,
+queue/startup/inference time/errors. Bounded retries без overlapping submissions
+или selective retries вне preregistered protocol. Cleanup только owned temporary
+resources после сохранения evidence, не shared datasets/source originals.
 
 <a id="GPU-GATE"></a>
-## [GPU-GATE] CUDA and artifact verification
+## CUDA, provenance и результат
 
-Record actual GPU model/count, selected device(s), driver/CUDA/framework versions,
-loaded artifact SHA-256/revisions, runtime identity and execution configuration.
-Prove real CUDA computation or model-layer offload using the selected runtime's
-outputs; device enumeration or allocated memory alone is insufficient. Record
-offload/placement consistency and reject silent CPU/model fallback. Two T4 devices
-do not form one combined 32 GB address space; report each device and actual placement.
+Записать actual devices/model/count/placement/offload, driver/CUDA/framework,
+loaded artifact hashes/revisions/runtime/config/input identities.
+Доказать actual CUDA computation/model-layer offload; enumeration/allocation,
+download/submission/HTTP 200 не доказывают inference. Silent CPU/model fallback запрещён.
+Две T4 не образуют автоматически единое 32 GB VRAM address space.
 
-Measure cold load/startup separately from steady inference and total elapsed time;
-record P50/P95 where sample size permits, peak device VRAM and host RAM, units,
-sampling/process scope, concurrency, timeouts and failed attempts. Mark unavailable
-measurements UNKNOWN/NOT_EVALUATED rather than infer peaks from one sample.
-
-Execution PASS requires completed workload plus matching source/input/model/runtime
-and CUDA provenance, valid expected artifacts and inspected logs. Missing essential
-runtime/provenance means BLOCKED or failed execution, never a silent success.
-JSON/CSV results must separate operational execution from stage quality decisions.
-GPU execution PASS grants no model-quality PASS or production authorization.
+Измерять cold load/startup отдельно от steady/total; P50/P95 при достаточной выборке,
+peak device VRAM/host RAM с units/sampling/process scope/concurrency/timeouts/failures.
+Unavailable measurements — UNKNOWN/NOT_EVALUATED. Execution PASS требует completed
+workload, matching provenance/CUDA, inspected logs/expected valid artifacts;
+missing essential provenance/runtime блокирует PASS. JSON/CSV отдельно показывают
+execution/stage quality. GPU execution не даёт model promotion/production authorization.
