@@ -4,6 +4,16 @@ DocLens is a Python/FastAPI modular monolith for PDF, DOCX and XLSX intelligence
 Correctness, tenant isolation, reproducibility and measurable evidence quality
 come before feature count. API and workers share one codebase.
 
+## Instruction hierarchy and navigation
+
+Follow platform instructions, the current user task, then applicable repository
+instructions (this file and any nested AGENTS.md for affected paths). The task
+defines authorized scope; specifications define required behavior, not delivered
+features. If requirements conflict, identify the owning source and report the
+conflict before changing a critical contract. Do not infer missing requirements.
+Use [README_SOURCE_MAP.md](README_SOURCE_MAP.md) to select sources and sections;
+do not read the full documentation corpus for an ordinary scoped task.
+
 ## One scoped step
 
 - Establish HEAD/branch/status, previous verdict and relevant uncommitted work.
@@ -13,7 +23,9 @@ come before feature count. API and workers share one codebase.
   sources before editing. Read only affected code/tests/config and report sections.
 - Bugs: reproduce -> cause -> smallest fix -> regression -> verify. Preserve working
   behavior; no unrelated refactoring, dependencies or future stages.
-- Verify, review scope/security, commit one logical step. Report out-of-scope findings;
+- Verify, review scope/security, commit one logical step when authorized by the task.
+  Preserve unrelated edits and staged files; never reset/clean or rewrite history.
+  Report out-of-scope findings;
   stop before the next major step/review gate.
 
 ## Sources and claims
@@ -21,11 +33,12 @@ come before feature count. API and workers share one codebase.
 Use current code/tests/migrations/configuration and verified reports first, then
 architecture constraints, version-matched official docs via configured MCP and
 relevant primary research. Check pinned versions; never export private text/Gold.
-P-ARCH: [architecture v3](Doclens_AI-architecture.docx), 15 October 2026, separately
-dated implementation sync; read relevant sections only for affected boundaries.
-P-REPO = current repository evidence. P-ML (ML Quality Strategy), P-GPU (Kaggle GPU
-Playbook), quality policy and Engineering Sources need actual supplied/local files;
-otherwise mark UNAVAILABLE. Never claim to inspect missing attachments.
+P-ARCH is the unchanged architecture v3 DOCX (15 October 2026; implementation
+snapshot 17 October at `9b39846`), not current-HEAD verification. P-REPO is current
+code/tests/configuration and scoped executed evidence. The source map routes to
+the five AVAILABLE LOCAL EDITORIAL SPECIFICATIONS reconstructed 19 October 2026.
+They are new authored requirements, not recovered originals or verified historical
+thresholds. Do not claim missing attachments were inspected.
 IMPLEMENTED needs code and verification scope; prior checks are historical only.
 OFFLINE BASELINE = measured comparator; CANDIDATE = experimental; TARGET = undelivered;
 REJECTED = failed evaluated configuration; NOT_EVALUATED = no defensible measurement.
@@ -76,16 +89,13 @@ validity, extraction success or experiment execution cannot establish production
 
 ## Quality and skill routing
 
-EDA/quality -> baseline -> reviewed evaluation -> ingestion/embeddings/indexing ->
-retrieval -> measured reranking need -> generation -> E2E; fine-tuning needs error
-analysis. Preserve QG-00..QG-09 and RU/KK/EN coverage. Missing policy definitions
-are UNAVAILABLE, never invented/waived gates. Freeze bytes/manifests, family-safe
-splits, models/configs and reviewed Gold; separate train/evaluation. No sealed-test
-tuning or exposed tests called blind. Include failed/needs_review denominators and
-negative/adversarial cases. Critical evidence/security regressions cannot be pooled
-away. Require actual stage metrics; JSON/quotes/citation coverage are not semantics.
-Use PROMOTE/REJECT/INCONCLUSIVE experimentally; missing essential inputs = BLOCKED.
-Production promotion/rollback needs its own authorized gate.
+Follow the source map's quality, extraction, ML and GPU owners. Quality Policy
+defines QG-00..QG-09; unapproved numerical thresholds remain TBD and cannot qualify
+release. ML Strategy owns frozen comparisons, reviewed Gold, family-safe splits,
+failure-inclusive denominators and stage metrics. No sealed-test tuning, fabricated
+review or quality claims from schema validity. Critical evidence/security failures
+cannot be pooled away. Follow architecture §20 dependencies; model complexity and
+fine-tuning need measured justification. Production promotion is a separate gate.
 
 Load only relevant `.agents/skills/<name>/SKILL.md`:
 - `doclens-db-migration`: schema/migration compatibility and execution.
@@ -96,8 +106,10 @@ Load only relevant `.agents/skills/<name>/SKILL.md`:
 - `doclens-ml-experiment`: comparison protocol/reproducibility/decisions.
 - `doclens-kaggle-gpu`: explicitly authorized temporary GPU staging/execution.
 - `doclens-production-readiness`: operational/release qualification.
-Stage skills own metrics; experiment skill owns shared protocol. Kaggle execution
-never grants quality/release approval. Read architecture/reports conditionally.
+Skills provide focused execution procedures; root specifications own requirements.
+Preserve stricter compatible skill checks. Report conflicting or obsolete references
+instead of silently weakening gates. Read reports conditionally; GPU execution
+alone never grants quality/release approval.
 
 ## Verification, Git and completion
 

@@ -1,6 +1,11 @@
 # DocLens AI
 
-DocLens AI provides Backend Core, authenticated intake, durable processing workers, canonical PostgreSQL chunks, versioned CPU embeddings/Qdrant indexing, opt-in tenant-safe dense search, and a stateless citation-validated RAG generation baseline for an operator-managed local generator. PostgreSQL remains authoritative for authorization, source text and ACTIVE revisions. Real generator quality is not yet evaluated. Conversations, deletion and document READY workflows are not implemented.
+DocLens AI provides Backend Core, authenticated intake, durable processing workers, canonical PostgreSQL chunks, versioned CPU embeddings/Qdrant indexing, opt-in tenant-safe dense search, and a stateless citation-validated RAG generation baseline for an operator-managed local generator. PostgreSQL remains authoritative for authorization, source text and ACTIVE revisions. Recorded real-generator configurations were rejected; independent production semantic quality remains NOT_EVALUATED. Conversations, deletion and document READY workflows are not implemented.
+
+For engineering instructions and specification ownership, start with
+[AGENTS.md](AGENTS.md) and the [documentation source map](README_SOURCE_MAP.md).
+The architecture is a dated specification; its targets and historical measurements
+do not establish current implementation or production readiness.
 
 A dedicated ingestion worker consumes EXTRACTION jobs, persists canonical chunks, and hands runs
 off to EMBEDDING. The opt-in index worker embeds and verifies versioned Qdrant points before
@@ -429,12 +434,13 @@ Orphan CANDIDATE/VERIFIED revisions and their vectors are retained intentionally
 and must first establish no active/reference or in-flight owned attempt exists, then remove only
 that revision's external points and safe metadata. Never delete a shared collection on worker exit.
 An external administrator can still alter/delete Qdrant after verification; PostgreSQL completion
-does not promise continuous external availability. Future retrieval must resolve the authoritative
-active revision and tenant scope server-side, not accept arbitrary client filters.
+does not promise continuous external availability. The Search API described below resolves the
+authoritative active revision and tenant scope server-side.
 
 ### Measured smoke and evaluation limits
 
-A controlled two-chunk DOCX traversed real MinIO, PostgreSQL 16, CPU E5 and Qdrant 1.15.4: one active
+The historical indexing smoke recorded a controlled two-chunk DOCX traversing real MinIO,
+PostgreSQL 16, CPU E5 and Qdrant 1.15.4: one active
 revision, two fully verified 384-dimensional points and one COMPLETED job; embedding failures 0,
 incomplete candidate revisions 0. Worker indexing duration was 1010.662 ms, including 679.023 ms of
 embedding, excluding model startup. Separate preflight model load was 12062.060 ms. The exact smoke
@@ -442,13 +448,14 @@ configuration fingerprint was
 `4aace3473f62dd7648fdb228b682a266ec85f92ff8c71180bbfd93567e3cd524`.
 One post-indexing Docker stats sample measured 589.6 MiB worker memory and 17.8 MiB Qdrant memory;
 these are point-in-time samples, not peak memory or representative corpus benchmarks.
+These recorded observations were not rerun during the documentation audit.
 
 Fault/concurrency integration tests use an explicitly fake deterministic embedding provider with
 real PostgreSQL, MinIO and Qdrant; they test persistence/protocol/fencing, not real-model quality.
 The separate indexing Docker smoke uses actual pinned weights. Existing
 `docs/evaluation/dense_retrieval_baseline_v1.md` remains the retrieval-quality evidence: E5 is a
-baseline candidate, not a demonstrated BM25 improvement. That indexing step added no Search API;
-the following independent retrieval step adds dense search without RAG, generation or reranking.
+baseline candidate, not a demonstrated BM25 improvement. The indexing smoke does not validate
+the separate Search or Answers API paths documented below.
 
 ## Authenticated production dense search
 
@@ -634,7 +641,13 @@ run `python -m doclens_ai.rag_eval --gold local-evaluation/rag_gold_v1.jsonl --u
 --workspace-id AUTHORIZED_UUID --output-dir evaluation-output/rag-new-real-run` as one command.
 The runner is read-only, never filters retrieval using Gold labels, writes only aggregate metrics,
 and refuses to overwrite output directories. Private annotations and model assets remain ignored.
-No real Qwen3-8B smoke, real answer correctness, groundedness or RU/KK quality is established yet.
+No real Qwen3-8B smoke is established by that baseline report. Subsequent real-model
+diagnostics are recorded in [ML-6](docs/evaluation/rag_real_baseline_v1.md),
+[ML-7](docs/evaluation/rag_model_compare_dev_v1.md) and
+[ML-9](docs/evaluation/rag_schema_dev_v1.md): the evaluated configurations were
+REJECTED. Execution and structural checks do not establish independent production
+answer correctness, semantic citation support, groundedness or RU/KK quality;
+these dimensions remain NOT_EVALUATED in those reports.
 
 ## Offline extraction fidelity benchmark
 
