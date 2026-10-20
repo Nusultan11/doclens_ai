@@ -15,20 +15,13 @@
 | Stable technical IDs, official links, intended use | [Engineering Sources](DocLens_AI_Engineering_Sources.md#CATALOG) | Catalog, legacy IDs, external extraction |
 | Codex procedure | [AGENTS.md](AGENTS.md) | Scope, verification, Git, report |
 | Actual setup/commands/features | [README](README.md) | API, worker, local/evaluation commands |
-| Миграция/limitations | [Review and migration](docs/DOCS_REVIEW_AND_MIGRATION.md) | Reconciliation, evidence, checks |
 
 ## Priority, conflicts and historical evidence
 
-Platform → current task → applicable AGENTS. Владелец определяет требования;
-P-REPO (current code/config/migrations/tests и scoped executed evidence) определяет
-реализацию. Gap не превращается в delivered feature. Существенный conflict назвать
-по источникам и сообщить до изменения critical contract.
-
+Иерархия, P-REPO и правила статусов: [AGENTS](AGENTS.md#sources-and-claims).
 [DOCX v3](Doclens_AI-architecture.docx) — historical reference, не второй owner.
-Новые v4 Markdown authored по текущему заданию; unavailable originals/attachments
-не объявляются прочитанными. Исторические отчёты не пересчитаны. QG thresholds
-не восстановлены из истории. Состояние кандидатов — у Extraction/ML Strategy.
-Статусы и правила evidence: [AGENTS](AGENTS.md#sources-and-claims).
+[Review and migration](docs/DOCS_REVIEW_AND_MIGRATION.md) сохраняет решения v4,
+проверки того snapshot и limitations; исторические отчёты не пересчитаны.
 
 ## Skill selection
 
@@ -44,10 +37,3 @@ Skills — процедуры применения owner documents, не пар�
 | Experiment protocol | [doclens-ml-experiment](.agents/skills/doclens-ml-experiment/SKILL.md) |
 | Authorized GPU execution | [doclens-kaggle-gpu](.agents/skills/doclens-kaggle-gpu/SKILL.md) |
 | Operational/release qualification | [doclens-production-readiness](.agents/skills/doclens-production-readiness/SKILL.md) |
-
-## Reconciliation notes and future review
-
-Решения, сохранённые contracts и outstanding gaps:
-[DOCS_REVIEW_AND_MIGRATION](docs/DOCS_REVIEW_AND_MIGRATION.md).
-Stable explicit anchors прежних root specifications сохранены; исторические
-DOCX section numbers не используются как действующая маршрутизация.

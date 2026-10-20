@@ -50,60 +50,37 @@ cell values, filenames, or paths. Use `--omit-runtime-metrics` for byte-for-byte
 
 ## Structured extraction contract
 
-`doclens_ai.extraction` is a standalone baseline for future chunking experiments. It is not a
-production ingestion stage and does not mutate the API, PostgreSQL, object storage, or upload
-state. Each file returns one of `success`, `needs_review`, or `failed`; failures use a fixed
-sanitized category and cannot stop later files.
+The standalone command uses the same native parsers as ingestion without creating
+upload, database or object-storage state. Per-file statuses are `success`,
+`needs_review` or `failed`; failures have sanitized categories and do not stop later files.
 
-- PDF emits one ordered text block per page with a one-based page number. Pages below 20
-  non-whitespace characters require review. No OCR is attempted, and an informational warning
-  states that table structure is not preserved.
-- DOCX emits body paragraphs and tables in document order. A merged logical cell is emitted once
-  with its anchor coordinate and row/column span. Headers, footers, footnotes, endnotes, comments,
-  drawings, text boxes, nested tables, and unsupported body containers are not extracted;
-  detected occurrences require review.
-- XLSX reads stored cells rather than iterating each coordinate inside a declared worksheet
-  rectangle. It preserves sheet order/state, meaningful cell coordinates and raw values, formula
-  definitions and cached values when present, merged ranges, and table names/references/columns.
-  Missing shared-formula definitions or cached results and detected drawings/comments require
-  review. Formulae and external content are never executed.
+- PDF emits native page text and genuine page locators, without OCR or verified table topology.
+- DOCX preserves ordered body paragraphs/tables, grid spans, part/XML addresses and note
+  references. Preserved ancillary parts remain subject to review; no Word page numbers
+  or unsupported drawing content are invented.
+- XLSX preserves sparse stored values, coordinates, number formats, date system,
+  formulas/caches and merged/table metadata. Missing caches/definitions are explicit;
+  formulas, macros and external content are never executed.
 
-The parser bounds corpus file count, input bytes, office archive entries and expansion, PDF pages,
-extracted characters, document blocks, DOCX table grid positions, worksheets, stored spreadsheet
-cells, merged ranges, and spreadsheet table definitions. XML document type/entity declarations
-are rejected.
-These safeguards are application-level limits, not a substitute for OS/container resource
-isolation when processing hostile documents.
+See [current contract and eligibility](../../README.md#ingestion-worker),
+[format strategy](../../DocLens_AI_Extraction_Strategy.md) and
+[parser models](../../src/doclens_ai/extraction/models.py). Native parsing success
+alone does not establish trusted evidence eligibility.
 
 ## Offline chunking contract
 
-`doclens_ai.chunking` accepts the in-memory `ExtractionResult` contract. Each chunk retains the
-opaque document identity, source SHA-256, deterministic chunk identity, strategy/configuration
-fingerprint, ordinal, format, and source-unit locations/ranges. Identical extraction content,
-document identity, and configuration produce identical chunks.
+The CLI compares fixed-size and structure-aware character baselines over the same
+in-memory extraction. Chunks preserve source identity, deterministic configuration,
+ordinals and rendered source-unit spans; those offsets are not RAW byte offsets.
+Character limits are not tokenizer budgets. Table relationships and missing formula
+metadata must remain explicit; oversized evidence splits require review.
 
-The fixed-size strategy creates deterministic character windows over the normalized document
-representation. It is the simplest control but may cross page, paragraph, table-row, or worksheet
-boundaries. The structure-aware strategy keeps PDF pages and XLSX worksheets separate, avoids
-mixing DOCX body text with tables, prefers whole DOCX table rows and XLSX rows, and splits any
-oversized element into bounded windows. Its overlap reuses complete trailing structural groups
-when they fit within the configured overlap; oversized elements use exact character overlap.
-
-Character sizing is intentionally dependency-free and reproducible, but it is not a token budget:
-the same number of characters can map to different token counts across languages and tokenizers.
-Before model integration, measure the selected tokenizer against the fixed evaluation corpus.
-
-For XLSX, canonical chunk input includes stored values, cell coordinates, merged ranges, and
-table metadata. Formula text and cached values are retained when available; a missing cache is
-represented explicitly, and a shared-formula follower without its own definition is marked as
-unavailable. Formulae are never calculated or executed.
-
-Only extraction results with `success` are eligible by default. `needs_review` and `failed`
-documents receive explicit skip reasons. `--include-needs-review` is an opt-in evaluation aid, not
-permission to treat incomplete extraction as production-ready. Coverage is measured over the
-normalized canonical representation: newline forms are normalized, outer whitespace is removed,
-and structural labels are included. Generated inter-unit separators are excluded from the source
-coverage denominator.
+By default, `needs_review` and `failed` extraction results are skipped with reasons.
+`--include-needs-review` is an offline inspection option. Coverage counts normalized
+rendered source units, including structural labels and excluding generated inter-unit
+separators; it does not prove semantic completeness. See
+[chunk configuration](../../src/doclens_ai/chunking/models.py) and
+[chunking methodology](../../DocLens_AI_ML_Quality_Strategy.md#ML-CHUNK).
 
 ## Confidential documents
 
@@ -111,9 +88,8 @@ coverage denominator.
 - Write reports to an access-controlled location and do not treat SHA-256 values as public data.
 - Inspect the privacy checks before sharing a report, and delete local reports under the source
   retention policy when analysis is complete.
-- Never add source documents or generated reports to Git. The standard `eda-output/`,
-  `.eda-output/`, and `reports/eda/` locations are ignored, but a custom output path remains the
-  operator's responsibility.
+- Never add source documents or generated reports to Git. The standard EDA, extraction and
+  chunking output directories shown above are ignored; custom paths remain the operator's responsibility.
 
 ## Metrics and methodology
 

@@ -12,6 +12,10 @@ dist/
 eda-output/
 .eda-output/
 reports/eda/
+extraction-output/
+chunking-output/
+reports/extraction/
+reports/chunking/
 local-corpus/
 local-evaluation/
 evaluation-output/

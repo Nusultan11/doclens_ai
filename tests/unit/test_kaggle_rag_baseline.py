@@ -15,16 +15,25 @@ from doclens_ai.services.rag import EvidenceContext
 ROOT = Path(__file__).resolve().parents[2]
 
 
-@pytest.fixture
-def runner():
-    return runpy.run_path(str(ROOT / "tools/kaggle_gpu/rag_baseline/benchmark.py"))
+@pytest.fixture(params=("rag_baseline", "rag_model_compare"))
+def runner(request):
+    """Exercise both frozen runners with the same privacy/provenance regressions."""
+    return runpy.run_path(str(ROOT / "tools/kaggle_gpu" / request.param / "benchmark.py"))
 
 
 @pytest.fixture
-def package(runner):
+def case_layout(runner):
+    return {"rag_baseline": (20, 18, 1), "rag_model_compare": (15, 14, 0)}[
+        Path(runner["__file__"]).parent.name
+    ]
+
+
+@pytest.fixture
+def package(runner, case_layout):
+    count, full_evidence_count, remaining_evidence = case_layout
     cases = []
-    for i in range(20):
-        evidence = [{"text": "synthetic"}] * (6 if i < 18 else 1)
+    for i in range(count):
+        evidence = [{"text": "synthetic"}] * (6 if i < full_evidence_count else remaining_evidence)
         messages = [
             {"role": "system", "content": runner["SYSTEM_PROMPT"]},
             {
@@ -59,7 +68,7 @@ def freeze(runner, package, monkeypatch):
 
 def test_complete_frozen_input(runner, package, monkeypatch):
     raw = freeze(runner, package, monkeypatch)
-    assert len(runner["validate_input"](raw)) == 20
+    assert len(runner["validate_input"](raw)) == len(package["cases"])
     with pytest.raises(ValueError, match="hash"):
         runner["validate_input"](raw + b" ")
 
@@ -177,6 +186,7 @@ def test_capture_provenance_rejects_tampering(runner, package, monkeypatch, chan
     report = {
         "source_sha256": "source",
         "configuration": runner["configuration"](),
+        "configuration_fingerprint": runner["fingerprint"](runner["configuration"]()),
         "cases_fingerprint": runner["fingerprint"](cases),
         "responses": responses,
         "verified_artifacts": {
@@ -225,16 +235,14 @@ async def test_http_failure_is_not_refusal(runner):
 
 def test_public_report_contains_no_raw_payload():
     path = ROOT / "docs/evaluation/rag_real_baseline_v1.md"
-    if not path.exists():
-        pytest.skip("Report is written after actual capture replay")
     text = path.read_text(encoding="utf-8")
     assert '"raw_body_b64"' not in text and '"messages"' not in text
     assert "postgresql+asyncpg://" not in text
     assert "NOT_EVALUATED" in text and "REJECT" in text
 
 
-def test_offload_gate_keeps_verified_server_logging():
-    source = (ROOT / "tools/kaggle_gpu/rag_baseline/benchmark.py").read_text()
+def test_offload_gate_keeps_verified_server_logging(runner):
+    source = Path(runner["__file__"]).read_text()
     assert '"--verbosity",\n            "5",' in source
     assert '"offloaded" in text and "layers to GPU" in text' in source
 
