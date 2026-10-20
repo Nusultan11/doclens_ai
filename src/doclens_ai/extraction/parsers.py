@@ -10,17 +10,18 @@ import re
 import time
 import zipfile
 from collections import Counter
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from pathlib import Path, PurePosixPath
 from typing import Any, BinaryIO
+from urllib.parse import unquote, urlsplit
 from xml.etree import ElementTree
 
 from docx import Document
 from docx.oxml.table import CT_Tbl
 from docx.oxml.text.paragraph import CT_P
 from docx.table import Table
-from docx.text.paragraph import Paragraph
-from openpyxl.utils.cell import coordinate_to_tuple
+from openpyxl.styles.numbers import BUILTIN_FORMATS
+from openpyxl.utils.cell import coordinate_to_tuple, range_boundaries
 from pypdf import PdfReader
 
 from doclens_ai.extraction.models import (
@@ -30,6 +31,7 @@ from doclens_ai.extraction.models import (
     ExtractionResult,
     ExtractionStatus,
     ExtractionWarning,
+    NoteReference,
     SourceLocation,
     SpreadsheetCell,
     SpreadsheetSheet,
@@ -42,7 +44,7 @@ from doclens_ai.extraction.models import (
     WarningSeverity,
 )
 
-SCHEMA_VERSION = "1.0"
+SCHEMA_VERSION = "1.1"
 _SUPPORTED_SUFFIXES = {
     ".pdf": DocumentFormat.PDF,
     ".docx": DocumentFormat.DOCX,
@@ -57,7 +59,6 @@ _OFFICE_REL_NS = "http://schemas.openxmlformats.org/officeDocument/2006/relation
 _PACKAGE_REL_NS = "http://schemas.openxmlformats.org/package/2006/relationships"
 _WORD_NS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
 _CELL_REFERENCE = re.compile(r"^\$?([A-Za-z]{1,3})\$?([1-9][0-9]{0,6})$")
-_FORBIDDEN_XML_DECLARATION = re.compile(br"<!\s*(?:doctype|entity)\b", re.IGNORECASE)
 
 
 @dataclass(frozen=True, slots=True)
@@ -301,11 +302,16 @@ def _extract_docx(
     total_characters = 0
     total_table_grid_positions = 0
     unsupported_body_content_count = 0
-    for child in document.element.body.iterchildren():
+    main_part_uri = str(document.part.partname)
+    body_root_path = (list(document.element).index(document.element.body),)
+    for child_index, child in enumerate(document.element.body.iterchildren()):
         if isinstance(child, CT_P):
-            paragraph = Paragraph(child, document._body)  # noqa: SLF001
-            text = paragraph.text
-            source = SourceLocation(block_index=len(blocks))
+            text = _docx_paragraph_text(child)
+            source = SourceLocation(
+                block_index=len(blocks),
+                part_uri=main_part_uri,
+                xml_path=body_root_path + (child_index,),
+            )
             blocks.append(TextBlock(order=len(blocks), text=text, source=source))
             total_characters += len(text)
         elif isinstance(child, CT_Tbl):
@@ -315,6 +321,8 @@ def _extract_docx(
                 order=len(blocks),
                 table_index=table_index,
                 max_grid_positions=limits.max_table_cells - total_table_grid_positions,
+                part_uri=main_part_uri,
+                xml_path=body_root_path + (child_index,),
             )
             blocks.append(table_block)
             total_table_grid_positions += grid_count
@@ -348,12 +356,86 @@ def _extract_docx(
             )
         )
     warnings.extend(_docx_unsupported_content_warnings(path, document))
+    # Reuse the bounded relationship-driven reader. Its unresolved independent
+    # locator review remains explicit; extraction does not promote this evidence.
+    from doclens_ai.extraction.docx_footnote_candidate import extract_footnotes
+
+    ancillary = extract_footnotes(path)
+    if (
+        ancillary.status is ExtractionStatus.FAILED
+        or ancillary.source_sha256 != source_sha256
+        or ancillary.source_size_bytes != source_size
+        or ancillary.main_part_uri != main_part_uri
+    ):
+        raise _ExtractionFailure(ErrorCategory.CORRUPT_DOCUMENT)
+    references = tuple(
+        NoteReference(
+            SourceLocation(
+                block_index=ref.baseline_block_index,
+                part_uri=main_part_uri,
+                xml_path=body_root_path + ref.body_xml_path,
+                note_id=ref.note_id,
+                relationship_id=ancillary.footnote_relationship_id,
+            ),
+            ancillary.footnote_part_uri,
+            ref.note_id,
+        )
+        for ref in ancillary.references
+    )
+    for note in ancillary.notes:
+        for paragraph in note.paragraphs:
+            blocks.append(
+                TextBlock(
+                    order=len(blocks),
+                    text=paragraph.text,
+                    source=SourceLocation(
+                        part_uri=note.part_uri,
+                        xml_path=(note.note_element_index, paragraph.child_index),
+                        note_id=note.note_id,
+                        relationship_id=ancillary.footnote_relationship_id,
+                    ),
+                )
+            )
+            total_characters += len(paragraph.text)
+    if ancillary.notes or ancillary.issues:
+        warnings.append(
+            ExtractionWarning(WarningCode.FOOTNOTE_PROVENANCE_UNREVIEWED, WarningSeverity.REVIEW)
+        )
+    ancillary_blocks = _docx_headers_and_footers(
+        path,
+        document,
+        start_order=len(blocks),
+        limits=replace(limits, max_table_cells=limits.max_table_cells - total_table_grid_positions),
+    )
+    if ancillary_blocks:
+        blocks.extend(ancillary_blocks)
+        warnings = [
+            warning
+            for warning in warnings
+            if warning.code
+            not in (WarningCode.HEADERS_NOT_EXTRACTED, WarningCode.FOOTERS_NOT_EXTRACTED)
+        ]
+        warnings.append(
+            ExtractionWarning(WarningCode.ANCILLARY_PROVENANCE_UNREVIEWED, WarningSeverity.REVIEW)
+        )
+        total_characters += sum(
+            len(block.text)
+            if isinstance(block, TextBlock)
+            else sum(len(cell.text) for row in block.rows for cell in row.cells)
+            for block in ancillary_blocks
+        )
+    if (
+        len(blocks) > limits.max_document_blocks
+        or total_characters > limits.max_extracted_characters
+    ):
+        raise _ExtractionFailure(ErrorCategory.LIMIT_EXCEEDED)
     return _success_result(
         document_format=DocumentFormat.DOCX,
         source_sha256=source_sha256,
         source_size=source_size,
         blocks=tuple(blocks),
         warnings=tuple(warnings),
+        note_references=references,
     )
 
 
@@ -363,11 +445,19 @@ def _docx_table_block(
     order: int,
     table_index: int,
     max_grid_positions: int,
+    part_uri: str | None = None,
+    xml_path: tuple[int, ...] | None = None,
 ) -> tuple[TableBlock, int, int, int]:
     positions_by_cell: dict[int, list[tuple[int, int, Any]]] = {}
     grid_position_count = 0
     for row_index, row in enumerate(table.rows):
-        for column_index, cell in enumerate(row.cells):
+        before, after = row.grid_cols_before, row.grid_cols_after
+        if before < 0 or after < 0:
+            raise _ExtractionFailure(ErrorCategory.CORRUPT_DOCUMENT)
+        row_cells = row.cells
+        if before + len(row_cells) + after != len(table.columns):
+            raise _ExtractionFailure(ErrorCategory.CORRUPT_DOCUMENT)
+        for column_index, cell in enumerate(row_cells, start=before):
             grid_position_count += 1
             if grid_position_count > max_grid_positions:
                 raise _ExtractionFailure(ErrorCategory.LIMIT_EXCEEDED)
@@ -385,7 +475,7 @@ def _docx_table_block(
         row_index = min(row_indexes)
         column_index = min(column_indexes)
         cell = positions[0][2]
-        text = cell.text
+        text = "\n".join(_docx_paragraph_text(p._p) for p in cell.paragraphs)
         total_characters += len(text)
         nested_count += len(cell.tables)
         source = SourceLocation(
@@ -393,6 +483,16 @@ def _docx_table_block(
             table_index=table_index,
             row_index=row_index,
             column_index=column_index,
+            part_uri=part_uri,
+            xml_path=(
+                xml_path
+                + (
+                    list(table._tbl).index(cell._tc.getparent()),
+                    list(cell._tc.getparent()).index(cell._tc),
+                )
+                if xml_path is not None
+                else None
+            ),
         )
         logical_cells.append(
             TableCell(
@@ -413,18 +513,91 @@ def _docx_table_block(
         )
         for row_index in sorted({cell.row_index for cell in logical_cells})
     )
-    source = SourceLocation(block_index=order, table_index=table_index)
+
+    source = SourceLocation(
+        block_index=order, table_index=table_index, part_uri=part_uri, xml_path=xml_path
+    )
     return (
         TableBlock(
             order=order,
             table_index=table_index,
             rows=rows,
             source=source,
+            header_row_indices=tuple(
+                i
+                for i, row in enumerate(table.rows)
+                if any(
+                    node.get(f"{{{_WORD_NS}}}val", "true") not in ("0", "false", "off")
+                    for node in row._tr.findall(f"{{{_WORD_NS}}}trPr/{{{_WORD_NS}}}tblHeader")
+                )
+            ),
         ),
         grid_position_count,
         total_characters,
         nested_count,
     )
+
+
+def _docx_headers_and_footers(
+    path: Path, document: Any, *, start_order: int, limits: ExtractionLimits
+) -> tuple[DocumentBlock, ...]:
+    """Keep shared parts once, in their own XML order, without invented pages."""
+    blocks: list[DocumentBlock] = []
+    seen = set()
+    total_grid = 0
+    with zipfile.ZipFile(path) as archive:
+        names = set(archive.namelist())
+        for section in document.sections:
+            for container in (
+                section.header,
+                section.first_page_header,
+                section.even_page_header,
+                section.footer,
+                section.first_page_footer,
+                section.even_page_footer,
+            ):
+                part_uri = str(container.part.partname)
+                if part_uri in seen or part_uri.lstrip("/") not in names:
+                    continue
+                seen.add(part_uri)
+                if not _container_has_text(container):
+                    continue
+                table_index = 0
+                for child_index, child in enumerate(container._element):
+                    order = start_order + len(blocks)
+                    source = SourceLocation(part_uri=part_uri, xml_path=(child_index,))
+                    if isinstance(child, CT_P):
+                        blocks.append(TextBlock(order, _docx_paragraph_text(child), source))
+                    elif isinstance(child, CT_Tbl):
+                        table, grid, _, _ = _docx_table_block(
+                            Table(child, container),
+                            order=order,
+                            table_index=table_index,
+                            max_grid_positions=limits.max_table_cells - total_grid,
+                            part_uri=part_uri,
+                            xml_path=(child_index,),
+                        )
+                        # Body ordinals do not apply to a separately addressed part.
+                        table = replace(
+                            table,
+                            source=replace(table.source, block_index=None),
+                            rows=tuple(
+                                replace(
+                                    row,
+                                    cells=tuple(
+                                        replace(cell, source=replace(cell.source, block_index=None))
+                                        for cell in row.cells
+                                    ),
+                                )
+                                for row in table.rows
+                            ),
+                        )
+                        blocks.append(table)
+                        table_index += 1
+                        total_grid += grid
+                    if len(blocks) > limits.max_document_blocks:
+                        raise _ExtractionFailure(ErrorCategory.LIMIT_EXCEEDED)
+    return tuple(blocks)
 
 
 def _docx_unsupported_content_warnings(
@@ -467,18 +640,36 @@ def _docx_unsupported_content_warnings(
     with zipfile.ZipFile(path) as archive:
         names = set(archive.namelist())
         for part_name, warning_code in (
-            ("word/footnotes.xml", WarningCode.FOOTNOTES_NOT_EXTRACTED),
             ("word/endnotes.xml", WarningCode.ENDNOTES_NOT_EXTRACTED),
             ("word/comments.xml", WarningCode.COMMENTS_NOT_EXTRACTED),
         ):
             if part_name in names and _xml_has_text(archive.read(part_name)):
                 warnings.append(ExtractionWarning(warning_code, WarningSeverity.REVIEW))
 
-        root = _parse_xml(archive.read("word/document.xml"))
+        root = _parse_xml(archive.read(str(document.part.partname).lstrip("/")))
+        for tag, code in (
+            ("endnoteReference", WarningCode.ENDNOTES_NOT_EXTRACTED),
+            ("commentReference", WarningCode.COMMENTS_NOT_EXTRACTED),
+        ):
+            references = root.findall(f".//{{{_WORD_NS}}}{tag}")
+            if references and not any(warning.code is code for warning in warnings):
+                warnings.append(ExtractionWarning(code, WarningSeverity.REVIEW, len(references)))
         drawing_count = len(root.findall(f".//{{{_WORD_NS}}}drawing")) + len(
             root.findall(f".//{{{_WORD_NS}}}pict")
         )
         text_box_count = len(root.findall(f".//{{{_WORD_NS}}}txbxContent"))
+        unsupported_inline = sum(
+            len(root.findall(f".//{{{_WORD_NS}}}{tag}"))
+            for tag in ("ins", "del", "sdt", "fldSimple", "fldChar", "sym", "altChunk")
+        )
+        if unsupported_inline:
+            warnings.append(
+                ExtractionWarning(
+                    WarningCode.UNSUPPORTED_BODY_CONTENT_NOT_EXTRACTED,
+                    WarningSeverity.REVIEW,
+                    unsupported_inline,
+                )
+            )
         if drawing_count:
             warnings.append(
                 ExtractionWarning(
@@ -498,6 +689,31 @@ def _docx_unsupported_content_warnings(
     return warnings
 
 
+def _docx_paragraph_text(paragraph: Any) -> str:
+    """Render supported OOXML text controls without changing Unicode characters."""
+    controls = {
+        "tab": "\t",
+        "ptab": "\t",
+        "cr": "\n",
+        "noBreakHyphen": "\u2011",
+        "softHyphen": "\u00ad",
+    }
+    chunks = []
+    stack = [paragraph]
+    while stack:
+        node = stack.pop()
+        if node.tag == f"{{{_WORD_NS}}}t":
+            chunks.append(node.text or "")
+        elif node.tag in {f"{{{_WORD_NS}}}{tag}" for tag in controls}:
+            chunks.append(controls[node.tag.rsplit("}", 1)[-1]])
+        elif node.tag == f"{{{_WORD_NS}}}br":
+            if node.get(f"{{{_WORD_NS}}}type", "textWrapping") == "textWrapping":
+                chunks.append("\n")
+        elif node.tag in {f"{{{_WORD_NS}}}{tag}" for tag in ("p", "r", "hyperlink")}:
+            stack.extend(reversed(list(node)))
+    return "".join(chunks)
+
+
 def _extract_xlsx(
     path: Path,
     source_sha256: str,
@@ -515,6 +731,20 @@ def _extract_xlsx(
         shared_strings = _xlsx_shared_strings(archive, limits)
         workbook = _parse_xml(archive.read("xl/workbook.xml"))
         workbook_relationships = _read_relationships(archive, "xl/_rels/workbook.xml.rels")
+        styles = _xlsx_number_formats(archive, workbook_relationships)
+        properties = workbook.find(f"{{{_SPREADSHEET_NS}}}workbookPr")
+        if properties is not None and properties.get("date1904", "0") not in (
+            "0",
+            "1",
+            "true",
+            "false",
+        ):
+            raise _ExtractionFailure(ErrorCategory.CORRUPT_DOCUMENT)
+        date_system = (
+            "1904"
+            if properties is not None and properties.get("date1904") in ("1", "true")
+            else "1900"
+        )
         sheet_elements = workbook.findall(f".//{{{_SPREADSHEET_NS}}}sheet")
         if len(sheet_elements) > limits.max_xlsx_sheets:
             raise _ExtractionFailure(ErrorCategory.LIMIT_EXCEEDED)
@@ -524,6 +754,8 @@ def _extract_xlsx(
             missing_formula_cache_count = 0
             relationship_id = sheet_element.get(f"{{{_OFFICE_REL_NS}}}id")
             if not relationship_id or relationship_id not in workbook_relationships:
+                raise _ExtractionFailure(ErrorCategory.CORRUPT_DOCUMENT)
+            if not workbook_relationships[relationship_id][1].endswith("/worksheet"):
                 raise _ExtractionFailure(ErrorCategory.CORRUPT_DOCUMENT)
             sheet_path = _resolve_relationship_target(
                 "xl/workbook.xml", workbook_relationships[relationship_id][0]
@@ -535,11 +767,16 @@ def _extract_xlsx(
                 raise _ExtractionFailure(ErrorCategory.LIMIT_EXCEEDED)
 
             cells: list[SpreadsheetCell] = []
+            seen_coordinates: set[str] = set()
             for cell_element in cell_elements:
                 coordinate = cell_element.get("r")
                 if not coordinate or not _CELL_REFERENCE.match(coordinate):
                     raise _ExtractionFailure(ErrorCategory.CORRUPT_DOCUMENT)
                 row_index, column_index = coordinate_to_tuple(coordinate.replace("$", ""))
+                coordinate = coordinate.replace("$", "").upper()
+                if coordinate in seen_coordinates:
+                    raise _ExtractionFailure(ErrorCategory.CORRUPT_DOCUMENT)
+                seen_coordinates.add(coordinate)
                 if row_index > 1_048_576 or column_index > 16_384:
                     raise _ExtractionFailure(ErrorCategory.CORRUPT_DOCUMENT)
                 formula_element = cell_element.find(f"{{{_SPREADSHEET_NS}}}f")
@@ -555,7 +792,28 @@ def _extract_xlsx(
                     missing_formula_cache_count += 1
                 if formula_element is None and value is None:
                     continue
-                character_count += len(value or "") + len(formula or "")
+                style_index = int(cell_element.get("s", "0"))
+                if not 0 <= style_index < len(styles):
+                    raise _ExtractionFailure(ErrorCategory.CORRUPT_DOCUMENT)
+                format_id, number_format = styles[style_index]
+                if number_format is None:
+                    warnings.append(
+                        ExtractionWarning(
+                            WarningCode.NUMBER_FORMAT_UNAVAILABLE, WarningSeverity.REVIEW
+                        )
+                    )
+                if cell_element.get("t") == "e":
+                    warnings.append(
+                        ExtractionWarning(
+                            WarningCode.SPREADSHEET_ERROR_VALUE, WarningSeverity.REVIEW
+                        )
+                    )
+                character_count += len(value or "") + len(formula or "") + len(number_format or "")
+                if formula_element is not None:
+                    character_count += sum(
+                        len(key) + len(attribute)
+                        for key, attribute in formula_element.attrib.items()
+                    )
                 if character_count > limits.max_extracted_characters:
                     raise _ExtractionFailure(ErrorCategory.LIMIT_EXCEEDED)
                 source = SourceLocation(
@@ -573,8 +831,18 @@ def _extract_xlsx(
                         value=value,
                         formula=formula,
                         cached_value=cached_value,
-                        data_type=cell_element.get("t"),
+                        data_type=cell_element.get("t", "n"),
                         source=source,
+                        raw_value=value_element.text if value_element is not None else None,
+                        number_format=number_format,
+                        number_format_id=format_id,
+                        style_index=style_index,
+                        has_formula=formula_element is not None,
+                        formula_attributes=(
+                            tuple(sorted(formula_element.attrib.items()))
+                            if formula_element is not None
+                            else ()
+                        ),
                     )
                 )
 
@@ -605,6 +873,8 @@ def _extract_xlsx(
                 element.get("ref", "")
                 for element in sheet_root.findall(f".//{{{_SPREADSHEET_NS}}}mergeCell")
             )
+            for merged in merged_ranges:
+                _xlsx_range(merged)
             merged_range_count += len(merged_ranges)
             if merged_range_count > limits.max_xlsx_merged_ranges:
                 raise _ExtractionFailure(ErrorCategory.LIMIT_EXCEEDED)
@@ -618,6 +888,16 @@ def _extract_xlsx(
             if table_count > limits.max_xlsx_tables:
                 raise _ExtractionFailure(ErrorCategory.LIMIT_EXCEEDED)
             warnings.extend(relationship_warnings)
+            if not _xlsx_structure_consistent(cells, tables, merged_ranges):
+                warnings.append(
+                    ExtractionWarning(
+                        WarningCode.AMBIGUOUS_SPREADSHEET_STRUCTURE,
+                        WarningSeverity.REVIEW,
+                        source=sheet_source,
+                    )
+                )
+            else:
+                cells = _xlsx_table_memberships(cells, tables)
             sheets.append(
                 SpreadsheetSheet(
                     index=sheet_index,
@@ -626,6 +906,7 @@ def _extract_xlsx(
                     cells=tuple(cells),
                     merged_ranges=merged_ranges,
                     tables=tables,
+                    date_system=date_system,
                 )
             )
 
@@ -648,7 +929,7 @@ def _xlsx_shared_strings(
     values: list[str] = []
     character_count = 0
     for item in root.findall(f"{{{_SPREADSHEET_NS}}}si"):
-        value = "".join(node.text or "" for node in item.findall(f".//{{{_SPREADSHEET_NS}}}t"))
+        value = _xlsx_string(item)
         values.append(value)
         if len(values) > limits.max_xlsx_stored_cells:
             raise _ExtractionFailure(ErrorCategory.LIMIT_EXCEEDED)
@@ -658,6 +939,120 @@ def _xlsx_shared_strings(
     return tuple(values)
 
 
+def _xlsx_string(container: ElementTree.Element) -> str:
+    # Phonetic rPh/t annotations are not the cell's native text.
+    return "".join(
+        (child.text or "")
+        if child.tag == f"{{{_SPREADSHEET_NS}}}t"
+        else "".join(node.text or "" for node in child.findall(f"{{{_SPREADSHEET_NS}}}t"))
+        for child in container
+        if child.tag in (f"{{{_SPREADSHEET_NS}}}t", f"{{{_SPREADSHEET_NS}}}r")
+    )
+
+
+def _xlsx_number_formats(
+    archive: zipfile.ZipFile, relationships: dict[str, tuple[str, str]]
+) -> tuple[tuple[int, str | None], ...]:
+    targets = [target for target, kind in relationships.values() if kind.endswith("/styles")]
+    if not targets:
+        return ((0, "General"),)
+    if len(targets) != 1:
+        raise _ExtractionFailure(ErrorCategory.CORRUPT_DOCUMENT)
+    root = _parse_xml(archive.read(_resolve_relationship_target("xl/workbook.xml", targets[0])))
+    custom: dict[int, str] = {}
+    for node in root.findall(f"{{{_SPREADSHEET_NS}}}numFmts/{{{_SPREADSHEET_NS}}}numFmt"):
+        key = int(node.get("numFmtId", "-1"))
+        value = node.get("formatCode")
+        if key < 164 or key in custom or value is None:
+            raise _ExtractionFailure(ErrorCategory.CORRUPT_DOCUMENT)
+        custom[key] = value
+    formats = []
+    for node in root.findall(f"{{{_SPREADSHEET_NS}}}cellXfs/{{{_SPREADSHEET_NS}}}xf"):
+        key = int(node.get("numFmtId", "0"))
+        value = custom.get(key, BUILTIN_FORMATS.get(key))
+        if key < 0:
+            raise _ExtractionFailure(ErrorCategory.CORRUPT_DOCUMENT)
+        formats.append((key, value))
+    if not formats:
+        raise _ExtractionFailure(ErrorCategory.CORRUPT_DOCUMENT)
+    return tuple(formats)
+
+
+def _xlsx_range(reference: str) -> tuple[int, int, int, int]:
+    bounds = range_boundaries(reference)
+    if (
+        any(value is None for value in bounds)
+        or not 1 <= bounds[0] <= bounds[2] <= 16_384
+        or not 1 <= bounds[1] <= bounds[3] <= 1_048_576
+    ):
+        raise _ExtractionFailure(ErrorCategory.CORRUPT_DOCUMENT)
+    return bounds
+
+
+def _xlsx_structure_consistent(
+    cells: list[SpreadsheetCell], tables: tuple[SpreadsheetTable, ...], merges: tuple[str, ...]
+) -> bool:
+    by_coordinate = {(cell.column_index + 1, cell.row_index + 1): cell for cell in cells}
+    for table in tables:
+        left, top, _, _ = _xlsx_range(table.reference)
+        if table.header_row_count:
+            for offset, name in enumerate(table.columns):
+                cell = by_coordinate.get((left + offset, top))
+                if cell is None or cell.formula is not None or cell.value != name:
+                    return False
+    # Sweep row boundaries rather than expand large sparse ranges into grid cells.
+    regions = [(bounds, "merge") for bounds in map(_xlsx_range, merges)]
+    regions += [(_xlsx_range(table.reference), "table") for table in tables]
+    regions.sort(key=lambda item: item[0][1])
+    active: list[tuple[tuple[int, int, int, int], str]] = []
+    for bounds, kind in regions:
+        left, top, right, _ = bounds
+        active = [(other, tag) for other, tag in active if other[3] >= top]
+        if any(left <= other[2] and other[0] <= right and tag == kind for other, tag in active):
+            return False
+        active.append((bounds, kind))
+    merge_regions = sorted(map(_xlsx_range, merges), key=lambda bounds: bounds[1])
+    active_merges = []
+    index = 0
+    for cell in cells:
+        row, col = cell.row_index + 1, cell.column_index + 1
+        while index < len(merge_regions) and merge_regions[index][1] <= row:
+            active_merges.append(merge_regions[index])
+            index += 1
+        active_merges = [bounds for bounds in active_merges if bounds[3] >= row]
+        if any(
+            left <= col <= right and (col, row) != (left, top)
+            for left, top, right, _ in active_merges
+        ):
+            return False  # Non-anchor stored content in a merged range is ambiguous.
+    return True
+
+
+def _xlsx_table_memberships(
+    cells: list[SpreadsheetCell], tables: tuple[SpreadsheetTable, ...]
+) -> list[SpreadsheetCell]:
+    regions = sorted(
+        ((_xlsx_range(table.reference), index) for index, table in enumerate(tables)),
+        key=lambda item: item[0][1],
+    )
+    active = []
+    next_region = 0
+    output = []
+    for cell in cells:
+        row, col = cell.row_index + 1, cell.column_index + 1
+        while next_region < len(regions) and regions[next_region][0][1] <= row:
+            active.append(regions[next_region])
+            next_region += 1
+        active = [(bounds, index) for bounds, index in active if bounds[3] >= row]
+        membership = [index for (left, _, right, _), index in active if left <= col <= right]
+        output.append(
+            replace(
+                cell, source=replace(cell.source, table_index=membership[0] if membership else None)
+            )
+        )
+    return output
+
+
 def _xlsx_cell_value(
     cell: ElementTree.Element,
     value_element: ElementTree.Element | None,
@@ -665,20 +1060,27 @@ def _xlsx_cell_value(
 ) -> str | None:
     data_type = cell.get("t")
     if data_type == "inlineStr":
-        value = "".join(
-            node.text or "" for node in cell.findall(f".//{{{_SPREADSHEET_NS}}}t")
-        )
-        return value or None
+        inline = cell.find(f"{{{_SPREADSHEET_NS}}}is")
+        return _xlsx_string(inline) if inline is not None else None
     if value_element is None or value_element.text is None:
+        if value_element is not None and data_type == "str":
+            return ""
         return None
     raw_value = value_element.text
     if data_type == "s":
-        try:
-            return shared_strings[int(raw_value)]
-        except (IndexError, ValueError) as exc:
-            raise _ExtractionFailure(ErrorCategory.CORRUPT_DOCUMENT) from exc
+        if not re.fullmatch(r"[0-9]+", raw_value) or not 0 <= int(raw_value) < len(shared_strings):
+            raise _ExtractionFailure(ErrorCategory.CORRUPT_DOCUMENT)
+        return shared_strings[int(raw_value)]
     if data_type == "b":
-        return "true" if raw_value == "1" else "false"
+        if raw_value not in ("0", "1", "true", "false"):
+            raise _ExtractionFailure(ErrorCategory.CORRUPT_DOCUMENT)
+        return "true" if raw_value in ("1", "true") else "false"
+    if data_type not in (None, "n", "d", "str", "e"):
+        raise _ExtractionFailure(ErrorCategory.CORRUPT_DOCUMENT)
+    if data_type in (None, "n") and not re.fullmatch(
+        r"[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[Ee][+-]?[0-9]+)?", raw_value
+    ):
+        raise _ExtractionFailure(ErrorCategory.CORRUPT_DOCUMENT)
     return raw_value
 
 
@@ -702,22 +1104,34 @@ def _xlsx_tables_and_warnings(
             raise _ExtractionFailure(ErrorCategory.CORRUPT_DOCUMENT)
         target, relationship_type = relationships[relationship_id]
         if not relationship_type.endswith("/table"):
-            continue
+            raise _ExtractionFailure(ErrorCategory.CORRUPT_DOCUMENT)
         table_path = _resolve_relationship_target(sheet_path, target)
         table_root = _parse_xml(archive.read(table_path))
         reference = table_root.get("ref")
         if not reference:
             raise _ExtractionFailure(ErrorCategory.CORRUPT_DOCUMENT)
+        min_col, min_row, max_col, max_row = _xlsx_range(reference)
         columns = tuple(
             column.get("name", "")
             for column in table_root.findall(f".//{{{_SPREADSHEET_NS}}}tableColumn")
         )
+        header_rows = int(table_root.get("headerRowCount", "1"))
+        totals_rows = int(table_root.get("totalsRowCount", "0"))
+        if (
+            len(columns) != max_col - min_col + 1
+            or header_rows not in (0, 1)
+            or totals_rows not in (0, 1)
+            or header_rows + totals_rows > max_row - min_row + 1
+        ):
+            raise _ExtractionFailure(ErrorCategory.CORRUPT_DOCUMENT)
         tables.append(
             SpreadsheetTable(
                 name=table_root.get("name"),
                 display_name=table_root.get("displayName"),
                 reference=reference,
                 columns=columns,
+                header_row_count=header_rows,
+                totals_row_count=totals_rows,
             )
         )
 
@@ -750,17 +1164,32 @@ def _read_relationships(
     if relationship_path not in archive.namelist():
         return {}
     root = _parse_xml(archive.read(relationship_path))
-    return {
-        relationship.get("Id", ""): (
-            relationship.get("Target", ""),
-            relationship.get("Type", ""),
-        )
-        for relationship in root.findall(f"{{{_PACKAGE_REL_NS}}}Relationship")
-        if relationship.get("Id")
-    }
+    if root.tag != f"{{{_PACKAGE_REL_NS}}}Relationships":
+        raise _ExtractionFailure(ErrorCategory.CORRUPT_DOCUMENT)
+    result = {}
+    seen = set()
+    for relationship in root.findall(f"{{{_PACKAGE_REL_NS}}}Relationship"):
+        key, target, kind = (relationship.get(k) for k in ("Id", "Target", "Type"))
+        if not key or key in seen or not target or not kind:
+            raise _ExtractionFailure(ErrorCategory.CORRUPT_DOCUMENT)
+        seen.add(key)
+        mode = relationship.get("TargetMode", "Internal")
+        if mode not in ("Internal", "External"):
+            raise _ExtractionFailure(ErrorCategory.CORRUPT_DOCUMENT)
+        if mode == "External":
+            # These relationships are never followed. Table/sheet lookup fails closed.
+            continue
+        result[key] = (target, kind)
+    return result
 
 
 def _resolve_relationship_target(source_path: str, target: str) -> str:
+    url = urlsplit(target)
+    if url.scheme or url.netloc or url.query or url.fragment:
+        raise _ExtractionFailure(ErrorCategory.CORRUPT_DOCUMENT)
+    target = unquote(url.path)
+    if not target or any(c in target for c in ("\\", "\x00", ":")):
+        raise _ExtractionFailure(ErrorCategory.CORRUPT_DOCUMENT)
     if target.startswith("/"):
         candidate = target.lstrip("/")
     else:
@@ -781,7 +1210,7 @@ def _validate_office_archive(
             if len(entries) > limits.max_office_entries:
                 raise _ExtractionFailure(ErrorCategory.LIMIT_EXCEEDED)
             names = {entry.filename for entry in entries}
-            if _OFFICE_CONTENT_TYPES[document_format] not in names:
+            if len({name.lower() for name in names}) != len(entries):
                 raise _ExtractionFailure(ErrorCategory.CORRUPT_DOCUMENT)
             total_uncompressed = 0
             for entry in entries:
@@ -797,7 +1226,23 @@ def _validate_office_archive(
                     ratio = entry.file_size / entry.compress_size
                     if ratio > limits.max_office_compression_ratio:
                         raise _ExtractionFailure(ErrorCategory.LIMIT_EXCEEDED)
-            _parse_xml(archive.read(_OFFICE_CONTENT_TYPES[document_format]))
+            if document_format is DocumentFormat.DOCX:
+                main_links = [
+                    target
+                    for target, kind in _read_relationships(archive, "_rels/.rels").values()
+                    if kind == f"{_OFFICE_REL_NS}/officeDocument"
+                ]
+                if (
+                    len(main_links) != 1
+                    or _resolve_relationship_target("", main_links[0]) not in names
+                ):
+                    raise _ExtractionFailure(ErrorCategory.CORRUPT_DOCUMENT)
+            elif _OFFICE_CONTENT_TYPES[document_format] not in names:
+                raise _ExtractionFailure(ErrorCategory.CORRUPT_DOCUMENT)
+            # Validate before python-docx or any other consumer parses package XML.
+            for entry in entries:
+                if entry.filename.lower().endswith((".xml", ".rels")):
+                    _parse_xml(archive.read(entry))
     except zipfile.BadZipFile as exc:
         raise _ExtractionFailure(ErrorCategory.CORRUPT_DOCUMENT) from exc
 
@@ -824,10 +1269,15 @@ def _xml_has_text(data: bytes) -> bool:
     return any((node.text or "").strip() for node in root.findall(f".//{{{_WORD_NS}}}t"))
 
 
-def _parse_xml(data: bytes) -> ElementTree.Element:
-    if _FORBIDDEN_XML_DECLARATION.search(data):
+class _NoDoctypeTreeBuilder(ElementTree.TreeBuilder):
+    def doctype(self, name: str, pubid: str | None, system: str | None) -> None:
         raise _ExtractionFailure(ErrorCategory.CORRUPT_DOCUMENT)
-    return ElementTree.fromstring(data)
+
+
+def _parse_xml(data: bytes) -> ElementTree.Element:
+    return ElementTree.fromstring(
+        data, parser=ElementTree.XMLParser(target=_NoDoctypeTreeBuilder())
+    )
 
 
 def _success_result(
@@ -838,7 +1288,28 @@ def _success_result(
     blocks: tuple[DocumentBlock, ...] = (),
     sheets: tuple[SpreadsheetSheet, ...] = (),
     warnings: tuple[ExtractionWarning, ...] = (),
+    note_references: tuple[NoteReference, ...] = (),
 ) -> ExtractionResult:
+    text_values = [block.text for block in blocks if isinstance(block, TextBlock)]
+    text_values.extend(
+        cell.text
+        for block in blocks
+        if isinstance(block, TableBlock)
+        for row in block.rows
+        for cell in row.cells
+    )
+    text_values.extend(
+        value or ""
+        for sheet in sheets
+        for cell in sheet.cells
+        for value in (cell.value, cell.formula, cell.cached_value)
+    )
+    if any(
+        character == "\ufffd" or 0xD800 <= ord(character) <= 0xDFFF
+        for value in text_values
+        for character in value
+    ):
+        warnings += (ExtractionWarning(WarningCode.CORRUPTED_UNICODE, WarningSeverity.REVIEW),)
     status = (
         ExtractionStatus.NEEDS_REVIEW
         if any(warning.severity is WarningSeverity.REVIEW for warning in warnings)
@@ -853,6 +1324,7 @@ def _success_result(
         blocks=blocks,
         sheets=sheets,
         warnings=warnings,
+        note_references=note_references,
     )
 
 

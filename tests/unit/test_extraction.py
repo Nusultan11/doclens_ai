@@ -136,7 +136,7 @@ def test_docx_preserves_body_order_and_merged_cell_semantics(tmp_path: Path) -> 
     assert (vertical_cell.row_index, vertical_cell.column_index) == (1, 2)
 
 
-def test_docx_reports_unsupported_header_content(tmp_path: Path) -> None:
+def test_docx_preserves_header_with_explicit_review_status(tmp_path: Path) -> None:
     source = tmp_path / "header.docx"
     document = Document()
     document.add_paragraph("body")
@@ -146,9 +146,11 @@ def test_docx_reports_unsupported_header_content(tmp_path: Path) -> None:
     result = extract_file(source)
 
     assert result.status is ExtractionStatus.NEEDS_REVIEW
-    assert WarningCode.HEADERS_NOT_EXTRACTED in {
+    assert WarningCode.ANCILLARY_PROVENANCE_UNREVIEWED in {
         warning.code for warning in result.warnings
     }
+    assert result.blocks[-1].text == "private header"
+    assert result.blocks[-1].source.part_uri == "/word/header1.xml"
     assert "private header" not in json.dumps(
         [warning.code.value for warning in result.warnings]
     )

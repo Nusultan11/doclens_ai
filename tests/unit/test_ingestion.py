@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 from uuid import uuid4
 
 import pytest
@@ -25,6 +26,7 @@ from doclens_ai.services.ingestion import (
     [
         SourceLocation(page_number=2, block_index=1),
         SourceLocation(block_index=3, table_index=1, row_index=2, column_index=4),
+        SourceLocation(block_index=0, part_uri="/word/document.xml", xml_path=(0, 1)),
         SourceLocation(
             sheet_index=0,
             sheet_name="Metrics",
@@ -68,6 +70,7 @@ def test_canonicalization_is_deterministic_and_preserves_provenance(
     assert first.content_sha256 == hashlib.sha256(chunk.text.encode()).hexdigest()
     assert first.character_count == len(chunk.text)
     assert first.token_count is None
+    assert json.loads(json.dumps(first.source_provenance)) == first.source_provenance
     assert first.source_provenance == [
         {
             "unit_id": "unit-1",
@@ -82,12 +85,15 @@ def test_canonicalization_is_deterministic_and_preserves_provenance(
                     "table_index": source.table_index,
                     "row_index": source.row_index,
                     "column_index": source.column_index,
+                    "part_uri": source.part_uri,
+                    "xml_path": list(source.xml_path) if source.xml_path is not None else None,
                 }.items()
                 if value is not None
             },
             "source_start": 1,
             "source_end": 8,
             "source_length": 14,
+            "offset_basis": "rendered_source_unit",
         }
     ]
 

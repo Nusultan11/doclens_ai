@@ -192,7 +192,7 @@ def score_record(record: FidelityRecord, result: ExtractionResult) -> dict[str, 
             continue
         left, right = found[pair.left][0], found[pair.right][0]
         key = "row_index" if pair.relationship == "same_row" else "column_index"
-        scope = ("sheet_index", "table_index", "page_number")
+        scope = ("sheet_index", "table_index", "page_number", "part_uri", "block_index")
         relation_passed += int(
             left.structured_cell
             and right.structured_cell

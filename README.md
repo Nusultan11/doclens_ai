@@ -241,6 +241,21 @@ atomically publishes the complete chunk set. Canonical chunk UUIDs, content hash
 fingerprints, ordinals, and JSONB provenance support deterministic replay, citations, and future
 rebuilding of a vector index. Token counts remain `NULL` until a tokenizer is explicitly selected.
 
+Extraction/chunking contract 1.1 preserves DOCX part/XML addresses, note references,
+declared table headers, XLSX raw values, number formats, date system and formula/cache
+metadata. Source-span offsets address rendered source units, not RAW bytes. New processing
+identities include implementation hashes and the pinned native parser stack; workers reject
+version/configuration drift. Existing runs and chunks are not rewritten. Queued runs
+with older configurations fail with `configuration_mismatch`; processing them with
+the new contract requires a new run with the current configuration.
+
+Parser `success` is separate from evidence eligibility. Native PDF text remains available
+offline, but production ingestion currently holds every PDF for review because verified
+table topology/reading order is unavailable. DOCX notes and headers/footers are preserved
+with real part identity and remain under review. Missing formula definitions/caches,
+ambiguous spreadsheet structure/formats, corrupted Unicode, inconsistent locators, and
+oversized table evidence splits cannot silently publish trusted canonical chunks.
+
 Internal ingestion requires trusted ownership explicitly:
 `await ingestion.ingest(processing_run_id, worker_id=worker_id, lease_token=lease_token)`.
 The coordinator must first claim the job; ingestion accepts only its active lease and a

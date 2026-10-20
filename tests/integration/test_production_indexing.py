@@ -33,6 +33,7 @@ from doclens_ai.services.indexing import (
 )
 from doclens_ai.services.ingestion import IngestionService
 from doclens_ai.services.processing import (
+    PROCESSING_CONFIGURATION_VERSION,
     InvalidProcessingTransition,
     LeaseOwnershipError,
     ProcessingCoordinator,
@@ -382,7 +383,7 @@ async def _next_version_or_run(factory, first, *, reprocess):
                 document_version_id=version.id,
                 operation_id=uuid4(),
                 operation_kind="reprocess",
-                configuration_version="1.0",
+                configuration_version=PROCESSING_CONFIGURATION_VERSION,
                 configuration_fingerprint=default_processing_configuration_fingerprint(),
                 stage="extraction",
                 status="queued",

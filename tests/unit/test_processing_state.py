@@ -9,9 +9,20 @@ from doclens_ai.services.processing import (
 
 
 def test_default_processing_configuration_fingerprint_is_stable() -> None:
-    assert default_processing_configuration_fingerprint() == (
-        "b4fbdf76ff96f38c4007380693a83fd82920645cd355f0f8abd80ee14d1ec9c3"
-    )
+    first = default_processing_configuration_fingerprint()
+    assert len(first) == 64
+    assert first == default_processing_configuration_fingerprint()
+
+
+def test_processing_identity_changes_with_parser_code_and_versions(monkeypatch) -> None:
+    from doclens_ai.extraction import runtime
+
+    original = default_processing_configuration_fingerprint()
+    monkeypatch.setitem(runtime.PARSER_VERSIONS, "pypdf", "different")
+    assert default_processing_configuration_fingerprint() != original
+    monkeypatch.undo()
+    monkeypatch.setattr(runtime, "IMPLEMENTATION_FILES", ("extraction/models.py",))
+    assert default_processing_configuration_fingerprint() != original
 
 
 def test_retry_backoff_is_exponential_and_bounded() -> None:

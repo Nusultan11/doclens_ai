@@ -72,6 +72,23 @@ class SourceLocation(BaseModel):
     table_index: int | None = Field(default=None, ge=0)
     row_index: int | None = Field(default=None, ge=0)
     column_index: int | None = Field(default=None, ge=0)
+    part_uri: str | None = Field(default=None, pattern=r"^/[^\\\x00]+$")
+    xml_path: tuple[int, ...] | None = None
+    note_id: str | None = None
+    relationship_id: str | None = None
+
+    @field_validator("xml_path", mode="before")
+    @classmethod
+    def valid_xml_path(cls, value):
+        if value is None:
+            return value
+        if (
+            not isinstance(value, (list, tuple))
+            or not value
+            or any(type(index) is not int or index < 0 for index in value)
+        ):
+            raise ValueError("invalid XML address")
+        return tuple(value)
 
 
 class SourceSpan(BaseModel):
@@ -80,6 +97,7 @@ class SourceSpan(BaseModel):
     source_start: int = Field(ge=0)
     source_end: int = Field(gt=0)
     source_length: int = Field(gt=0)
+    offset_basis: Literal["rendered_source_unit"] | None = None
 
     @model_validator(mode="after")
     def valid_range(self):
@@ -97,7 +115,10 @@ class SourceLocator(BaseModel):
 def source_locator(chunk: CanonicalChunk) -> SourceLocator:
     spans = [
         SourceSpan.model_validate(
-            {k: item[k] for k in ("source", "source_start", "source_end", "source_length")}
+            {
+                **{k: item[k] for k in ("source", "source_start", "source_end", "source_length")},
+                "offset_basis": item.get("offset_basis"),
+            }
         )
         for item in chunk.source_provenance
     ]
@@ -105,7 +126,11 @@ def source_locator(chunk: CanonicalChunk) -> SourceLocator:
         location = span.source
         if (
             (chunk.document_format == "pdf" and location.page_number is None)
-            or (chunk.document_format == "docx" and location.block_index is None)
+            or (
+                chunk.document_format == "docx"
+                and location.block_index is None
+                and (location.part_uri is None or location.xml_path is None)
+            )
             or (
                 chunk.document_format == "xlsx"
                 and (

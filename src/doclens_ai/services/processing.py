@@ -15,6 +15,7 @@ from doclens_ai.chunking.models import (
     ChunkingStrategy,
     config_as_dict,
 )
+from doclens_ai.extraction.runtime import extraction_runtime_manifest
 from doclens_ai.models import (
     CanonicalChunk,
     Document,
@@ -29,7 +30,7 @@ from doclens_ai.models import (
 )
 from doclens_ai.models.index_revision import chunk_set_fingerprint
 
-PROCESSING_CONFIGURATION_VERSION = "1.0"
+PROCESSING_CONFIGURATION_VERSION = "1.1"
 DEFAULT_MAX_ATTEMPTS = 3
 _SAFE_CODE = re.compile(r"^[a-z0-9][a-z0-9_]{0,63}$")
 _STAGE_ORDER = tuple(ProcessingStage)
@@ -85,7 +86,8 @@ def default_processing_configuration_fingerprint() -> str:
 
     payload = {
         "chunking": config_as_dict(ChunkingConfig(strategy=ChunkingStrategy.STRUCTURE_AWARE)),
-        "extraction_contract_version": "1.0",
+        "extraction_contract_version": "1.1",
+        "extraction_runtime": extraction_runtime_manifest(),
         "pipeline_version": PROCESSING_CONFIGURATION_VERSION,
     }
     serialized = json.dumps(payload, sort_keys=True, separators=(",", ":"))

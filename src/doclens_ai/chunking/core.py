@@ -9,9 +9,12 @@ import math
 import time
 from collections import Counter
 from collections.abc import Iterable
-from dataclasses import dataclass, fields
+from dataclasses import dataclass, fields, replace
 from pathlib import Path
 from typing import Any
+
+from openpyxl.styles.numbers import is_date_format
+from openpyxl.utils.cell import range_boundaries
 
 from doclens_ai.chunking.models import (
     Chunk,
@@ -43,6 +46,7 @@ class _SourceUnit:
     source: SourceLocation
     scope_key: str
     group_key: str
+    context_ids: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -66,6 +70,7 @@ class _StructuralGroup:
     group_key: str
     units: tuple[_SourceUnit, ...]
     rendered: _RenderedText
+    context_units: tuple[_SourceUnit, ...] = ()
 
 
 class EvaluationConfigurationError(ValueError):
@@ -96,10 +101,7 @@ def chunk_document(
                 status=ChunkingStatus.SKIPPED,
                 reason=ChunkingReason.EXTRACTION_FAILED,
             )
-        if (
-            extraction.status is ExtractionStatus.NEEDS_REVIEW
-            and not config.allow_needs_review
-        ):
+        if extraction.status is ExtractionStatus.NEEDS_REVIEW and not config.allow_needs_review:
             return _empty_outcome(
                 extraction,
                 document_id=document_id,
@@ -121,6 +123,8 @@ def chunk_document(
             )
 
         units = _build_source_units(extraction)
+        if len({unit.unit_id for unit in units}) != len(units):
+            raise _ChunkingFailure(ChunkingReason.CHUNKING_FAILED)
         normalized_source_characters = sum(len(unit.text) for unit in units)
         if not units or normalized_source_characters == 0:
             return _empty_outcome(
@@ -343,18 +347,38 @@ def _build_source_units(extraction: ExtractionResult) -> tuple[_SourceUnit, ...]
 
     units: list[_SourceUnit] = []
     for block in extraction.blocks:
+        reference_units = []
+        if block.source.block_index is not None:
+            for index, ref in enumerate(extraction.note_references):
+                if (
+                    ref.source.block_index == block.source.block_index
+                    and ref.source.part_uri == block.source.part_uri
+                ):
+                    scope = f"docx-part:{ref.source.part_uri}"
+                    reference_units.append(
+                        _SourceUnit(
+                            unit_id=f"docx-note-reference:{index}",
+                            text=f"footnote_reference={ref.note_id}\ttarget_part={ref.target_part_uri}",
+                            source=ref.source,
+                            scope_key=scope,
+                            group_key=f"{scope}:block:{ref.source.block_index}",
+                        )
+                    )
         if isinstance(block, TextBlock):
             text = _normalize_text(block.text)
             if not text:
+                units.extend(reference_units)
                 continue
             if extraction.document_format is DocumentFormat.PDF:
-                page_number = block.source.page_number or block.order + 1
+                page_number = block.source.page_number
+                if page_number is None:
+                    raise _ChunkingFailure(ChunkingReason.CHUNKING_FAILED)
                 scope_key = f"pdf-page:{page_number}"
                 group_key = scope_key
                 unit_id = f"page:{page_number}:block:{block.order}"
             else:
-                scope_key = "docx-body"
-                group_key = f"docx-block:{block.order}"
+                scope_key = f"docx-part:{block.source.part_uri or 'body'}"
+                group_key = f"{scope_key}:block:{block.order}"
                 unit_id = group_key
             units.append(
                 _SourceUnit(
@@ -363,37 +387,60 @@ def _build_source_units(extraction: ExtractionResult) -> tuple[_SourceUnit, ...]
                     source=block.source,
                     scope_key=scope_key,
                     group_key=group_key,
+                    context_ids=tuple(
+                        f"docx-note-reference:{index}"
+                        for index, ref in enumerate(extraction.note_references)
+                        if block.source.note_id is not None
+                        and ref.note_id == block.source.note_id
+                        and ref.target_part_uri == block.source.part_uri
+                    ),
                 )
             )
         elif isinstance(block, TableBlock):
-            scope_key = f"docx-table:{block.table_index}"
+            scope_key = (
+                f"{extraction.document_format.value}:part:{block.source.part_uri}:"
+                f"page:{block.source.page_number}:block:{block.source.block_index}:"
+                f"table:{block.table_index}"
+            )
+            header_ids = tuple(
+                f"{scope_key}:row:{cell.row_index}:column:{cell.column_index}"
+                for row in block.rows
+                if row.row_index in block.header_row_indices
+                for cell in row.cells
+            )
             for row in block.rows:
                 group_key = f"{scope_key}:row:{row.row_index}"
                 for cell in row.cells:
+                    if any(
+                        getattr(cell.source, key) != getattr(block.source, key)
+                        for key in ("part_uri", "page_number", "block_index", "table_index")
+                    ) or (
+                        cell.source.row_index != cell.row_index
+                        or cell.source.column_index != cell.column_index
+                    ):
+                        raise _ChunkingFailure(ChunkingReason.CHUNKING_FAILED)
                     value = _normalize_text(cell.text)
                     span = (
                         f"{cell.row_span}x{cell.column_span}"
                         if cell.row_span > 1 or cell.column_span > 1
                         else "1x1"
                     )
-                    text = (
-                        f"r{cell.row_index + 1}c{cell.column_index + 1}"
-                        f"[{span}]\t{value}"
-                    )
+                    text = f"r{cell.row_index + 1}c{cell.column_index + 1}[{span}]\t{value}"
                     units.append(
                         _SourceUnit(
-                            unit_id=(
-                                f"table:{block.table_index}:row:{cell.row_index}:"
-                                f"column:{cell.column_index}"
-                            ),
+                            unit_id=f"{scope_key}:row:{cell.row_index}:column:{cell.column_index}",
                             text=text,
                             source=cell.source,
                             scope_key=scope_key,
                             group_key=group_key,
+                            context_ids=(
+                                header_ids if row.row_index not in block.header_row_indices else ()
+                            ),
                         )
                     )
         else:
             raise TypeError("unsupported extraction block")
+        units.extend(reference_units)
     return tuple(units)
 
 
@@ -421,9 +468,7 @@ def _xlsx_source_units(extraction: ExtractionResult) -> tuple[_SourceUnit, ...]:
             units.append(
                 _SourceUnit(
                     unit_id=f"sheet:{sheet.index}:table:{table_index}",
-                    text=(
-                        f"table={table_name}\treference={table.reference}\tcolumns={columns}"
-                    ),
+                    text=(f"table={table_name}\treference={table.reference}\tcolumns={columns}"),
                     source=SourceLocation(
                         sheet_index=sheet.index,
                         sheet_name=sheet.name,
@@ -433,8 +478,58 @@ def _xlsx_source_units(extraction: ExtractionResult) -> tuple[_SourceUnit, ...]:
                     group_key=f"{scope_key}:metadata",
                 )
             )
+        ranges = [range_boundaries(table.reference) for table in sheet.tables]
+        cells_by_row: dict[int, list[SpreadsheetCell]] = {}
         for cell in sheet.cells:
-            units.append(_xlsx_cell_unit(sheet.index, sheet.name, cell))
+            cells_by_row.setdefault(cell.row_index + 1, []).append(cell)
+        table_headers = [
+            tuple(
+                f"sheet:{sheet.index}:cell:{cell.coordinate}"
+                for cell in cells_by_row.get(min_row, ())
+                if min_col <= cell.column_index + 1 <= max_col
+            )
+            for min_col, min_row, max_col, _ in ranges
+        ]
+        merge_anchors = {
+            merged.split(":", 1)[0]: f"sheet:{sheet.index}:merge:{index}"
+            for index, merged in enumerate(sheet.merged_ranges)
+        }
+        for cell in sheet.cells:
+            context_ids = []
+            table_indices = []
+            for index, (min_col, min_row, max_col, max_row) in enumerate(ranges):
+                if (
+                    min_col <= cell.column_index + 1 <= max_col
+                    and min_row <= cell.row_index + 1 <= max_row
+                ):
+                    table_indices.append(index)
+                    context_ids.append(f"sheet:{sheet.index}:table:{index}")
+                    if sheet.tables[index].header_row_count and cell.row_index + 1 > min_row:
+                        context_ids.extend(table_headers[index])
+            if len(table_indices) > 1:
+                raise _ChunkingFailure(ChunkingReason.CHUNKING_FAILED)
+            # A merge is a relationship, not an invitation to duplicate its value.
+            if cell.coordinate in merge_anchors:
+                context_ids.append(merge_anchors[cell.coordinate])
+            unit = _xlsx_cell_unit(sheet.index, sheet.name, cell)
+            if cell.number_format is not None:
+                unit = replace(unit, text=f"{unit.text}\tnumber_format={cell.number_format}")
+            elif cell.number_format_id is not None:
+                unit = replace(unit, text=f"{unit.text}\tnumber_format_id={cell.number_format_id}")
+            if cell.data_type is not None:
+                unit = replace(unit, text=f"{unit.text}\tdata_type={cell.data_type}")
+            if cell.data_type == "n" and cell.number_format and is_date_format(cell.number_format):
+                unit = replace(unit, text=f"{unit.text}\tdate_system={sheet.date_system}")
+            if cell.raw_value is not None and cell.raw_value != cell.value:
+                unit = replace(unit, text=f"{unit.text}\traw_value={cell.raw_value}")
+            if cell.has_formula and cell.formula is None and cell.cached_value is None:
+                unit = replace(unit, text=f"{unit.text}\tformula=<unavailable>\tcache=<missing>")
+            if cell.formula_attributes:
+                attributes = json.dumps(dict(cell.formula_attributes), sort_keys=True)
+                unit = replace(unit, text=f"{unit.text}\tformula_attributes={attributes}")
+            if table_indices:
+                unit = replace(unit, source=replace(unit.source, table_index=table_indices[0]))
+            units.append(replace(unit, context_ids=tuple(context_ids)))
     return tuple(units)
 
 
@@ -556,7 +651,14 @@ def _structural_groups(units: tuple[_SourceUnit, ...]) -> tuple[_StructuralGroup
                 rendered=_render_units(tuple(current), separator="\t"),
             )
         )
-    return tuple(groups)
+    by_id = {unit.unit_id: unit for unit in units}
+    enriched = []
+    for group in groups:
+        ids = tuple(dict.fromkeys(key for unit in group.units for key in unit.context_ids))
+        context = tuple(by_id[key] for key in ids)
+        group = replace(group, context_units=context)
+        enriched.append(replace(group, rendered=_render_groups([group])))
+    return tuple(enriched)
 
 
 def _tail_groups(
@@ -577,6 +679,14 @@ def _tail_groups(
 def _render_groups(groups: list[_StructuralGroup]) -> _RenderedText:
     units: list[_SourceUnit] = []
     separators: list[str] = []
+    present = {unit.unit_id for group in groups for unit in group.units}
+    for group in groups:
+        for unit in group.context_units:
+            if unit.unit_id not in present:
+                if units:
+                    separators.append("\n\n")
+                units.append(unit)
+                present.add(unit.unit_id)
     for group in groups:
         for unit_index, unit in enumerate(group.units):
             if units:

@@ -67,6 +67,10 @@ class EvidenceLocator:
     table_index: int | None = None
     row_index: int | None = None
     column_index: int | None = None
+    part_uri: str | None = None
+    xml_path: tuple[int, ...] | None = None
+    note_id: str | None = None
+    relationship_id: str | None = None
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -80,6 +84,10 @@ class EvidenceLocator:
                 ("table_index", self.table_index),
                 ("row_index", self.row_index),
                 ("column_index", self.column_index),
+                ("part_uri", self.part_uri),
+                ("xml_path", list(self.xml_path) if self.xml_path is not None else None),
+                ("note_id", self.note_id),
+                ("relationship_id", self.relationship_id),
             )
             if value is not None
         }
@@ -406,10 +414,21 @@ def _parse_locator(value: object, *, document_format: DocumentFormat) -> Evidenc
         "table_index",
         "row_index",
         "column_index",
+        "part_uri",
+        "xml_path",
+        "note_id",
+        "relationship_id",
     }
     _require_exact_keys(record, required=set(), optional=allowed, context="locator")
     parsed: dict[str, object] = {}
-    for field in allowed - {"sheet_name", "cell_coordinate"}:
+    for field in allowed - {
+        "sheet_name",
+        "cell_coordinate",
+        "part_uri",
+        "xml_path",
+        "note_id",
+        "relationship_id",
+    }:
         if field in record:
             minimum = 1 if field == "page_number" else 0
             parsed[field] = _int_at_least(record[field], field, minimum)
@@ -420,6 +439,15 @@ def _parse_locator(value: object, *, document_format: DocumentFormat) -> Evidenc
         if _CELL_RANGE.fullmatch(coordinate) is None:
             raise GoldValidationError("cell_coordinate must be an A1 cell or range")
         parsed["cell_coordinate"] = coordinate
+    for key in ("part_uri", "note_id", "relationship_id"):
+        if key in record:
+            parsed[key] = _string(record[key], key)
+    if "part_uri" in parsed and not parsed["part_uri"].startswith("/"):
+        raise GoldValidationError("part_uri must identify a package part")
+    if "xml_path" in record:
+        if not isinstance(record["xml_path"], list) or not record["xml_path"]:
+            raise GoldValidationError("xml_path must contain XML child ordinals")
+        parsed["xml_path"] = tuple(_int_at_least(i, "xml_path", 0) for i in record["xml_path"])
     locator = EvidenceLocator(**parsed)
     if document_format is DocumentFormat.PDF:
         if locator.page_number is None or any(
@@ -435,7 +463,9 @@ def _parse_locator(value: object, *, document_format: DocumentFormat) -> Evidenc
         ):
             raise GoldValidationError("PDF evidence requires a page locator")
     elif document_format is DocumentFormat.DOCX:
-        if locator.block_index is None or any(
+        if (
+            locator.block_index is None and (locator.part_uri is None or locator.xml_path is None)
+        ) or any(
             value is not None
             for value in (
                 locator.page_number,

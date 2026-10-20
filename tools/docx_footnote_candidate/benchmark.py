@@ -37,6 +37,7 @@ from doclens_ai.extraction.models import (
     ExtractionResult,
     ExtractionStatus,
     ExtractionWarning,
+    NoteReference,
     SourceLocation,
     TableBlock,
     TableCell,
@@ -62,7 +63,7 @@ def restore_docx(raw: dict) -> ExtractionResult:
         raise ValueError("DOCX capture contract rejected")
     blocks = []
     for block in raw["blocks"]:
-        source = SourceLocation(**block["source"])
+        source = _restore_location(block["source"])
         if block["kind"] == "text":
             blocks.append(TextBlock(block["order"], block["text"], source))
         elif block["kind"] == "table":
@@ -74,7 +75,7 @@ def restore_docx(raw: dict) -> ExtractionResult:
                             cell["row_index"],
                             cell["column_index"],
                             cell["text"],
-                            SourceLocation(**cell["source"]),
+                            _restore_location(cell["source"]),
                             cell["row_span"],
                             cell["column_span"],
                         )
@@ -91,6 +92,7 @@ def restore_docx(raw: dict) -> ExtractionResult:
                     source,
                     block["name"],
                     block["reference"],
+                    tuple(block.get("header_row_indices", ())),
                 )
             )
         else:
@@ -100,7 +102,7 @@ def restore_docx(raw: dict) -> ExtractionResult:
             WarningCode(w["code"]),
             WarningSeverity(w["severity"]),
             w["count"],
-            SourceLocation(**w["source"]) if w["source"] is not None else None,
+            _restore_location(w["source"]) if w["source"] is not None else None,
         )
         for w in raw["warnings"]
     )
@@ -114,10 +116,33 @@ def restore_docx(raw: dict) -> ExtractionResult:
         (),
         warnings,
         ErrorCategory(raw["error_category"]) if raw["error_category"] else None,
+        tuple(
+            NoteReference(_restore_location(ref["source"]), ref["target_part_uri"], ref["note_id"])
+            for ref in raw.get("note_references", ())
+        ),
     )
-    if result.to_dict() != raw:
+    restored = result.to_dict()
+    if raw["schema_version"] == "1.0":
+        # Old captures have no new optional fields. Compare the exact old shape;
+        # reject unknown fields rather than silently dropping them.
+        def old_shape(value, shape):
+            if isinstance(shape, dict):
+                return {key: old_shape(value[key], child) for key, child in shape.items()}
+            if isinstance(shape, list):
+                return [old_shape(v, s) for v, s in zip(value, shape, strict=True)]
+            return value
+
+        restored = old_shape(restored, raw)
+    if restored != raw:
         raise ValueError("Lossy DOCX capture restoration rejected")
     return result
+
+
+def _restore_location(raw: dict) -> SourceLocation:
+    values = dict(raw)
+    if values.get("xml_path") is not None:
+        values["xml_path"] = tuple(values["xml_path"])
+    return SourceLocation(**values)
 
 
 def sha(path: Path) -> str:

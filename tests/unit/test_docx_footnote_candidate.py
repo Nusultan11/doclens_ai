@@ -293,6 +293,13 @@ def test_independent_provenance_rejects_wrong_reference_and_note_addresses(tmp_p
 
 def synthetic_gold(path):
     result = extract_file(path)
+    # This frozen candidate comparison uses the historical body-only comparator.
+    # Runtime now also exposes notes, whose reviewed locator convention is separate.
+    result = replace(
+        result,
+        blocks=tuple(block for block in result.blocks if block.source.note_id is None),
+        note_references=(),
+    )
     data = {
         "schema_version": "1.0",
         "dataset_revision": "corpus-v1-fidelity-v1",

@@ -352,7 +352,7 @@ class EvidenceEnvelope(Contract):
         if (
             fingerprint(self.native_v1) != self.native_sha256
             or self.native_v1.get("source_sha256") != self.scope.raw_sha256
-            or self.native_v1.get("schema_version") != "1.0"
+            or self.native_v1.get("schema_version") not in {"1.0", "1.1"}
         ):
             raise ValueError("native identity mismatch")
         return self

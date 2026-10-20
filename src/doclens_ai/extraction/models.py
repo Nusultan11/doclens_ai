@@ -49,6 +49,12 @@ class WarningCode(StrEnum):
     FORMULA_DEFINITION_UNAVAILABLE = "formula_definition_unavailable"
     SPREADSHEET_DRAWINGS_NOT_EXTRACTED = "spreadsheet_drawings_not_extracted"
     SPREADSHEET_COMMENTS_NOT_EXTRACTED = "spreadsheet_comments_not_extracted"
+    FOOTNOTE_PROVENANCE_UNREVIEWED = "footnote_provenance_unreviewed"
+    CORRUPTED_UNICODE = "corrupted_unicode"
+    SPREADSHEET_ERROR_VALUE = "spreadsheet_error_value"
+    AMBIGUOUS_SPREADSHEET_STRUCTURE = "ambiguous_spreadsheet_structure"
+    ANCILLARY_PROVENANCE_UNREVIEWED = "ancillary_provenance_unreviewed"
+    NUMBER_FORMAT_UNAVAILABLE = "number_format_unavailable"
 
 
 class ErrorCategory(StrEnum):
@@ -77,6 +83,10 @@ class SourceLocation:
     table_index: int | None = None
     row_index: int | None = None
     column_index: int | None = None
+    part_uri: str | None = None
+    xml_path: tuple[int, ...] | None = None  # Child ordinals from the named part's XML root.
+    note_id: str | None = None
+    relationship_id: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -119,6 +129,7 @@ class TableBlock:
     source: SourceLocation
     name: str | None = None
     reference: str | None = None
+    header_row_indices: tuple[int, ...] = ()
     kind: str = field(default="table", init=False)
 
 
@@ -137,6 +148,12 @@ class SpreadsheetCell:
     cached_value: str | None
     data_type: str | None
     source: SourceLocation
+    raw_value: str | None = None
+    number_format: str | None = None
+    style_index: int | None = None
+    has_formula: bool = False
+    formula_attributes: tuple[tuple[str, str], ...] = ()
+    number_format_id: int | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -147,6 +164,8 @@ class SpreadsheetTable:
     display_name: str | None
     reference: str
     columns: tuple[str, ...]
+    header_row_count: int = 1
+    totals_row_count: int = 0
 
 
 @dataclass(frozen=True, slots=True)
@@ -159,6 +178,16 @@ class SpreadsheetSheet:
     cells: tuple[SpreadsheetCell, ...]
     merged_ranges: tuple[str, ...]
     tables: tuple[SpreadsheetTable, ...]
+    date_system: str = "1900"
+
+
+@dataclass(frozen=True, slots=True)
+class NoteReference:
+    """An actual OOXML reference to a note, including repeated references."""
+
+    source: SourceLocation
+    target_part_uri: str | None
+    note_id: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -184,6 +213,7 @@ class ExtractionResult:
     sheets: tuple[SpreadsheetSheet, ...] = ()
     warnings: tuple[ExtractionWarning, ...] = ()
     error_category: ErrorCategory | None = None
+    note_references: tuple[NoteReference, ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
         """Return a deterministic JSON-compatible representation."""

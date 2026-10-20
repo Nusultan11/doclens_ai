@@ -25,6 +25,8 @@ from doclens_ai.chunking.models import (
 )
 from doclens_ai.extraction.models import ExtractionStatus
 from doclens_ai.extraction.parsers import SCHEMA_VERSION, ExtractionLimits, extract_file
+from doclens_ai.extraction.runtime import runtime_versions_match
+from doclens_ai.extraction.validation import evidence_is_indexable
 from doclens_ai.models import (
     CanonicalChunk,
     DocumentVersion,
@@ -223,9 +225,9 @@ class IngestionService:
 
     def _validate_processing_configuration(self, source: _SourceIdentity) -> None:
         if (
-            source.configuration_version != PROCESSING_CONFIGURATION_VERSION
-            or source.configuration_fingerprint
-            != default_processing_configuration_fingerprint()
+            not runtime_versions_match()
+            or source.configuration_version != PROCESSING_CONFIGURATION_VERSION
+            or source.configuration_fingerprint != default_processing_configuration_fingerprint()
         ):
             raise IngestionFailure(
                 IngestionFailureCategory.CONFIGURATION_MISMATCH,
@@ -280,6 +282,8 @@ class IngestionService:
             if (
                 extraction.source_sha256 != source.sha256_checksum
                 or extraction.source_size_bytes != source.file_size
+                or extraction.document_format is None
+                or f".{extraction.document_format.value}" != suffix
             ):
                 raise IngestionFailure(
                     IngestionFailureCategory.SOURCE_IDENTITY_MISMATCH,
@@ -299,6 +303,12 @@ class IngestionService:
                         if extraction.error_category is not None
                         else None
                     ),
+                )
+
+            if not evidence_is_indexable(extraction):
+                raise IngestionFailure(
+                    IngestionFailureCategory.EXTRACTION_NEEDS_REVIEW,
+                    retryable=False,
                 )
 
             outcome = await asyncio.to_thread(
@@ -402,11 +412,24 @@ class IngestionService:
                 chunk.ordinal != ordinal
                 or chunk.document_id != expected_document_id
                 or chunk.source_sha256 != source.sha256_checksum
+                or f".{chunk.document_format.value}"
+                != _SUFFIX_BY_CONTENT_TYPE.get(source.content_type)
                 or chunk.strategy is not ChunkingStrategy.STRUCTURE_AWARE
                 or chunk.config_fingerprint != expected_fingerprint
                 or chunk.config_version != self._chunking_config.version
                 or not chunk.text
                 or not chunk.provenance
+                or any(
+                    not 0 <= span.source_start < span.source_end <= span.source_length
+                    for span in chunk.provenance
+                )
+                or (
+                    chunk.split_oversized_element
+                    and any(
+                        span.source.table_index is not None or span.source.sheet_index is not None
+                        for span in chunk.provenance
+                    )
+                )
             ):
                 raise IngestionFailure(
                     IngestionFailureCategory.CHUNKING_FAILED,
@@ -527,13 +550,18 @@ def canonicalize_chunk(processing_run_id: UUID, chunk: Chunk) -> CanonicalChunkP
         {
             "unit_id": span.unit_id,
             "source": {
-                field.name: getattr(span.source, field.name)
+                field.name: (
+                    list(getattr(span.source, field.name))
+                    if isinstance(getattr(span.source, field.name), tuple)
+                    else getattr(span.source, field.name)
+                )
                 for field in fields(span.source)
                 if getattr(span.source, field.name) is not None
             },
             "source_start": span.source_start,
             "source_end": span.source_end,
             "source_length": span.source_length,
+            "offset_basis": "rendered_source_unit",
         }
         for span in chunk.provenance
     ]

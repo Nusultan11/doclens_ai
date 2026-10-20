@@ -146,11 +146,11 @@ def _pdf_bytes(page_texts: list[str]) -> bytes:
     return output.getvalue()
 
 
-def _docx_bytes(*, empty: bool = False) -> bytes:
+def _docx_bytes(*, empty: bool = False, text: str | None = None) -> bytes:
     output = io.BytesIO()
     document = DocxDocument()
     if not empty:
-        document.add_paragraph("A production document paragraph with useful content.")
+        document.add_paragraph(text or "A production document paragraph with useful content.")
         table = document.add_table(rows=1, cols=2)
         table.cell(0, 0).text = "left value"
         table.cell(0, 1).text = "right value"
@@ -250,7 +250,38 @@ async def _legacy_completed_job(factory, claim) -> None:
 
 
 @pytest.mark.integration
-def test_pdf_docx_xlsx_persistence_idempotency_and_reprocessing_isolation(
+def test_successful_pdf_text_is_not_published_as_complete_evidence(
+    migrated_database_url: str,
+) -> None:
+    async def exercise() -> None:
+        engine = create_async_engine(migrated_database_url)
+        factory = async_sessionmaker(engine, expire_on_commit=False)
+        storage = MemoryStorage()
+        try:
+            workspace, document = await _create_document(factory)
+            _, run_id, _ = await _upload(
+                factory,
+                storage,
+                workspace_id=workspace,
+                document_id=document,
+                filename="unverified-table.pdf",
+                content_type=PDF_CONTENT_TYPE,
+                content=_pdf_bytes(["Amount kg 2026 entity A -10. Native text is recoverable."]),
+            )
+            with pytest.raises(IngestionFailure) as failure:
+                await _ingest_claimed(IngestionService(factory, storage), factory, run_id)
+            assert failure.value.category is IngestionFailureCategory.EXTRACTION_NEEDS_REVIEW
+            assert not failure.value.retryable
+            async with factory() as session:
+                assert await session.scalar(select(func.count(CanonicalChunk.id))) == 0
+        finally:
+            await engine.dispose()
+
+    asyncio.run(exercise())
+
+
+@pytest.mark.integration
+def test_docx_xlsx_persistence_idempotency_and_reprocessing_isolation(
     migrated_database_url: str,
 ) -> None:
     async def exercise() -> None:
@@ -260,9 +291,9 @@ def test_pdf_docx_xlsx_persistence_idempotency_and_reprocessing_isolation(
         workspace_id, document_id = await _create_document(session_factory)
         sources = (
             (
-                "source.pdf",
-                PDF_CONTENT_TYPE,
-                _pdf_bytes(["PDF page content long enough for production extraction."]),
+                "source-text.docx",
+                DOCX_CONTENT_TYPE,
+                _docx_bytes(text="First version of the source with extractable text."),
             ),
             ("source.docx", DOCX_CONTENT_TYPE, _docx_bytes()),
             ("source.xlsx", XLSX_CONTENT_TYPE, _xlsx_bytes()),
@@ -336,12 +367,12 @@ def test_pdf_docx_xlsx_persistence_idempotency_and_reprocessing_isolation(
                         version_id == (await session.get(ProcessingRun, run_id)).document_version_id
                     )
 
-                pdf_chunks = chunks_by_run[uploaded[0][1]]
+                first_chunks = chunks_by_run[uploaded[0][1]]
                 assert {
-                    span["source"]["page_number"]
-                    for chunk in pdf_chunks
+                    span["source"]["part_uri"]
+                    for chunk in first_chunks
                     for span in chunk.source_provenance
-                } == {1}
+                } == {"/word/document.xml"}
                 docx_chunks = chunks_by_run[uploaded[1][1]]
                 assert any(
                     span["source"].get("table_index") == 0
@@ -432,9 +463,9 @@ def test_stale_worker_cannot_publish_after_lease_reclaimed_during_extraction(
             storage,
             workspace_id=workspace_id,
             document_id=document_id,
-            filename="fenced.pdf",
-            content_type=PDF_CONTENT_TYPE,
-            content=_pdf_bytes(["First worker must not publish after another worker reclaims."]),
+            filename="fenced.docx",
+            content_type=DOCX_CONTENT_TYPE,
+            content=_docx_bytes(text="Lease and atomic publication regression source."),
         )
         coordinator = ProcessingCoordinator(session_factory)
         first = await coordinator.claim_next(worker_id="worker-a")
@@ -696,9 +727,9 @@ def test_revocation_or_transition_during_extraction_rolls_back(
                 storage,
                 workspace_id=workspace,
                 document_id=document,
-                filename="transition.pdf",
-                content_type=PDF_CONTENT_TYPE,
-                content=_pdf_bytes(["Extraction paused before publication while job transitions."]),
+                filename="transition.docx",
+                content_type=DOCX_CONTENT_TYPE,
+                content=_docx_bytes(text="Lease and atomic publication regression source."),
             )
             claim = await _claim_run(factory, run_id)
             service = IngestionService(factory, storage)
@@ -796,11 +827,9 @@ def test_lease_expiration_after_row_lock_wait_uses_postgres_wall_clock(
                 storage,
                 workspace_id=workspace,
                 document_id=document,
-                filename="lock-wait.pdf",
-                content_type=PDF_CONTENT_TYPE,
-                content=_pdf_bytes(
-                    ["PostgreSQL row lock wait must not freeze lease validation time."]
-                ),
+                filename="lock-wait.docx",
+                content_type=DOCX_CONTENT_TYPE,
+                content=_docx_bytes(text="Lease and atomic publication regression source."),
             )
             claim = await _claim_run(factory, run_id)
             service = IngestionService(factory, storage)
@@ -809,7 +838,7 @@ def test_lease_expiration_after_row_lock_wait_uses_postgres_wall_clock(
             )
             chunks = tuple(
                 ingestion_module.canonicalize_chunk(run_id, chunk)
-                for chunk in await service._extract_and_chunk(source, suffix=".pdf")
+                for chunk in await service._extract_and_chunk(source, suffix=".docx")
             )
             async with factory() as blocker, blocker.begin():
                 await blocker.scalar(
@@ -886,14 +915,9 @@ def test_expiration_at_final_check_rolls_back_or_rejects_idempotence(
                 storage,
                 workspace_id=workspace,
                 document_id=document,
-                filename="expiry.pdf",
-                content_type=PDF_CONTENT_TYPE,
-                content=_pdf_bytes(
-                    [
-                        "First complete canonical chunk must roll back if ownership expires.",
-                        "Second complete canonical chunk must also roll back atomically.",
-                    ]
-                ),
+                filename="expiry.docx",
+                content_type=DOCX_CONTENT_TYPE,
+                content=_docx_bytes(text="Lease and atomic publication regression source."),
             )
             claim = await _claim_run(factory, run_id)
             service = IngestionService(factory, storage)
@@ -902,7 +926,7 @@ def test_expiration_at_final_check_rolls_back_or_rejects_idempotence(
             )
             chunks = tuple(
                 ingestion_module.canonicalize_chunk(run_id, chunk)
-                for chunk in await service._extract_and_chunk(source, suffix=".pdf")
+                for chunk in await service._extract_and_chunk(source, suffix=".docx")
             )
             assert len(chunks) == 2
             if already_persisted:
@@ -982,13 +1006,9 @@ def test_independent_runs_isolate_lease_failure(migrated_database_url: str) -> N
                         storage,
                         workspace_id=workspace,
                         document_id=document,
-                        filename=f"independent-{index}.pdf",
-                        content_type=PDF_CONTENT_TYPE,
-                        content=_pdf_bytes(
-                            [
-                                f"Independent document {index} has sufficient extraction content."
-                            ]
-                        ),
+                        filename=f"independent-{index}.docx",
+                        content_type=DOCX_CONTENT_TYPE,
+                        content=_docx_bytes(text="Lease and atomic publication regression source."),
                     )
                 )[1]
                 for index in range(2)
@@ -1159,14 +1179,9 @@ def test_canonical_chunk_set_rolls_back_on_persistence_failure(
             storage,
             workspace_id=workspace_id,
             document_id=document_id,
-            filename="rollback.pdf",
-            content_type=PDF_CONTENT_TYPE,
-            content=_pdf_bytes(
-                [
-                    "First page has enough text for an independent canonical chunk.",
-                    "Second page has enough text for an independent canonical chunk.",
-                ]
-            ),
+            filename="rollback.docx",
+            content_type=DOCX_CONTENT_TYPE,
+            content=_docx_bytes(text="Lease and atomic publication regression source."),
         )
         original = ingestion_module.canonicalize_chunk
 
@@ -1203,9 +1218,9 @@ def test_configuration_mismatch_and_existing_chunk_conflict_fail_safely(
             storage,
             workspace_id=workspace_id,
             document_id=document_id,
-            filename="conflict.pdf",
-            content_type=PDF_CONTENT_TYPE,
-            content=_pdf_bytes(["Conflict source with sufficient extractable text."]),
+            filename="conflict.docx",
+            content_type=DOCX_CONTENT_TYPE,
+            content=_docx_bytes(text="Lease and atomic publication regression source."),
         )
         conflicting_text = "pre-existing conflicting canonical text"
         conflicting_id = f"chunk-{'d' * 64}"
