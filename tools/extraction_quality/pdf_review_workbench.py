@@ -1,4 +1,4 @@
-"""Local human worksheet workbench. No extraction, predictions, or automatic decisions."""
+"""Local PDF worksheets and explicitly requested proposals; never automatic review."""
 
 from __future__ import annotations
 
@@ -21,6 +21,7 @@ from urllib.parse import parse_qs, urlsplit
 
 from doclens_ai.extraction.evidence_v2 import Scope, valid_bbox
 from doclens_ai.extraction.fidelity_gold import fingerprint
+from tools.extraction_quality import pdf_grid_proposals as grids
 from tools.extraction_quality import pdf_review_validation as validation
 from tools.extraction_quality import pdf_table_review_packet as packet
 
@@ -224,6 +225,14 @@ class Workbench:
             box(anchor["locator"]["page"], anchor["locator"]["bbox"])
 
     def _validate_independent(self, key: str, draft: dict) -> None:
+        proposals = self.output / "grid-proposals"
+        packet.no_links(proposals)
+        if any(proposals.glob(f"{key}-*.json")) or any(
+            t.get("assisted_grid_proposals") for t in draft["tables"]
+        ):
+            raise WorkbenchError(
+                "Assisted draft requires separate independent review before Gold freeze"
+            )
         _, _, undecided = packet.worksheets(self.records[key], self.pages[key])
         validation.validate_document(
             draft,
@@ -502,6 +511,186 @@ class Workbench:
         destination["bbox_pdf_user_space_points"] = bbox
         return self.update("draft", {**payload, "draft": draft})
 
+    def _grid_target(self, payload: dict):
+        self._current(payload["revision"])
+        key, number, path, identity = self._page(payload)
+        item = self.state["documents"][key]
+        if item["seal"] is not None:
+            raise WorkbenchError("Independent draft is frozen")
+        index = payload["table_index"]
+        if type(index) is not int or not 0 <= index < len(item["draft"]["tables"]):
+            raise WorkbenchError("Select a saved table for proposals")
+        table = item["draft"]["tables"][index]
+        if table["page_number"] != number:
+            raise WorkbenchError("Proposal table is on a different page")
+        if any(c.get("page_number", number) != number for c in table["cells"]) or any(
+            region["page_number"] != number for region in table.get("source_regions", [])
+        ):
+            raise WorkbenchError("Assisted grid requires a single original page")
+        directory = self.output / "grid-proposals"
+        packet.no_links(directory)
+        return (
+            key,
+            number,
+            path,
+            identity,
+            table,
+            directory / f"{key}-{index}-{fingerprint(table)}.json",
+        )
+
+    def grid_proposal(self, action: str, payload: dict) -> dict:
+        """Sidecar proposals never mutate the worksheet; only explicit acceptance appends."""
+        key, number, path, identity, table, destination = self._grid_target(payload)
+        if action == "grid-propose":
+            rendered = self.render_page(payload)
+            candidate = grids.detect(
+                rendered,
+                table["bbox_pdf_user_space_points"],
+                table["row_count"],
+                table["column_count"],
+            )
+            grids.add_text(path, number, candidate)
+            context = {
+                "binding": self.binding,
+                "source_sha256": self.records[key].source_sha256,
+                "render_id": rendered["render_id"],
+                "renderer": rendered["renderer"],
+                "document_id": key,
+                "page_identity": identity,
+                "table_index": payload["table_index"],
+                "table_fingerprint": fingerprint(table),
+                "bbox": table["bbox_pdf_user_space_points"],
+                "rows": table["row_count"],
+                "columns": table["column_count"],
+            }
+            original = {"context": context, "candidate": candidate}
+            record = {**original, "proposal_id": fingerprint(original), "cells": candidate["cells"]}
+            # Regeneration must not discard resumable human corrections silently.
+            if destination.exists():
+                previous = validation.read_json(destination)
+                if previous["proposal_id"] != record["proposal_id"]:
+                    raise WorkbenchError(
+                        "Saved proposal differs; resume it or select another saved table"
+                    )
+                record = previous
+            else:
+                self._private_output()
+                destination.parent.mkdir(exist_ok=True)
+                atomic_json(destination, record)
+        else:
+            if not destination.is_file():
+                raise WorkbenchError(
+                    "No proposal for this saved table; generate or select matching table"
+                )
+            record = validation.read_json(destination)
+        context = record["context"]
+        if (
+            record["proposal_id"]
+            != fingerprint({"context": context, "candidate": record["candidate"]})
+            or context["binding"] != self.binding
+            or context["document_id"] != key
+            or context["source_sha256"] != self.records[key].source_sha256
+            or context["page_identity"] != identity
+            or context["table_index"] != payload["table_index"]
+        ):
+            raise WorkbenchError("Saved proposal identity mismatch")
+        applicable = context["table_fingerprint"] == fingerprint(table)
+        if action in {"grid-correct", "grid-accept"}:
+            if (
+                not applicable
+                or payload["proposal_revision"] != fingerprint(record)
+                or record["candidate"]["status"] != "PROPOSED"
+            ):
+                raise WorkbenchError("Proposal is stale, unresolved or already applied")
+            if action == "grid-correct":
+                grids.check_cells(
+                    payload["cells"], context["bbox"], context["rows"], context["columns"]
+                )
+                record["cells"] = sorted(
+                    copy.deepcopy(payload["cells"]), key=lambda c: (c["row"], c["column"])
+                )
+                atomic_json(destination, record)
+            else:
+                if payload.get("confirm_accept") is not True:
+                    raise WorkbenchError("Explicit proposal acceptance required")
+                grids.check_cells(
+                    record["cells"], context["bbox"], context["rows"], context["columns"]
+                )
+                draft = copy.deepcopy(self.state["documents"][key]["draft"])
+                target = draft["tables"][payload["table_index"]]
+                occupied = set()
+                for cell in target["cells"]:
+                    row, column = cell["row"], cell["column"]
+                    rs, cs = cell["row_span"], cell["column_span"]
+                    if (
+                        any(type(v) is not int for v in (row, column, rs, cs))
+                        or row < 0
+                        or column < 0
+                        or rs <= 0
+                        or cs <= 0
+                        or row + rs > context["rows"]
+                        or column + cs > context["columns"]
+                    ):
+                        raise WorkbenchError(
+                            "Existing cells need explicit row/column/span resolution"
+                        )
+                    slots = {
+                        (r, c) for r in range(row, row + rs) for c in range(column, column + cs)
+                    }
+                    if occupied & slots:
+                        raise WorkbenchError("Existing manual cell grid positions conflict")
+                    occupied.update(slots)
+                added = 0
+                for proposed in record["cells"]:
+                    if (proposed["row"], proposed["column"]) in occupied:
+                        continue  # Existing manually entered cells are preserved exactly.
+                    if any(
+                        existing.get("bbox_pdf_user_space_points") is not None
+                        and grids.intersects(
+                            proposed["bbox_pdf_user_space_points"],
+                            existing["bbox_pdf_user_space_points"],
+                        )
+                        for existing in table["cells"]
+                    ):
+                        raise WorkbenchError("Proposed geometry overlaps an existing manual cell")
+                    cell = packet.worksheets(self.records[key], self.pages[key])[0]["cell_template"]
+                    cell.update(
+                        {
+                            k: proposed[k]
+                            for k in (
+                                "row",
+                                "column",
+                                "row_span",
+                                "column_span",
+                                "bbox_pdf_user_space_points",
+                                "literal_text",
+                            )
+                        }
+                    )
+                    cell["review_cell_id"] = (
+                        f"proposal-{record['proposal_id'][:16]}-r{cell['row']}-c{cell['column']}"
+                    )
+                    cell["proposal_origin"] = {
+                        "proposal_id": record["proposal_id"],
+                        "method": grids.METHOD,
+                    }
+                    if any(
+                        existing["review_cell_id"] == cell["review_cell_id"]
+                        for existing in target["cells"]
+                    ):
+                        raise WorkbenchError(
+                            "Proposed cell identity conflicts with an existing cell"
+                        )
+                    target["cells"].append(cell)
+                    added += 1
+                # Durable assistance provenance, with no review/uncertainty/completeness decisions.
+                target.setdefault("assisted_grid_proposals", []).append(record["proposal_id"])
+                state = self.update(
+                    "draft", {"revision": payload["revision"], "document_id": key, "draft": draft}
+                )
+                return {"state": state, "added": added, "preserved": len(table["cells"])}
+        return {**record, "proposal_revision": fingerprint(record), "applicable": applicable}
+
     def validate(self, revision: str) -> dict:
         self._current(revision)
         if not self.state["exposed"]:
@@ -583,11 +772,12 @@ class ReviewHandler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:
         try:
             route, query = self._route()
-            if route in {"", "workbench.js", "annotation.js", "workbench.css"}:
+            if route in {"", "workbench.js", "annotation.js", "grid.js", "workbench.css"}:
                 name, mime = {
                     "": ("index.html", "text/html; charset=utf-8"),
                     "workbench.js": ("workbench.js", "text/javascript; charset=utf-8"),
                     "annotation.js": ("annotation.js", "text/javascript; charset=utf-8"),
+                    "grid.js": ("grid.js", "text/javascript; charset=utf-8"),
                     "workbench.css": ("workbench.css", "text/css; charset=utf-8"),
                 }[route]
                 self._send(200, (ASSETS / name).read_bytes(), mime)
@@ -618,7 +808,9 @@ class ReviewHandler(BaseHTTPRequestHandler):
             if not 0 < length <= MAX_JSON:
                 raise WorkbenchError("Worksheet size limit")
             payload = json.loads(self.rfile.read(length))
-            if route == "render":
+            if route in {"grid-propose", "grid-load", "grid-correct", "grid-accept"}:
+                value = self.server.workbench.grid_proposal(route, payload)
+            elif route == "render":
                 value = self.server.workbench.render_page(payload)
             elif route == "annotate":
                 value = self.server.workbench.annotate(payload)

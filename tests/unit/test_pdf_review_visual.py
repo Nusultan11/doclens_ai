@@ -27,7 +27,7 @@ def local_renderer():
     pytest.importorskip("pypdfium2", reason="Optional local visual renderer is not installed")
 
 
-def visual_fixture(tmp_path, *, crop=(20, 30, 280, 370), rotation=0, unit=1):
+def visual_fixture(tmp_path, *, crop=(20, 30, 280, 370), rotation=0, unit=1, content_data=None):
     data = completed(tmp_path)[0]
     writer = PdfWriter()
     page = writer.add_blank_page(300, 400)
@@ -36,7 +36,23 @@ def visual_fixture(tmp_path, *, crop=(20, 30, 280, 370), rotation=0, unit=1):
     page[NameObject("/UserUnit")] = FloatObject(unit)
     content = DecodedStreamObject()
     # The only painted content: exact PDF-space rectangle [60,100,180,200].
-    content.set_data(b"0 0 0 rg 60 100 120 100 re f\n")
+    content.set_data(
+        content_data if content_data is not None else b"0 0 0 rg 60 100 120 100 re f\n"
+    )
+    from pypdf.generic import DictionaryObject
+
+    font = writer._add_object(
+        DictionaryObject(
+            {
+                NameObject("/Type"): NameObject("/Font"),
+                NameObject("/Subtype"): NameObject("/Type1"),
+                NameObject("/BaseFont"): NameObject("/Helvetica"),
+            }
+        )
+    )
+    page[NameObject("/Resources")] = DictionaryObject(
+        {NameObject("/Font"): DictionaryObject({NameObject("/F1"): font})}
+    )
     page[NameObject("/Contents")] = writer._add_object(content)
     writer.write(data[5])
     digest = packet.sha(data[5])

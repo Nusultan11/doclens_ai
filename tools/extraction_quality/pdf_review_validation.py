@@ -297,6 +297,12 @@ def validate_document(
     actual_pages = [{k: p[k] for k in pages[0]} for p in draft["pages"]]
     if actual_pages != pages:
         raise PacketError("Review page identity mismatch")
+    if any(
+        table.get("assisted_grid_proposals")
+        or any(cell.get("proposal_origin") for cell in table["cells"])
+        for table in draft["tables"]
+    ):
+        raise PacketError("Assisted annotations require separate independent review before Gold")
     review = _review(draft, allow_synthetic=allow_synthetic)
     if not independent_only:
         _decisions(adjudication, template, pages, review, draft)

@@ -16,6 +16,7 @@ const visual = {
     $("assign-geometry").disabled = !this.enabled() || !this.selection;
     $("undo-assignment").disabled = !this.enabled() || !this.undoDraft || this.undoDraft.document !== selected || this.undoDraft.revision !== state.revision;
     $("undo-selection").disabled = !this.enabled() || !this.history.length;
+    grid.controls();
   },
   async load() {
     const generation = ++this.generation;
@@ -73,6 +74,7 @@ const visual = {
     const canvas = $("page-canvas"), context = canvas.getContext("2d");
     context.clearRect(0, 0, canvas.width, canvas.height);
     if (this.image) context.drawImage(this.image, 0, 0);
+    grid.paint(context, canvas);
     if (this.valid(this.selection)) {
       const [x0, y0, x1, y1] = this.selection;
       context.fillStyle = "rgba(0,110,200,0.16)"; context.strokeStyle = "#0059ac"; context.lineWidth = 3;

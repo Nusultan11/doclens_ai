@@ -5,6 +5,7 @@
   <title>Local PDF review</title>
   <link rel="stylesheet" href="workbench.css">
   <script src="annotation.js" defer></script>
+  <script src="grid.js" defer></script>
   <script src="workbench.js" defer></script>
 </head>
 <body>
@@ -32,6 +33,22 @@
       <button id="assign-geometry">Assign rectangle and save worksheet</button><button id="undo-assignment">Undo last assignment</button>
       <p>Add a blank table in the worksheet first if needed. Supply IDs, text and structure yourself in JSON. Assignment saves all current worksheet edits.</p>
     </div>
+    <section id="grid-controls" aria-label="Assisted grid proposals">
+      <h3>Assisted table grid</h3>
+      <p>Select a saved table target with bbox, row_count and column_count filled in.
+      Proposals use only original ruling lines and text. Generating one ends blind
+      review for this document in this workspace; separate independent review is required for Gold.</p>
+      <button id="grid-propose">Propose saved table grid</button>
+      <button id="grid-load">Resume saved proposal</button>
+      <button id="grid-clear">Hide proposal overlay</button>
+      <p id="grid-status" role="status">No assisted proposal loaded</p>
+      <details><summary>Inspect detected boundaries and diagnostics</summary><pre id="grid-details"></pre></details>
+      <label>Editable proposed cells (JSON array)<textarea id="grid-cells" rows="10" spellcheck="false"></textarea></label>
+      <button id="grid-correct">Save corrections and redraw overlay</button>
+      <button id="grid-accept">Explicitly accept missing cells into draft</button>
+      <p>Original candidates remain separate. Existing manual cells are never replaced.
+      Acceptance does not set uncertainty, evidence, completeness or reviewer approvals.</p>
+    </section>
     <details><summary>Native PDF viewer (inspection)</summary>
     <iframe id="pdf" title="Original PDF in the browser viewer"></iframe>
     </details>
@@ -78,7 +95,7 @@
     <section id="comparison" hidden>
       <h2>Human adjudication</h2>
       <p>Resolve each decision yourself. Nothing is automatically confirmed.
-      Keep disagreements and corrections explicit. Parser predictions are never loaded.</p>
+      Keep disagreements and corrections explicit. Legacy parser predictions are never loaded.</p>
       <details><summary>Frozen legacy assertions</summary><pre id="legacy"></pre></details>
       <label>Adjudication worksheet (JSON object)<textarea id="adjudication" rows="20" spellcheck="false"></textarea></label>
       <button id="save-adjudication">Save adjudication draft</button>

@@ -21,7 +21,7 @@ async function api(path, payload) {
 function safely(action) {
   return async () => { try { await action(); } catch (error) { message(error.message, true); } };
 }
-function mayNavigate() { return !dirty || confirm("Discard unsaved edits and load the saved worksheet?"); }
+function mayNavigate() { return (!dirty && !grid.dirty) || confirm("Discard unsaved worksheet/proposal edits and load the saved worksheet?"); }
 function read(id) { return JSON.parse($(id).value); }
 function gather() {
   const draft = structuredClone(item().draft);
@@ -69,6 +69,7 @@ async function render() {
     $("adjudication").value = pretty(current.adjudication);
   }
   dirty = false;
+  grid.clear();
   await visual.load();
 }
 async function load() {
@@ -133,7 +134,8 @@ $("validate").addEventListener("click", safely(async () => {
   message(result.summary.export_ready ? "Existing ML-28 validation accepted the supplied review. No Gold was exported." :
     "Existing ML-28 validation remains blocked. Review the pending decisions.");
 }));
-document.querySelectorAll("textarea,#presence").forEach(field => field.addEventListener("input", () => { dirty = true; }));
+document.querySelectorAll("textarea:not(#grid-cells),#presence").forEach(field => field.addEventListener("input", () => { dirty = true; }));
 window.addEventListener("beforeunload", event => { if (dirty) { event.preventDefault(); event.returnValue = ""; } });
 visual.init();
+grid.init();
 load().catch(error => message(error.message, true));
