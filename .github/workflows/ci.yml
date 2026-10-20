@@ -50,7 +50,7 @@ jobs:
       - name: Portable unit tests
         run: >-
           python -m pytest tests/unit -q --strict-config --strict-markers
-          --basetemp=evaluation-output/ci-pytest
+          --basetemp="$RUNNER_TEMP/doclens-ci-pytest"
           --deselect=tests/unit/test_pdf_review_visual.py::test_browser_rendered_mouse_selection
           --deselect=tests/unit/test_pdf_grid_proposals.py::test_grid_http_security_and_browser
           --deselect=tests/unit/test_pdf_proposal_review.py::test_browser_confirm_correct_reject_and_export
