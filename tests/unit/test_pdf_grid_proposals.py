@@ -17,6 +17,7 @@ from tests.unit.test_pdf_review_workbench import fixture, request, seal, update
 from tools.extraction_quality import pdf_grid_proposals as grids
 from tools.extraction_quality import pdf_review_validation as validation
 from tools.extraction_quality import pdf_review_workbench as tool
+from tools.extraction_quality import pdf_text_diagnostics as text_diagnostics
 
 
 @pytest.fixture(autouse=True)
@@ -25,7 +26,15 @@ def renderer():
 
 
 def grid_fixture(
-    tmp_path, *, irregular=False, merged=False, borderless=False, crossed=False, label=None
+    tmp_path,
+    *,
+    irregular=False,
+    merged=False,
+    borderless=False,
+    crossed=False,
+    label=None,
+    split_word=False,
+    empty_text=False,
 ):
     xs = [40, 100 if irregular else 140, 240]
     ys = [340, 290, 200, 100] if irregular else [340, 260, 180, 100]
@@ -40,8 +49,15 @@ def grid_fixture(
             commands.append(f"{x} {ys[-1]} m {x} {top} l S")
     for row in range(len(ys) - 1):
         for column in range(2):
+            if empty_text:
+                continue
             text = label if label is not None and row == column == 0 else f"R{row}C{column}"
             x = xs[column] + 6
+            if split_word and row == column == 0:
+                y = ys[row + 1] + 10
+                commands.append(f"BT /F1 10 Tf {x} {y} Td (A) Tj ET")
+                commands.append(f"BT /F1 10 Tf {x + 10.17} {y} Td (B) Tj ET")
+                continue
             if crossed and row == column == 0:
                 x = xs[1] - 6
             commands.append(f"BT /F1 10 Tf {x} {ys[row + 1] + 10} Td ({text}) Tj ET")
@@ -378,3 +394,189 @@ def test_wrong_page_source_and_forged_proposal_rejected(tmp_path):
     path.write_text(json.dumps(forged), encoding="utf-8")
     with pytest.raises(ValueError, match="identity"):
         app.grid_proposal("grid-accept", supplied(app, proposal, confirm_accept=True))
+
+
+def diagnostic_candidate(app):
+    table = app.state["documents"]["c1-0001"]["draft"]["tables"][0]
+    return grids.detect(
+        app.render_page(payload(app)),
+        table["bbox_pdf_user_space_points"],
+        table["row_count"],
+        table["column_count"],
+    )
+
+
+@pytest.mark.parametrize("options", [{}, {"irregular": True}, {"crossed": True}, {"label": "A  B"}])
+def test_diagnostics_do_not_change_any_proposal_field(tmp_path, options):
+    app, _, _ = grid_fixture(tmp_path, **options)
+    candidate = diagnostic_candidate(app)
+    plain, diagnosed = copy.deepcopy(candidate), copy.deepcopy(candidate)
+    report = {}
+    grids.add_text(app.pdf("c1-0001"), 1, plain)
+    grids.add_text(app.pdf("c1-0001"), 1, diagnosed, diagnostics=report)
+    assert plain == diagnosed
+    assert report["non_null"] + report["null"] == 6
+    assert sum(report["primary_null_reason_counts"].values()) == report["null"]
+    assert all(c["reason_codes"] for c in report["cells"] if not c["has_literal"])
+    serialized = json.dumps(report)
+    assert "R0C0" not in serialized and "PRIVATE_SYNTHETIC_FILENAME" not in serialized
+    assert "literal_text" not in serialized and "bbox_pdf_user_space_points" not in serialized
+
+
+def test_diagnostics_crossing_glyph_never_fills_either_neighbor(tmp_path):
+    app, _, _ = grid_fixture(tmp_path, crossed=True)
+    candidate, report = diagnostic_candidate(app), {}
+    grids.add_text(app.pdf("c1-0001"), 1, candidate, diagnostics=report)
+    assert candidate["cells"][0]["literal_text"] is None
+    assert candidate["cells"][1]["literal_text"] is None
+    assert candidate["cells"][2]["literal_text"] == "R1C0"
+    assert report["primary_null_reason_counts"]["CHARACTER_BBOX_CROSSES_CELLS"] == 2
+
+
+@pytest.mark.parametrize(
+    "native_flag, code", [(1, "UNICODE_MAPPING_ERROR"), (-1, "UNICODE_MAPPING_UNAVAILABLE")]
+)
+def test_diagnostics_missing_mapping_is_blocked_and_distinguished(
+    tmp_path, monkeypatch, native_flag, code
+):
+    import pypdfium2 as pdfium
+
+    app, _, _ = grid_fixture(tmp_path)
+    candidate, report = diagnostic_candidate(app), {}
+    original = pdfium.raw.FPDFText_HasUnicodeMapError
+    monkeypatch.setattr(
+        pdfium.raw,
+        "FPDFText_HasUnicodeMapError",
+        lambda t, i: native_flag if i == 0 else original(t, i),
+    )
+    grids.add_text(app.pdf("c1-0001"), 1, candidate, diagnostics=report)
+    assert candidate["cells"][0]["literal_text"] is None
+    assert report["primary_null_reason_counts"][code] == 1
+    assert report["non_null"] == 5
+
+
+@pytest.mark.parametrize(
+    "native_flag, code",
+    [(1, "GENERATED_NONSPACE_CHARACTER"), (-1, "GENERATED_CHARACTER_FLAG_UNAVAILABLE")],
+)
+def test_diagnostics_generated_identity_is_not_source_text(
+    tmp_path, monkeypatch, native_flag, code
+):
+    import pypdfium2 as pdfium
+
+    app, _, _ = grid_fixture(tmp_path)
+    candidate, report = diagnostic_candidate(app), {}
+    original = pdfium.raw.FPDFText_IsGenerated
+    monkeypatch.setattr(
+        pdfium.raw, "FPDFText_IsGenerated", lambda t, i: native_flag if i == 0 else original(t, i)
+    )
+    grids.add_text(app.pdf("c1-0001"), 1, candidate, diagnostics=report)
+    assert candidate["cells"][0]["literal_text"] is None
+    assert report["primary_null_reason_counts"][code] == 1
+
+
+@pytest.mark.parametrize(
+    "flag, code",
+    [("identity", "INVALID_CHARACTER_IDENTITY"), ("angle", "UNSUPPORTED_CHARACTER_ROTATION")],
+)
+def test_diagnostics_other_native_failures_remain_unresolved(tmp_path, monkeypatch, flag, code):
+    import pypdfium2 as pdfium
+
+    app, _, _ = grid_fixture(tmp_path)
+    candidate, report = diagnostic_candidate(app), {}
+    name = "FPDFText_GetUnicode" if flag == "identity" else "FPDFText_GetCharAngle"
+    original = getattr(pdfium.raw, name)
+    replacement = 0 if flag == "identity" else float("nan")
+    monkeypatch.setattr(pdfium.raw, name, lambda t, i: replacement if i == 0 else original(t, i))
+    grids.add_text(app.pdf("c1-0001"), 1, candidate, diagnostics=report)
+    assert candidate["cells"][0]["literal_text"] is None
+    assert report["primary_null_reason_counts"][code] == 1
+
+
+def test_diagnostics_outside_box_does_not_clip_or_move_glyph(tmp_path):
+    app, _, _ = grid_fixture(tmp_path)
+    candidate, report = diagnostic_candidate(app), {}
+    candidate["cells"][0]["bbox_pdf_user_space_points"][0] = 47
+    boxes = [copy.deepcopy(c["bbox_pdf_user_space_points"]) for c in candidate["cells"]]
+    grids.add_text(app.pdf("c1-0001"), 1, candidate, diagnostics=report)
+    assert report["primary_null_reason_counts"]["CHARACTER_BBOX_OUTSIDE_CELL"] == 1
+    assert candidate["cells"][0]["literal_text"] is None
+    assert boxes == [c["bbox_pdf_user_space_points"] for c in candidate["cells"]]
+
+
+def test_diagnostics_interleaved_native_order_is_not_sorted_into_cells(tmp_path, monkeypatch):
+    import pypdfium2 as pdfium
+
+    app, _, _ = grid_fixture(tmp_path)
+    candidate, report = diagnostic_candidate(app), {}
+    original = pdfium.PdfTextPage.get_charbox
+    monkeypatch.setattr(
+        pdfium.PdfTextPage,
+        "get_charbox",
+        lambda self, i, loose=False: original(self, {1: 5, 5: 1}.get(i, i), loose=loose),
+    )
+    grids.add_text(app.pdf("c1-0001"), 1, candidate, diagnostics=report)
+    assert candidate["cells"][0]["literal_text"] is None
+    assert candidate["cells"][1]["literal_text"] is None
+    assert report["primary_null_reason_counts"]["INTERLEAVED_CHARACTER_ORDER"] == 2
+
+
+def test_diagnostics_generated_space_with_degenerate_box_is_not_repaired(tmp_path):
+    app, _, _ = grid_fixture(tmp_path, split_word=True)
+    candidate, report = diagnostic_candidate(app), {}
+    grids.add_text(app.pdf("c1-0001"), 1, candidate, diagnostics=report)
+    assert candidate["cells"][0]["literal_text"] is None
+    assert report["primary_null_reason_counts"]["GENERATED_WHITESPACE_GAP"] == 1
+    assert report["reason_cell_counts"]["DEGENERATE_WHITESPACE_BOX"] == 1
+
+
+def test_diagnostics_missing_layer_and_limit_are_different(tmp_path, monkeypatch):
+    import pypdfium2 as pdfium
+
+    app, _, _ = grid_fixture(tmp_path, empty_text=True)
+    candidate, report = diagnostic_candidate(app), {}
+    grids.add_text(app.pdf("c1-0001"), 1, candidate, diagnostics=report)
+    assert report["primary_null_reason_counts"]["NO_TEXT_LAYER_GLYPHS_IN_CELL"] == 6
+    assert report["source_character_count"] == 0
+    monkeypatch.setattr(pdfium.PdfTextPage, "count_chars", lambda _: 200_001)
+    grids.add_text(app.pdf("c1-0001"), 1, candidate, diagnostics=report)
+    assert report["primary_null_reason_counts"]["TEXT_LAYER_LIMIT"] == 6
+    assert report["primary_null_reason_counts"]["NO_TEXT_LAYER_GLYPHS_IN_CELL"] == 0
+
+
+def test_diagnostics_no_grid_does_not_claim_empty_source_layer(tmp_path):
+    app, _, _ = grid_fixture(tmp_path)
+    proposal, report = {"cells": []}, {}
+    grids.add_text(app.pdf("c1-0001"), 1, proposal, diagnostics=report)
+    assert report["source_character_count"] is None
+    assert report["non_null"] == report["null"] == 0
+
+
+def test_diagnostics_helper_is_bound_sanitized_repeatable_and_read_only(tmp_path):
+    app, _, _ = grid_fixture(tmp_path)
+    proposal = app.grid_proposal("grid-propose", supplied(app))
+    proposal["cells"][0]["literal_text"] = "manual correction remains untouched"
+    before = copy.deepcopy(proposal)
+    source = app.pdf("c1-0001")
+    digest = app.records["c1-0001"].source_sha256
+    report = text_diagnostics.diagnose(source, digest, 1, proposal)
+    assert report == text_diagnostics.diagnose(source, digest, 1, proposal)
+    assert proposal == before and report["non_null"] == 6
+    proposal_path = app.output / "candidate.json"
+    proposal_path.write_text(json.dumps(proposal), encoding="utf-8")
+    saved = proposal_path.read_bytes()
+    output = app.root / "evaluation-output/ml30c-test-diagnostics"
+    assert text_diagnostics.run(source, digest, 1, proposal_path, output, root=app.root) == report
+    assert json.loads((output / "text-diagnostics.json").read_text(encoding="utf-8")) == report
+    assert saved == proposal_path.read_bytes()
+    assert "manual correction" not in json.dumps(report) and "R0C0" not in json.dumps(report)
+    with pytest.raises(ValueError):
+        text_diagnostics.run(source, digest, 1, proposal_path, output, root=app.root)
+    for forbidden in (app.output / "ml30c-nested", app.root / "raw/ml30c-output"):
+        with pytest.raises(ValueError):
+            text_diagnostics.run(source, digest, 1, proposal_path, forbidden, root=app.root)
+    with pytest.raises(ValueError, match="SHA"):
+        text_diagnostics.diagnose(source, "0" * 64, 1, proposal)
+    proposal["context"]["page_identity"] = {"page_number": 2}
+    with pytest.raises(ValueError, match="binding"):
+        text_diagnostics.diagnose(source, digest, 1, proposal)

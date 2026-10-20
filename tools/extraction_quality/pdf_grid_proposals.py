@@ -6,12 +6,77 @@ import base64
 import math
 import struct
 import zlib
+from collections import Counter
 from contextlib import closing
 
 from doclens_ai.extraction.evidence_v2 import valid_bbox
 
 METHOD = "ml30b-ruled-raster-v1"
 MAX_CELLS = 2048
+TEXT_DIAGNOSTICS = "ml30c-pdfium-text-diagnostics-v1"
+TEXT_REASONS = (
+    "CHARACTER_BBOX_CROSSES_CELLS",
+    "CHARACTER_BBOX_OUTSIDE_CELL",
+    "UNICODE_MAPPING_ERROR",
+    "UNICODE_MAPPING_UNAVAILABLE",
+    "INVALID_CHARACTER_IDENTITY",
+    "GENERATED_NONSPACE_CHARACTER",
+    "GENERATED_CHARACTER_FLAG_UNAVAILABLE",
+    "UNSUPPORTED_CHARACTER_ROTATION",
+    "INTERLEAVED_CHARACTER_ORDER",
+    "GENERATED_WHITESPACE_GAP",
+    "AMBIGUOUS_WHITESPACE_GAP",
+    "DEGENERATE_WHITESPACE_BOX",
+    "TEXT_LAYER_LIMIT",
+    "NO_TEXT_LAYER_GLYPHS_IN_CELL",
+)
+
+
+def _text_diagnostics(
+    report: dict | None,
+    cells: list,
+    reasons: list[Counter],
+    page_number: int,
+    character_count: int | None,
+    engine: str,
+) -> None:
+    """Only sanitized metadata: no literals, codepoints, filenames or private coordinates."""
+    if report is None:
+        return
+    primary = Counter()
+    per_cell = []
+    for cell, counts in zip(cells, reasons, strict=True):
+        codes = [code for code in TEXT_REASONS if counts[code]]
+        has_literal = cell["literal_text"] is not None
+        if not has_literal:
+            if not codes:
+                codes = ["NO_TEXT_LAYER_GLYPHS_IN_CELL"]
+                counts[codes[0]] = 1
+            primary[codes[0]] += 1
+        per_cell.append(
+            {
+                "row": cell["row"],
+                "column": cell["column"],
+                "has_literal": has_literal,
+                "text_status": cell["text_status"],
+                "reason_codes": codes,
+                "reason_occurrences": {k: counts[k] for k in codes},
+            }
+        )
+    report.clear()
+    report.update(
+        version=TEXT_DIAGNOSTICS,
+        page_number=page_number,
+        renderer=engine,
+        source_character_count=character_count,
+        cells=per_cell,
+        non_null=sum(c["has_literal"] for c in per_cell),
+        null=sum(not c["has_literal"] for c in per_cell),
+        primary_null_reason_counts={code: primary[code] for code in TEXT_REASONS},
+        reason_cell_counts={
+            code: sum(code in c["reason_codes"] for c in per_cell) for code in TEXT_REASONS
+        },
+    )
 
 
 def png_rows(rendered: dict) -> list[bytes]:
@@ -159,13 +224,17 @@ def detect(rendered: dict, bbox: list[float], rows: int, columns: int) -> dict:
     return result
 
 
-def add_text(path, page_number: int, proposal: dict) -> None:
+def add_text(path, page_number: int, proposal: dict, *, diagnostics: dict | None = None) -> None:
     """Bounded original text only when each intersecting glyph belongs to one cell."""
     import pypdfium2 as pdfium
 
-    if not proposal["cells"]:
-        return
     cells = proposal["cells"]
+    reasons = [Counter() for _ in cells]
+    if not cells:
+        _text_diagnostics(
+            diagnostics, cells, reasons, page_number, None, str(pdfium.PYPDFIUM_INFO.version)
+        )
+        return
     bad, present = set(), set()
     owners, characters = {}, []
     with (
@@ -173,10 +242,21 @@ def add_text(path, page_number: int, proposal: dict) -> None:
         closing(document[page_number - 1]) as page,
     ):
         with closing(page.get_textpage()) as text:
-            if text.count_chars() > 200_000:
+            character_count = text.count_chars()
+            if character_count > 200_000:
                 proposal["issues"].append("Text layer exceeds inspection limit")
+                for counts in reasons:
+                    counts["TEXT_LAYER_LIMIT"] += 1
+                _text_diagnostics(
+                    diagnostics,
+                    cells,
+                    reasons,
+                    page_number,
+                    character_count,
+                    str(pdfium.PYPDFIUM_INFO.version),
+                )
                 return
-            for index in range(text.count_chars()):
+            for index in range(character_count):
                 codepoint = pdfium.raw.FPDFText_GetUnicode(text, index)
                 character = chr(codepoint) if codepoint <= 0x10FFFF else "\ufffd"
                 characters.append(character)
@@ -212,6 +292,28 @@ def add_text(path, page_number: int, proposal: dict) -> None:
                     and valid_bbox(tuple(box), tuple(cells[hits[0]]["bbox_pdf_user_space_points"]))
                 )
                 (present if reliable else bad).update(hits)
+                if diagnostics is not None and not reliable:
+                    for hit in hits:
+                        counts = reasons[hit]
+                        if len(hits) > 1:
+                            counts["CHARACTER_BBOX_CROSSES_CELLS"] += 1
+                        elif not valid_bbox(
+                            tuple(box), tuple(cells[hit]["bbox_pdf_user_space_points"])
+                        ):
+                            counts["CHARACTER_BBOX_OUTSIDE_CELL"] += 1
+                        if generated == 1:
+                            counts["GENERATED_NONSPACE_CHARACTER"] += 1
+                        elif generated != 0:
+                            counts["GENERATED_CHARACTER_FLAG_UNAVAILABLE"] += 1
+                        if codepoint < 32 or not character.isprintable() or character == "\ufffd":
+                            counts["INVALID_CHARACTER_IDENTITY"] += 1
+                        mapping_error = pdfium.raw.FPDFText_HasUnicodeMapError(text, index)
+                        if mapping_error == 1:
+                            counts["UNICODE_MAPPING_ERROR"] += 1
+                        elif mapping_error != 0:
+                            counts["UNICODE_MAPPING_UNAVAILABLE"] += 1
+                        if not abs(pdfium.raw.FPDFText_GetCharAngle(text, index)) < 0.001:
+                            counts["UNSUPPORTED_CHARACTER_ROTATION"] += 1
                 if reliable:
                     owners[index] = hits[0]
             for index, cell in enumerate(cells):
@@ -224,6 +326,7 @@ def add_text(path, page_number: int, proposal: dict) -> None:
                         for i in range(start, end)
                     ):
                         cell["text_status"] = "AMBIGUOUS_TEXT_ORDER"
+                        reasons[index]["INTERLEAVED_CHARACTER_ORDER"] += 1
                         continue
                     ambiguous_spacing = False
                     for i in range(start, end - 1):
@@ -234,6 +337,12 @@ def add_text(path, page_number: int, proposal: dict) -> None:
                         # PDFium may collapse repeated spaces. Never reconstruct their count.
                         if following[0] - space[2] > max(0.5, (space[2] - space[0]) * 0.2):
                             ambiguous_spacing = True
+                            if diagnostics is not None:
+                                reasons[index]["AMBIGUOUS_WHITESPACE_GAP"] += 1
+                                if pdfium.raw.FPDFText_IsGenerated(text, i) != 0:
+                                    reasons[index]["GENERATED_WHITESPACE_GAP"] += 1
+                                if not valid_bbox(tuple(space)):
+                                    reasons[index]["DEGENERATE_WHITESPACE_BOX"] += 1
                     if ambiguous_spacing:
                         cell["text_status"] = "AMBIGUOUS_TEXT_SPACING"
                         continue
@@ -244,6 +353,9 @@ def add_text(path, page_number: int, proposal: dict) -> None:
                         )
                 elif index in bad:
                     cell["text_status"] = "AMBIGUOUS_TEXT_CONTAINMENT_OR_MAPPING"
+    _text_diagnostics(
+        diagnostics, cells, reasons, page_number, character_count, str(pdfium.PYPDFIUM_INFO.version)
+    )
 
 
 def intersects(a, b) -> bool:
