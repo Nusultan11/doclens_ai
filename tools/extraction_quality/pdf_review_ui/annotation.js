@@ -75,6 +75,7 @@ const visual = {
     context.clearRect(0, 0, canvas.width, canvas.height);
     if (this.image) context.drawImage(this.image, 0, 0);
     grid.paint(context, canvas);
+    proposalReview.paint(context, canvas);
     if (this.valid(this.selection)) {
       const [x0, y0, x1, y1] = this.selection;
       context.fillStyle = "rgba(0,110,200,0.16)"; context.strokeStyle = "#0059ac"; context.lineWidth = 3;

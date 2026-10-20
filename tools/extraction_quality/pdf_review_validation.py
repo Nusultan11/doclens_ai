@@ -59,6 +59,160 @@ def draft_fingerprint(draft: dict) -> str:
     return fingerprint(value)
 
 
+def proposal_review(proposal: dict, source: dict, pages: list[dict]) -> dict:
+    """Bind a saved proposal to original pages; leave every human decision unset."""
+    original = {
+        k: copy.deepcopy(proposal[k]) for k in ("context", "candidate", "proposal_id", "cells")
+    }
+    context = original["context"]
+    page = context["page_identity"]["page_number"]
+    if (
+        context["document_id"] != source["document_id"]
+        or context["source_sha256"] != source["sha256"]
+        or type(page) is not int
+        or not 1 <= page <= len(pages)
+        or context["page_identity"] != pages[page - 1]
+        or original["proposal_id"]
+        != fingerprint({"context": context, "candidate": original["candidate"]})
+        or not valid_bbox(tuple(context["bbox"]), tuple(pages[page - 1]["crop_box_pdf_user_space"]))
+        or not isinstance(original["cells"], list)
+        or not 0 < len(original["cells"]) <= 2048
+    ):
+        raise PacketError("Proposal source or identity mismatch")
+    for cell in original["cells"]:
+        # Predictions may be wrong or incomplete. Validate their shape, never their truth.
+        Cell(
+            cell_id="proposal",
+            literal=cell["literal_text"] if cell["literal_text"] is not None else "",
+            locator=Locator(
+                page=page,
+                bbox=tuple(cell["bbox_pdf_user_space_points"]),
+                coordinate_basis="pdf_user_space_unrotated",
+            ),
+            row=cell["row"],
+            column=cell["column"],
+            row_span=cell["row_span"],
+            column_span=cell["column_span"],
+            role=None,
+        )
+        if (
+            not valid_bbox(
+                tuple(cell["bbox_pdf_user_space_points"]),
+                tuple(pages[page - 1]["crop_box_pdf_user_space"]),
+            )
+            or cell.get("page_number", page) != page
+            or cell.get("coordinate_basis", "pdf_user_space_unrotated")
+            != "pdf_user_space_unrotated"
+        ):
+            raise PacketError("Proposal cell outside original page")
+    return {
+        "proposal": original,
+        "proposal_sha256": fingerprint(original),
+        "decisions": [
+            {
+                "proposal_cell_index": i,
+                "decision": None,
+                "independent_cell_ref": None,
+                "reviewer_id": None,
+                "reviewed_on": None,
+                "original_page_evidence": [],
+                "rationale": None,
+                "ambiguity": None,
+            }
+            for i in range(len(original["cells"]))
+        ],
+    }
+
+
+def _proposal_decisions(
+    adjudication: dict, draft: dict, pages: list[dict], review: HumanReview
+) -> None:
+    """Resolve predictions against a previously frozen blind worksheet, never copy them."""
+    imported = adjudication.get("proposal_reviews", [])
+    if not isinstance(imported, list):
+        raise PacketError("Proposal review population mismatch")
+    seen = set()
+    for entry in imported:
+        bound = proposal_review(entry["proposal"], draft["source"], pages)
+        digest = bound["proposal_sha256"]
+        if entry["proposal_sha256"] != digest or digest in seen:
+            raise PacketError("Proposal review identity mismatch")
+        seen.add(digest)
+        decisions = entry["decisions"]
+        if (
+            len(decisions) != len(bound["decisions"])
+            or any(type(d["proposal_cell_index"]) is not int for d in decisions)
+            or sorted(d["proposal_cell_index"] for d in decisions) != list(range(len(decisions)))
+        ):
+            raise PacketError("Proposal review population mismatch")
+        context = entry["proposal"]["context"]
+        for decision in decisions:
+            if (
+                decision["decision"] not in {"confirm", "revise", "reject"}
+                or decision["reviewer_id"] != review.reviewer_id
+                or decision["ambiguity"] is not False
+                or not isinstance(decision["rationale"], str)
+                or not decision["rationale"].strip()
+                or not decision["original_page_evidence"]
+            ):
+                raise PacketError("Independent proposal review incomplete or ambiguous")
+            reviewed_on = date.fromisoformat(decision["reviewed_on"])
+            if not review.reviewed_on <= reviewed_on <= date.today():
+                raise PacketError("Invalid proposal review date")
+            for evidence in decision["original_page_evidence"]:
+                page = evidence["page_number"]
+                if (
+                    type(page) is not int
+                    or not 1 <= page <= len(pages)
+                    or not valid_bbox(
+                        tuple(evidence["bbox"]), tuple(pages[page - 1]["crop_box_pdf_user_space"])
+                    )
+                ):
+                    raise PacketError("Proposal review evidence outside original")
+            ref = decision["independent_cell_ref"]
+            if decision["decision"] == "reject":
+                if ref is not None:
+                    raise PacketError("Rejected proposal cannot map to Gold")
+                continue
+            targets = [
+                (table, cell)
+                for table in draft["tables"]
+                for cell in table["cells"]
+                if ref == {"table_id": table["review_table_id"], "cell_id": cell["review_cell_id"]}
+            ]
+            if len(targets) != 1:
+                raise PacketError("Independent proposal cell mapping required")
+            table, cell = targets[0]
+            page = cell.get("page_number", table["page_number"])
+            if {"page_number": page, "bbox": cell["bbox_pdf_user_space_points"]} not in decision[
+                "original_page_evidence"
+            ]:
+                raise PacketError("Independent cell evidence required")
+            proposed = entry["proposal"]["cells"][decision["proposal_cell_index"]]
+            matches = (
+                context.get("review_table_id") == table["review_table_id"]
+                and context["page_identity"]["page_number"] == page
+                and context["bbox"] == table["bbox_pdf_user_space_points"]
+                and context["rows"] == table["row_count"]
+                and context["columns"] == table["column_count"]
+                and all(
+                    proposed[k] == cell[k]
+                    for k in (
+                        "row",
+                        "column",
+                        "row_span",
+                        "column_span",
+                        "literal_text",
+                        "bbox_pdf_user_space_points",
+                    )
+                )
+            )
+            if (decision["decision"] == "confirm") != matches:
+                raise PacketError(
+                    "Proposal differs from independent evidence; explicit correction required"
+                )
+
+
 def original_pages(path: Path) -> list[dict]:
     reader = PdfReader(path)
     if reader.is_encrypted or not 0 < len(reader.pages) <= 100:
@@ -317,6 +471,7 @@ def validate_document(
     tables = _tables(draft)
     if not independent_only:
         _assertion_links(draft, adjudication, record, tables)
+        _proposal_decisions(adjudication, draft, pages, review)
     crops = {p["page_number"]: tuple(p["crop_box_pdf_user_space"]) for p in pages}
     for table in draft["tables"]:
         for region in table.get(
@@ -442,6 +597,24 @@ def pending_discrepancies(adjudication: dict) -> list[dict]:
         for i, item in enumerate(adjudication.get(group, [])[:1000]):
             if item.get("state") != "RESOLVED" or item.get("decision") in (None, "unresolved"):
                 result.append({"group": group, "index": i, "code": "DECISION_PENDING"})
+    for batch, entry in enumerate(adjudication.get("proposal_reviews", [])):
+        for index, decision in enumerate(entry["decisions"]):
+            if (
+                decision.get("decision") not in {"confirm", "revise", "reject"}
+                or decision.get("ambiguity") is not False
+                or not decision.get("reviewer_id")
+                or not decision.get("reviewed_on")
+                or not decision.get("original_page_evidence")
+                or not decision.get("rationale")
+            ):
+                result.append(
+                    {
+                        "group": "proposal_reviews",
+                        "proposal_index": batch,
+                        "index": index,
+                        "code": "PROPOSAL_REVIEW_PENDING",
+                    }
+                )
     return result
 
 

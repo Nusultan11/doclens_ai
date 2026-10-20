@@ -255,6 +255,10 @@ class Workbench:
             raise WorkbenchError("Resumable state mismatch")
         for key, item in self.state["documents"].items():
             self._check_draft(key, item["draft"])
+            if self._proposal_bindings(key, item["adjudication"]) != item.get(
+                "proposal_review_bindings", []
+            ):
+                raise WorkbenchError("Imported proposal population changed")
             if item["seal"] is not None:
                 snapshot = validation.read_json(self.output / "snapshots" / f"{key}.json")
                 if (
@@ -265,6 +269,22 @@ class Workbench:
                 self._validate_independent(key, snapshot)
             elif item["adjudication"] is not None or self.state["exposed"]:
                 raise WorkbenchError("Premature legacy exposure")
+
+    def _proposal_bindings(self, key: str, adjudication: dict | None) -> list[str]:
+        entries = (adjudication or {}).get("proposal_reviews", [])
+        if not isinstance(entries, list):
+            raise WorkbenchError("Imported proposal population changed")
+        bindings = []
+        for entry in entries:
+            bound = validation.proposal_review(
+                entry["proposal"], self.state["documents"][key]["draft"]["source"], self.pages[key]
+            )
+            if entry["proposal_sha256"] != bound["proposal_sha256"]:
+                raise WorkbenchError("Imported proposal changed")
+            bindings.append(bound["proposal_sha256"])
+        if len(set(bindings)) != len(bindings):
+            raise WorkbenchError("Duplicate imported proposal")
+        return bindings
 
     def _current(self, expected: str | None = None) -> str:
         self._private_output()
@@ -347,7 +367,45 @@ class Workbench:
             else:
                 if not state["exposed"]:
                     raise WorkbenchError("Legacy comparison is still locked")
-                item["adjudication"] = payload["adjudication"]
+                adjudication = copy.deepcopy(payload["adjudication"])
+                for old, supplied in zip(
+                    item["adjudication"].get("proposal_reviews", []),
+                    adjudication.get("proposal_reviews", []),
+                    strict=False,
+                ):
+                    # JSON in browsers changes 0.0 to 0. Retain the original hash-bound
+                    # representation only when every supplied immutable value agrees.
+                    if (
+                        old["proposal_sha256"] == supplied["proposal_sha256"]
+                        and old["proposal"] == supplied["proposal"]
+                    ):
+                        supplied["proposal"] = copy.deepcopy(old["proposal"])
+                if self._proposal_bindings(key, adjudication) != item.get(
+                    "proposal_review_bindings", []
+                ):
+                    raise WorkbenchError("Imported proposal population changed")
+                item["adjudication"] = adjudication
+        elif action == "proposal-import":
+            key = payload["document_id"]
+            item = state["documents"][key]
+            if (
+                not state["exposed"]
+                or not item["seal"]
+                or payload.get("confirm_import") is not True
+            ):
+                raise WorkbenchError("Freeze blind review before importing proposed cells")
+            entry = validation.proposal_review(
+                json.loads(payload["proposal_json"]), item["draft"]["source"], self.pages[key]
+            )
+            if entry["proposal"]["context"]["binding"] != self.binding:
+                raise WorkbenchError("Proposal packet binding mismatch")
+            entries = item["adjudication"].setdefault("proposal_reviews", [])
+            if any(
+                e["proposal"]["proposal_id"] == entry["proposal"]["proposal_id"] for e in entries
+            ):
+                raise WorkbenchError("Proposal already imported; resume its saved decisions")
+            entries.append(entry)
+            item.setdefault("proposal_review_bindings", []).append(entry["proposal_sha256"])
         elif action == "reveal":
             if payload.get("confirm_reveal") is not True or not all(
                 v["seal"] for v in state["documents"].values()
@@ -563,6 +621,12 @@ class Workbench:
                 "rows": table["row_count"],
                 "columns": table["column_count"],
             }
+            # Old saved proposals retain their original identity on regeneration.
+            if (
+                not destination.exists()
+                or "review_table_id" in validation.read_json(destination)["context"]
+            ):
+                context["review_table_id"] = table["review_table_id"]
             original = {"context": context, "candidate": candidate}
             record = {**original, "proposal_id": fingerprint(original), "cells": candidate["cells"]}
             # Regeneration must not discard resumable human corrections silently.
@@ -691,10 +755,19 @@ class Workbench:
                 return {"state": state, "added": added, "preserved": len(table["cells"])}
         return {**record, "proposal_revision": fingerprint(record), "applicable": applicable}
 
-    def validate(self, revision: str) -> dict:
+    def validate(
+        self, revision: str, *, export: bool = False, export_revision: str | None = None
+    ) -> dict:
         self._current(revision)
         if not self.state["exposed"]:
             raise WorkbenchError("Complete independent review before adjudication")
+        if export and (
+            not isinstance(export_revision, str)
+            or not export_revision.strip()
+            or export_revision == "ml29-review-v1"
+        ):
+            raise WorkbenchError("Provide a new independent Gold revision")
+        gold_revision = export_revision if export else "ml29-review-v1"
         checks = self.output / "checks"
         packet.no_links(checks)
         checks.mkdir(exist_ok=True)
@@ -704,18 +777,29 @@ class Workbench:
             folder.mkdir(parents=True)
             packet.write_json(folder / "independent.json", item["draft"])
             packet.write_json(folder / "adjudication.json", item["adjudication"])
-        summary, _ = validation.validate_workflow(
+        summary, documents = validation.validate_workflow(
             self.manifest,
             self.corpus,
             self.gold,
             destination / "review",
             self.scopes,
-            "ml29-review-v1",
+            gold_revision,
             expected=self.expected,
             allow_synthetic=self.allow_synthetic,
         )
         packet.write_json(destination / "validation.json", summary)
-        return {"check_id": destination.name, "summary": summary}
+        if export:
+            if not summary["export_ready"]:
+                raise WorkbenchError("Independent review incomplete; no Gold exported")
+            packet.write_json(
+                destination / "reviewed-gold-v2.json",
+                {
+                    "schema_version": "reviewed-pdf-population-2.0",
+                    "revision": gold_revision,
+                    "documents": [d.model_dump(mode="json") for d in documents],
+                },
+            )
+        return {"check_id": destination.name, "summary": summary, "exported": export}
 
 
 class ReviewServer(HTTPServer):
@@ -772,12 +856,20 @@ class ReviewHandler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:
         try:
             route, query = self._route()
-            if route in {"", "workbench.js", "annotation.js", "grid.js", "workbench.css"}:
+            if route in {
+                "",
+                "workbench.js",
+                "annotation.js",
+                "grid.js",
+                "proposal-review.js",
+                "workbench.css",
+            }:
                 name, mime = {
                     "": ("index.html", "text/html; charset=utf-8"),
                     "workbench.js": ("workbench.js", "text/javascript; charset=utf-8"),
                     "annotation.js": ("annotation.js", "text/javascript; charset=utf-8"),
                     "grid.js": ("grid.js", "text/javascript; charset=utf-8"),
+                    "proposal-review.js": ("proposal-review.js", "text/javascript; charset=utf-8"),
                     "workbench.css": ("workbench.css", "text/css; charset=utf-8"),
                 }[route]
                 self._send(200, (ASSETS / name).read_bytes(), mime)
@@ -816,6 +908,12 @@ class ReviewHandler(BaseHTTPRequestHandler):
                 value = self.server.workbench.annotate(payload)
             elif route == "validate":
                 value = self.server.workbench.validate(payload["revision"])
+            elif route == "export":
+                if payload.get("confirm_export") is not True:
+                    raise WorkbenchError("Explicit independent Gold export required")
+                value = self.server.workbench.validate(
+                    payload["revision"], export=True, export_revision=payload.get("export_revision")
+                )
             else:
                 value = self.server.workbench.update(route, payload)
             self._send(200, json.dumps(value, ensure_ascii=False).encode())

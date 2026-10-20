@@ -21,7 +21,7 @@ async function api(path, payload) {
 function safely(action) {
   return async () => { try { await action(); } catch (error) { message(error.message, true); } };
 }
-function mayNavigate() { return (!dirty && !grid.dirty) || confirm("Discard unsaved worksheet/proposal edits and load the saved worksheet?"); }
+function mayNavigate() { return (!dirty && !grid.dirty && !proposalReview.dirty) || confirm("Discard unsaved worksheet/proposal edits and load the saved worksheet?"); }
 function read(id) { return JSON.parse($(id).value); }
 function gather() {
   const draft = structuredClone(item().draft);
@@ -70,6 +70,7 @@ async function render() {
   }
   dirty = false;
   grid.clear();
+  proposalReview.refresh();
   await visual.load();
 }
 async function load() {
@@ -124,18 +125,22 @@ $("add-anchor").addEventListener("click", safely(async () => {
   $("anchors").value = pretty(values); dirty = true;
 }));
 $("save-adjudication").addEventListener("click", safely(async () => {
+  if (proposalReview.dirty) throw new Error("Save your proposal decision before other adjudication edits");
   state = await api("adjudication", {document_id: selected, adjudication: read("adjudication")});
   await render(); message("Human adjudication draft saved locally.");
 }));
 $("validate").addEventListener("click", safely(async () => {
-  if (dirty) throw new Error("Save adjudication before validation");
+  if (dirty || proposalReview.dirty) throw new Error("Save adjudication before validation");
   const result = await api("validate", {});
   $("validation").textContent = pretty(result);
   message(result.summary.export_ready ? "Existing ML-28 validation accepted the supplied review. No Gold was exported." :
     "Existing ML-28 validation remains blocked. Review the pending decisions.");
 }));
-document.querySelectorAll("textarea:not(#grid-cells),#presence").forEach(field => field.addEventListener("input", () => { dirty = true; }));
+document.querySelectorAll("textarea:not(#grid-cells),#presence").forEach(field => field.addEventListener("input", () => {
+  if (!field.closest("#proposal-review")) dirty = true;
+}));
 window.addEventListener("beforeunload", event => { if (dirty) { event.preventDefault(); event.returnValue = ""; } });
 visual.init();
 grid.init();
+proposalReview.init();
 load().catch(error => message(error.message, true));

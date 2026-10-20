@@ -6,6 +6,7 @@
   <link rel="stylesheet" href="workbench.css">
   <script src="annotation.js" defer></script>
   <script src="grid.js" defer></script>
+  <script src="proposal-review.js" defer></script>
   <script src="workbench.js" defer></script>
 </head>
 <body>
@@ -100,6 +101,35 @@
       <label>Adjudication worksheet (JSON object)<textarea id="adjudication" rows="20" spellcheck="false"></textarea></label>
       <button id="save-adjudication">Save adjudication draft</button>
       <button id="validate">Validate saved population with ML-28</button>
+      <section id="proposal-review" hidden aria-label="Separate independent proposal review">
+        <h3>Review proposed cells against your frozen independent worksheet</h3>
+        <p>Complete blind annotation first in a separate workspace, then import the saved
+        grid proposal JSON here. Never remove assistance markers from an assisted draft.
+        A matching literal alone cannot confirm a table, row, column or source occurrence.</p>
+        <label>Saved proposal <input id="proposal-file" type="file" accept=".json,application/json"></label>
+        <button id="import-proposal">Import proposal after blind freeze</button>
+        <label>Proposed cell <select id="proposal-cell"></select></label>
+        <pre id="proposal-details"></pre>
+        <p>The original stays visible at left. Purple marks the proposed location;
+        green marks the selected independent cell on the current page.</p>
+        <label>Decision <select id="proposal-decision"><option value="">Unreviewed</option>
+          <option value="confirm">Confirm exact cell and locator</option>
+          <option value="revise">Correct mapping to independent evidence</option>
+          <option value="reject">Reject proposal; exclude from Gold</option></select></label>
+        <label>Frozen independent cell <select id="review-cell-ref"></select></label>
+        <pre id="review-target-details"></pre>
+        <p>Corrections select existing independent evidence. If it is absent, stop and
+        obtain a separate independent annotation revision; do not guess or edit a frozen draft.</p>
+        <label>Your reviewer ID <input id="proposal-reviewer" type="text"></label>
+        <label>Your decision date <input id="proposal-date" type="date"></label>
+        <label>Original-page evidence (array of page_number and bbox)<textarea id="proposal-evidence" rows="3"></textarea></label>
+        <label>Rationale and table/row counting convention<textarea id="proposal-rationale" rows="3"></textarea></label>
+        <label>Ambiguity <select id="proposal-ambiguity"><option value="">Unreviewed</option>
+          <option value="false">Resolved against original</option><option value="true">Unresolved; block export</option></select></label>
+        <button id="save-proposal-review">Save my proposal decision</button>
+      </section>
+      <label>New independent Gold revision <input id="gold-revision" type="text" maxlength="200"></label>
+      <button id="export-gold">Export validated independent Gold</button>
       <pre id="validation" aria-live="polite"></pre>
     </section>
   </section>
