@@ -48,3 +48,25 @@ those conventions and any split-cell interpretation still require human review.
 
 These checks validate supplied attestations and mappings. They do not authenticate
 reviewer identity, perform human review or establish extraction/production quality.
+
+## Offline physical-cell text recovery
+
+`pdf_cell_recovery` repairs text ownership using original PDF glyphs and an explicitly
+supplied physical-cell proposal. It ignores reference literals and relationships,
+verifies source SHA/page identity, grid coverage, opaque thin filled ruling rectangles
+and absence of internal dividers, then reuses the existing conservative glyph checks.
+It preserves cell IDs, rows/columns, spans and measured rectangles. Each recovered
+literal includes its original character range, glyph coordinates and mapping flags.
+No predicted neighboring fields are concatenated or reassigned by repeated text.
+
+```powershell
+$env:PYTHONPATH='src;.'
+.venv/Scripts/python.exe -B -m tools.extraction_quality.pdf_cell_recovery --source <original.pdf> --source-sha256 <original-sha256> --proposal <bound-proposal.json> --output evaluation-output/pdf-cell-recovery-example
+```
+
+Output must be a fresh ignored `pdf-cell-recovery-*` directory. `cell-evidence.json`
+contains separate machine evidence, not a replacement for the native capture or Gold.
+Unverified/clipped/occluded boundaries and genuine cross-cell glyphs fail closed.
+Empty text-layer cells stay unfilled; position-inferred separators remain explicitly
+uncertain. Unsupported strokes, page transforms and semantic relationships require
+separate evidence. Production routing and independent-review requirements are unchanged.

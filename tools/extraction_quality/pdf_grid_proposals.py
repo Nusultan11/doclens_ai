@@ -224,10 +224,20 @@ def detect(rendered: dict, bbox: list[float], rows: int, columns: int) -> dict:
     return result
 
 
-def add_text(path, page_number: int, proposal: dict, *, diagnostics: dict | None = None) -> None:
+def add_text(
+    path,
+    page_number: int,
+    proposal: dict,
+    *,
+    diagnostics: dict | None = None,
+    lineage: dict | None = None,
+) -> None:
     """Bounded original text only when each intersecting glyph belongs to one cell."""
     import pypdfium2 as pdfium
 
+    if lineage is not None:
+        lineage.clear()
+        lineage.update(page_number=page_number, cells=[])
     cells = proposal["cells"]
     reasons = [Counter() for _ in cells]
     if not cells:
@@ -238,7 +248,7 @@ def add_text(path, page_number: int, proposal: dict, *, diagnostics: dict | None
     bad, present = set(), set()
     owners, characters = {}, []
     with (
-        pdfium.PdfDocument(path.read_bytes()) as document,
+        pdfium.PdfDocument(path if isinstance(path, bytes) else path.read_bytes()) as document,
         closing(document[page_number - 1]) as page,
     ):
         with closing(page.get_textpage()) as text:
@@ -351,6 +361,26 @@ def add_text(path, page_number: int, proposal: dict, *, diagnostics: dict | None
                         cell.update(
                             literal_text=literal, text_status="ORIGINAL_TEXT_LAYER_PROPOSAL"
                         )
+                        if lineage is not None:
+                            lineage["cells"].append(
+                                {
+                                    "cell_index": index,
+                                    "character_range": [start, end],
+                                    "glyphs": [
+                                        {
+                                            "index": i,
+                                            "unicode": pdfium.raw.FPDFText_GetUnicode(text, i),
+                                            "bbox_pdf_user_space_points": list(text.get_charbox(i)),
+                                            "generated": pdfium.raw.FPDFText_IsGenerated(text, i),
+                                            "unicode_mapping_error": (
+                                                pdfium.raw.FPDFText_HasUnicodeMapError(text, i)
+                                            ),
+                                            "angle": pdfium.raw.FPDFText_GetCharAngle(text, i),
+                                        }
+                                        for i in range(start, end)
+                                    ],
+                                }
+                            )
                 elif index in bad:
                     cell["text_status"] = "AMBIGUOUS_TEXT_CONTAINMENT_OR_MAPPING"
     _text_diagnostics(
