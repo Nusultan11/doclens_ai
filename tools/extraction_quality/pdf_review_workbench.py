@@ -3,13 +3,18 @@
 from __future__ import annotations
 
 import argparse
+import base64
 import copy
 import hmac
 import json
+import math
 import os
 import secrets
+import struct
 import subprocess
 import tempfile
+import zlib
+from contextlib import closing
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
@@ -42,6 +47,27 @@ def atomic_json(path: Path, value: dict) -> None:
         os.replace(temporary, path)
     finally:
         Path(temporary).unlink(missing_ok=True)
+
+
+def rgb_png(bitmap) -> bytes:
+    """Encode the renderer's packed RGB rows using stdlib only (no image dependency)."""
+
+    def chunk(kind, data):
+        return (
+            struct.pack(">I", len(data)) + kind + data + struct.pack(">I", zlib.crc32(kind + data))
+        )
+
+    raw = bytes(bitmap.buffer)
+    rows = b"".join(
+        b"\x00" + raw[y * bitmap.stride : y * bitmap.stride + bitmap.width * 3]
+        for y in range(bitmap.height)
+    )
+    return (
+        b"\x89PNG\r\n\x1a\n"
+        + chunk(b"IHDR", struct.pack(">IIBBBBB", bitmap.width, bitmap.height, 8, 2, 0, 0, 0))
+        + chunk(b"IDAT", zlib.compress(rows))
+        + chunk(b"IEND", b"")
+    )
 
 
 class Workbench:
@@ -87,6 +113,7 @@ class Workbench:
         )
         self._private_output()
         self.state_path = self.output / "workbench.json"
+        self.renders: dict[tuple[str, int], dict] = {}  # Session memory only; never persisted.
         if resume:
             self.state = validation.read_json(self.state_path)
             self._check_state()
@@ -345,6 +372,136 @@ class Workbench:
             raise WorkbenchError("Original bytes changed")
         return path
 
+    def _page(self, payload: dict) -> tuple[str, int, Path, dict]:
+        key, number = payload["document_id"], payload["page"]
+        path = self.pdf(key)
+        if type(number) is not int or not 1 <= number <= len(self.pages[key]):
+            raise WorkbenchError("Original page rejected")
+        identity = self.pages[key][number - 1]
+        if (
+            payload["page_identity"] != identity
+            or validation.original_pages(path) != self.pages[key]
+        ):
+            raise WorkbenchError("Original page identity mismatch")
+        return key, number, path, identity
+
+    def render_page(self, payload: dict) -> dict:
+        """Render authorized bytes to memory. Only a verified unrotated mapping is exposed."""
+        self._current(payload["revision"])
+        key, number, path, identity = self._page(payload)
+        try:
+            import pypdfium2 as pdfium
+        except ImportError as exc:
+            raise WorkbenchError(
+                "Visual capture needs optional local pypdfium2 (tested 5.14.0)"
+            ) from exc
+        from pypdf import PdfReader
+
+        crop = identity["crop_box_pdf_user_space"]
+        media = identity["media_box_pdf_user_space"]
+        if (
+            identity["rotation"] != 0
+            or PdfReader(path).pages[number - 1].get("/UserUnit", 1) != 1
+            or not valid_bbox(tuple(crop), tuple(media))
+        ):
+            raise WorkbenchError(
+                "Capture disabled: requires rotation 0, UserUnit 1 and contained CropBox"
+            )
+        width, height = crop[2] - crop[0], crop[3] - crop[1]
+        scale = min(2.0, 3000 / width, 3000 / height)
+        with (
+            pdfium.PdfDocument(path.read_bytes()) as document,
+            closing(document[number - 1]) as page,
+        ):
+            if (
+                page.get_rotation() != 0
+                or any(abs(a - b) > 0.001 for a, b in zip(page.get_bbox(), crop, strict=True))
+                or any(
+                    abs(a - b) > 0.001
+                    for a, b in zip(page.get_size(), (width, height), strict=True)
+                )
+            ):
+                raise WorkbenchError("Capture disabled: renderer/page geometry mismatch")
+            with closing(
+                page.render(
+                    scale=scale,
+                    rotation=0,
+                    may_draw_forms=False,
+                    force_bitmap_format=pdfium.raw.FPDFBitmap_BGR,
+                    rev_byteorder=True,
+                )
+            ) as bitmap:
+                if bitmap.width * bitmap.height > 9_000_000 or bitmap.mode != "RGB":
+                    raise WorkbenchError("Capture disabled: renderer bitmap rejected")
+                converter = bitmap.get_posconv(page)
+                for pixel, expected in (
+                    ((0, 0), (crop[0], crop[3])),
+                    ((bitmap.width, bitmap.height), (crop[2], crop[1])),
+                ):
+                    if any(
+                        abs(a - b) > 0.001
+                        for a, b in zip(converter.to_page(*pixel), expected, strict=True)
+                    ):
+                        raise WorkbenchError("Capture disabled: renderer transform mismatch")
+                metadata = {
+                    "document_id": key,
+                    "page": number,
+                    "page_identity": identity,
+                    "source_sha256": self.records[key].source_sha256,
+                    "width": bitmap.width,
+                    "height": bitmap.height,
+                    "scale": scale,
+                    "renderer": str(pdfium.PYPDFIUM_INFO.version),
+                }
+                png = rgb_png(bitmap)
+        metadata["render_id"] = fingerprint(metadata)
+        self.renders[key, number] = metadata
+        return {**metadata, "png_base64": base64.b64encode(png).decode("ascii")}
+
+    def annotate(self, payload: dict) -> dict:
+        """Explicitly assign only geometry; all semantic fields remain human supplied."""
+        self._current(payload["revision"])
+        key, number, _, _ = self._page(payload)
+        if self.state["documents"][key]["seal"] is not None:
+            raise WorkbenchError("Independent draft is frozen")
+        rendered = self.renders.get((key, number))
+        if rendered is None or payload["render_id"] != rendered["render_id"]:
+            raise WorkbenchError("Render this original page before assigning geometry")
+        draft = copy.deepcopy(payload["draft"])
+        self._check_draft(key, draft)
+        bbox = payload["bbox"]
+        crop = self.pages[key][number - 1]["crop_box_pdf_user_space"]
+        if (
+            not isinstance(bbox, list)
+            or len(bbox) != 4
+            or any(type(v) not in (int, float) or not math.isfinite(v) for v in bbox)
+            or not valid_bbox(tuple(bbox), tuple(crop))
+        ):
+            raise WorkbenchError("Original rectangle rejected")
+        target = payload["target"]
+
+        def index(items, name):
+            value = target[name]
+            if type(value) is not int or not 0 <= value < len(items):
+                raise WorkbenchError("Select an existing worksheet target")
+            return items[value]
+
+        if target["kind"] == "region":
+            destination = index(draft["pages"][number - 1]["regions"], "region")
+        elif target["kind"] in {"table", "cell"}:
+            table = index(draft["tables"], "table")
+            if table["page_number"] != number:
+                raise WorkbenchError("Rectangle target is on a different page")
+            destination = table if target["kind"] == "table" else index(table["cells"], "cell")
+            if destination.get("page_number", number) != number:
+                raise WorkbenchError("Rectangle target is on a different page")
+            if target["kind"] == "table":
+                destination["coordinate_basis"] = "pdf_user_space_unrotated"
+        else:
+            raise WorkbenchError("Select a region, table or cell")
+        destination["bbox_pdf_user_space_points"] = bbox
+        return self.update("draft", {**payload, "draft": draft})
+
     def validate(self, revision: str) -> dict:
         self._current(revision)
         if not self.state["exposed"]:
@@ -402,7 +559,7 @@ class ReviewHandler(BaseHTTPRequestHandler):
         self.send_header(
             "Content-Security-Policy",
             "default-src 'none'; script-src 'self'; "
-            "style-src 'self'; frame-src 'self'; connect-src 'self'; "
+            "style-src 'self'; frame-src 'self'; connect-src 'self'; img-src blob:; "
             "object-src 'self'; frame-ancestors 'self'; base-uri 'none'; form-action 'none'",
         )
         self.end_headers()
@@ -426,10 +583,11 @@ class ReviewHandler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:
         try:
             route, query = self._route()
-            if route in {"", "workbench.js", "workbench.css"}:
+            if route in {"", "workbench.js", "annotation.js", "workbench.css"}:
                 name, mime = {
                     "": ("index.html", "text/html; charset=utf-8"),
                     "workbench.js": ("workbench.js", "text/javascript; charset=utf-8"),
+                    "annotation.js": ("annotation.js", "text/javascript; charset=utf-8"),
                     "workbench.css": ("workbench.css", "text/css; charset=utf-8"),
                 }[route]
                 self._send(200, (ASSETS / name).read_bytes(), mime)
@@ -460,7 +618,11 @@ class ReviewHandler(BaseHTTPRequestHandler):
             if not 0 < length <= MAX_JSON:
                 raise WorkbenchError("Worksheet size limit")
             payload = json.loads(self.rfile.read(length))
-            if route == "validate":
+            if route == "render":
+                value = self.server.workbench.render_page(payload)
+            elif route == "annotate":
+                value = self.server.workbench.annotate(payload)
+            elif route == "validate":
                 value = self.server.workbench.validate(payload["revision"])
             else:
                 value = self.server.workbench.update(route, payload)

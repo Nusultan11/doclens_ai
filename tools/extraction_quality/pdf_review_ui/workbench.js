@@ -69,6 +69,7 @@ async function render() {
     $("adjudication").value = pretty(current.adjudication);
   }
   dirty = false;
+  await visual.load();
 }
 async function load() {
   state = await api("state");
@@ -134,4 +135,5 @@ $("validate").addEventListener("click", safely(async () => {
 }));
 document.querySelectorAll("textarea,#presence").forEach(field => field.addEventListener("input", () => { dirty = true; }));
 window.addEventListener("beforeunload", event => { if (dirty) { event.preventDefault(); event.returnValue = ""; } });
+visual.init();
 load().catch(error => message(error.message, true));

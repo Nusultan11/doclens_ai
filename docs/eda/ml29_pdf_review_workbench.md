@@ -1,5 +1,9 @@
 # ML-29 — local human PDF table review
 
+For optional mouse-based geometry capture and safe resume of existing drafts, see
+[ML-30A visual annotation](ml30a_visual_pdf_annotation.md). The workflow below and its
+historical verification remain the ML-29 contract; visual capture adds a local renderer.
+
 The workbench adds no dependencies: its server and UI use Python's standard library
 and plain HTML/CSS/JavaScript, alongside the repository's existing pypdf/pydantic
 validation dependencies. Use Chrome or Edge with the built-in PDF viewer enabled.

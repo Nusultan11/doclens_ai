@@ -4,6 +4,7 @@
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Local PDF review</title>
   <link rel="stylesheet" href="workbench.css">
+  <script src="annotation.js" defer></script>
   <script src="workbench.js" defer></script>
 </head>
 <body>
@@ -16,12 +17,29 @@
 <p id="message" role="status" aria-live="polite">Loading local review…</p>
 <main>
   <section class="source" aria-label="Original page">
+    <h2>Visual geometry</h2>
+    <p id="capture-status" role="status">Loading original page…</p>
+    <div id="visual-controls">
+      <label>Zoom <select id="visual-zoom"><option value="1">Fit width</option><option value="1.5">150%</option><option value="2">200%</option></select></label>
+      <label>Mouse mode <select id="visual-mode"><option value="draw">Draw rectangle</option><option value="move">Move rectangle</option><option value="resize">Resize bottom-right corner</option></select></label>
+      <button id="undo-selection">Undo selection</button><button id="cancel-selection">Cancel selection</button>
+      <p>Draw on the rendered original below. Move/resize adjusts only your pending selection.</p>
+      <div id="visual-scroll"><canvas id="page-canvas" aria-label="Rendered original page rectangle selection"></canvas></div>
+      <output id="measured-bbox">No rectangle selected</output>
+      <label>Assign to <select id="geometry-target"></select></label>
+      <button id="refresh-targets">Refresh targets from JSON</button><button id="load-target">Adjust target rectangle</button>
+      <button id="add-region">Add blank original region</button><button id="add-cell">Add blank cell to selected table</button>
+      <button id="assign-geometry">Assign rectangle and save worksheet</button><button id="undo-assignment">Undo last assignment</button>
+      <p>Add a blank table in the worksheet first if needed. Supply IDs, text and structure yourself in JSON. Assignment saves all current worksheet edits.</p>
+    </div>
+    <details><summary>Native PDF viewer (inspection)</summary>
     <iframe id="pdf" title="Original PDF in the browser viewer"></iframe>
+    </details>
     <p id="geometry"></p>
     <label><input type="checkbox" id="inspected"> I inspected this original page</label>
     <p>Use the viewer's page number to match the selected page. Coordinates below
-    are unrotated PDF user-space points: [left, bottom, right, top]. Enter measured
-    original coordinates; the viewer does not supply or infer boxes.</p>
+    are unrotated PDF user-space points: [left, bottom, right, top]. The visual
+    surface measures geometry only; inspection and review remain your decisions.</p>
     <a id="open-pdf" target="_blank" rel="noreferrer">Open original in a separate viewer tab</a>
   </section>
   <section class="worksheet" aria-label="Independent worksheet">
