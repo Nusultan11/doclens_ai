@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Ruff and portable unit tests (Python 3.12)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      # Tool subprocesses need the repository root as well as the installed package.
+      PYTHONPATH: ${{ github.workspace }}
+      PYTHONDONTWRITEBYTECODE: "1"
+      HF_HUB_OFFLINE: "1"
+      TRANSFORMERS_OFFLINE: "1"
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Install application and unit-test dependencies
+        run: >-
+          python -m pip install -e ".[dev,eda]"
+          psutil==7.1.0 pdfplumber==0.11.9 pypdfium2==5.14.0
+
+      - name: Ruff
+        run: python -m ruff check src tests tools alembic
+
+      # tests/api and tests/integration are outside this service-free unit job:
+      # PostgreSQL, S3, Qdrant, private corpus/Gold/captures and real model/GPU
+      # environments require separate opt-in runs. Their synthetic unit tests stay in.
+      # These three individual tests require Node/Playwright and an installed browser.
+      # Keep the remaining PDF renderer, HTTP security and evidence tests enabled.
+      - name: Portable unit tests
+        run: >-
+          python -m pytest tests/unit -q --strict-config --strict-markers
+          --basetemp=evaluation-output/ci-pytest
+          --deselect=tests/unit/test_pdf_review_visual.py::test_browser_rendered_mouse_selection
+          --deselect=tests/unit/test_pdf_grid_proposals.py::test_grid_http_security_and_browser
+          --deselect=tests/unit/test_pdf_proposal_review.py::test_browser_confirm_correct_reject_and_export
