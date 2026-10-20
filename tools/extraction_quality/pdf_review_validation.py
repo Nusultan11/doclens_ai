@@ -279,7 +279,13 @@ def validate_document(
     revision: str,
     *,
     allow_synthetic: bool = False,
+    independent_only: bool = False,
 ):
+    """Validate a worksheet; independent-only mode validates but never returns Gold.
+
+    The workbench uses this before revealing legacy assertions. The default path
+    still requires every adjudication decision and assertion mapping.
+    """
     blind, legacy, template = worksheets(record, pages)
     if (
         draft["version"] != blind["version"]
@@ -292,9 +298,10 @@ def validate_document(
     if actual_pages != pages:
         raise PacketError("Review page identity mismatch")
     review = _review(draft, allow_synthetic=allow_synthetic)
-    _decisions(adjudication, template, pages, review, draft)
+    if not independent_only:
+        _decisions(adjudication, template, pages, review, draft)
     region_pages = {r["region_id"]: p["page_number"] for p in draft["pages"] for r in p["regions"]}
-    for mapping in adjudication["source_region_decisions"]:
+    for mapping in () if independent_only else adjudication["source_region_decisions"]:
         old = legacy["source_regions"][mapping["legacy_region_ref"]]
         if (
             mapping["decision"] == "confirm"
@@ -302,7 +309,8 @@ def validate_document(
         ):
             raise PacketError("Confirmed region page mismatch")
     tables = _tables(draft)
-    _assertion_links(draft, adjudication, record, tables)
+    if not independent_only:
+        _assertion_links(draft, adjudication, record, tables)
     crops = {p["page_number"]: tuple(p["crop_box_pdf_user_space"]) for p in pages}
     for table in draft["tables"]:
         for region in table.get(
@@ -340,7 +348,7 @@ def validate_document(
     family = draft["family_language"]
     if not family["basis"] or scope.raw_sha256 != record.source_sha256:
         raise PacketError("Missing family provenance")
-    return ReviewedDocument(
+    document = ReviewedDocument(
         revision=revision,
         scope=scope,
         review=review,
@@ -363,6 +371,7 @@ def validate_document(
         ),
         order_pairs=tuple(map(tuple, draft.get("order_pairs", []))),
     )
+    return None if independent_only else document
 
 
 def _assertion_links(draft: dict, adjudication: dict, record, tables: tuple[Table, ...]) -> None:

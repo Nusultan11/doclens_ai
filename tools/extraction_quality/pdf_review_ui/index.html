@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Local PDF review</title>
+  <link rel="stylesheet" href="workbench.css">
+  <script src="workbench.js" defer></script>
+</head>
+<body>
+<header><h1>Local PDF review</h1><span>Private • saved on this computer</span></header>
+<nav aria-label="Review controls">
+  <label>Original PDF <select id="document"></select></label>
+  <button id="previous">Previous page</button><strong id="page-label"></strong>
+  <button id="next">Next page</button><button id="reload">Reload saved state</button>
+</nav>
+<p id="message" role="status" aria-live="polite">Loading local review…</p>
+<main>
+  <section class="source" aria-label="Original page">
+    <iframe id="pdf" title="Original PDF in the browser viewer"></iframe>
+    <p id="geometry"></p>
+    <label><input type="checkbox" id="inspected"> I inspected this original page</label>
+    <p>Use the viewer's page number to match the selected page. Coordinates below
+    are unrotated PDF user-space points: [left, bottom, right, top]. Enter measured
+    original coordinates; the viewer does not supply or infer boxes.</p>
+    <a id="open-pdf" target="_blank" rel="noreferrer">Open original in a separate viewer tab</a>
+  </section>
+  <section class="worksheet" aria-label="Independent worksheet">
+    <h2>Independent worksheet <span id="phase"></span></h2>
+    <p id="seal"></p>
+    <div id="independent-fields">
+      <label>Does this page contain a table?
+        <select id="presence"><option value="null">Unreviewed</option>
+          <option value="true">Yes</option><option value="false">No</option></select></label>
+      <label>Original regions (JSON array)<textarea id="regions" rows="5" spellcheck="false"></textarea></label>
+      <label>Page notes<textarea id="notes" rows="2"></textarea></label>
+      <label>Tables on this page (JSON array)<textarea id="tables" rows="14" spellcheck="false"></textarea></label>
+      <button id="add-table">Add blank table</button>
+      <details><summary>Cell and relationship templates</summary>
+        <p>Copy these into a table's cells/relationships arrays. Fill literal_text,
+        bbox, zero-based row/column, positive spans, header_role, explicit unit/period
+        links, evidence_reference and uncertainty. Do not guess missing structure.</p>
+        <pre id="templates"></pre></details>
+      <label>Text anchors on this page (JSON array)<textarea id="anchors" rows="6" spellcheck="false"></textarea></label>
+      <button id="add-anchor">Add blank text anchor</button>
+      <label>Document reading-order pairs (JSON array)<textarea id="order" rows="3" spellcheck="false"></textarea></label>
+      <details open><summary>Reviewer, permissions and independence</summary>
+        <p>Enter your own identity, review date, viewer details and permission reference.
+        Set kind to independent_human. Each true/false attestation must be your decision.</p>
+        <label>Reviewer attestations (JSON object)<textarea id="reviewer" rows="12" spellcheck="false"></textarea></label>
+        <label>Family, languages and split (JSON object)<textarea id="family" rows="5" spellcheck="false"></textarea></label>
+        <label>Completion attestations (JSON object)<textarea id="completion" rows="5" spellcheck="false"></textarea></label>
+      </details>
+      <button id="save">Save independent draft</button>
+      <button id="freeze">Freeze completed independent draft</button>
+    </div>
+    <p>Every selected PDF must be independently completed and fingerprinted before
+    legacy assertions are revealed. Frozen independent drafts cannot be edited here.
+    Record later corrections explicitly during adjudication.</p>
+    <button id="reveal">Reveal legacy assertions after all drafts are frozen</button>
+    <section id="comparison" hidden>
+      <h2>Human adjudication</h2>
+      <p>Resolve each decision yourself. Nothing is automatically confirmed.
+      Keep disagreements and corrections explicit. Parser predictions are never loaded.</p>
+      <details><summary>Frozen legacy assertions</summary><pre id="legacy"></pre></details>
+      <label>Adjudication worksheet (JSON object)<textarea id="adjudication" rows="20" spellcheck="false"></textarea></label>
+      <button id="save-adjudication">Save adjudication draft</button>
+      <button id="validate">Validate saved population with ML-28</button>
+      <pre id="validation" aria-live="polite"></pre>
+    </section>
+  </section>
+</main>
+</body>
+</html>

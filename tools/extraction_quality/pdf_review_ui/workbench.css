@@ -1,0 +1,25 @@
+:root { font: 15px/1.5 system-ui, sans-serif; color: #17293b; background: #f3f5f7; }
+body { margin: 0; }
+header { background: #132e45; color: white; padding: 14px 24px; display: flex; align-items: baseline; gap: 24px; }
+h1 { font-size: 22px; margin: 0; }
+h2 { font-size: 19px; margin-top: 0; }
+nav { padding: 12px 24px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+button, select { font: inherit; padding: 7px 10px; border: 1px solid #8096a8; border-radius: 4px; background: white; color: #17293b; }
+button { cursor: pointer; margin: 4px 0; }
+button:hover:enabled { background: #e6f1f8; }
+button:disabled { opacity: .55; cursor: default; }
+button:focus-visible, textarea:focus-visible, select:focus-visible { outline: 3px solid #1678b0; outline-offset: 2px; }
+#message { margin: 0 24px 12px; padding: 10px 14px; background: #e1eef6; border-left: 4px solid #1678b0; }
+#message.error { background: #f9e7e5; border-color: #ac382d; }
+main { display: grid; grid-template-columns: minmax(320px, 1fr) minmax(380px, 1fr); gap: 18px; padding: 0 24px 24px; align-items: start; }
+section.source, section.worksheet { background: white; padding: 16px; border: 1px solid #c9d3dc; border-radius: 6px; }
+.source { position: sticky; top: 8px; }
+iframe { width: 100%; height: 65vh; border: 1px solid #c9d3dc; }
+.worksheet label { display: block; margin: 12px 0; font-weight: 600; }
+textarea { box-sizing: border-box; display: block; width: 100%; resize: vertical; margin-top: 5px; padding: 9px; border: 1px solid #8096a8; border-radius: 4px; font: 13px/1.5 ui-monospace, monospace; color: #17293b; background: #fbfcfd; }
+details { border-top: 1px solid #d5dfe6; margin: 14px 0; padding-top: 10px; }
+summary { cursor: pointer; font-weight: 600; }
+pre { font: 12px/1.5 ui-monospace, monospace; white-space: pre-wrap; overflow-wrap: anywhere; background: #f1f4f6; padding: 12px; max-height: 360px; overflow: auto; }
+#seal { overflow-wrap: anywhere; }
+[hidden] { display: none !important; }
+@media (max-width: 850px) { main { grid-template-columns: 1fr; padding: 0 12px 12px; } .source { position: static; } header { gap: 10px; flex-wrap: wrap; } }
