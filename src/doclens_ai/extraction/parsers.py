@@ -985,7 +985,8 @@ def _xlsx_number_formats(
     for node in root.findall(f"{{{_SPREADSHEET_NS}}}numFmts/{{{_SPREADSHEET_NS}}}numFmt"):
         key = int(node.get("numFmtId", "-1"))
         value = node.get("formatCode")
-        if key < 164 or key in custom or value is None:
+        # Explicit definitions also carry localized formats with built-in IDs (<164).
+        if key < 0 or key in custom or value is None:
             raise _ExtractionFailure(ErrorCategory.CORRUPT_DOCUMENT)
         custom[key] = value
     formats = []
