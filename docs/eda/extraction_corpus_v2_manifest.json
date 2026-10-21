@@ -1,0 +1,3194 @@
+{
+  "revision": "extraction-corpus-v2-20261021-office-r2",
+  "samples": [
+    {
+      "annotation": null,
+      "cohort": "pilot",
+      "dataset": "additional-xlsx",
+      "difficulty": [
+        "not_reviewed"
+      ],
+      "disposition": "admitted",
+      "document_type": "public_sector_office",
+      "family_id": "f-b99eb463bad5ffc6433cbd73",
+      "family_review": "unknown",
+      "family_review_reference": null,
+      "image": null,
+      "languages": [
+        "unknown"
+      ],
+      "near_duplicate_group": null,
+      "normalized_text_sha256": null,
+      "original": {
+        "format": "xlsx",
+        "path": "assets/e2-office-06dfbd6eeae9cd9a.xlsx",
+        "sha256": "f2c0d04df802ae19e5b011d51cd6ba3e5bb957cb0e4c2c580572acaef88e9eac",
+        "size_bytes": 127669
+      },
+      "original_page_number": null,
+      "page": null,
+      "publicly_exposed": true,
+      "reasons": [],
+      "related_families": [],
+      "release": "GOV.UK-20261021",
+      "revision": "d36ff70e6997c7ecc54f6b82a6339c3180269fd39402365454b2fcb2bb59c2e8",
+      "rights": {
+        "annotation_use": null,
+        "dataset_license": "Open Government Licence v3.0",
+        "local_evaluation": true,
+        "original_license": "Open Government Licence v3.0",
+        "redistribution": null,
+        "references": [
+          "docs/eda/corpus_v1_protocol.md",
+          "frozen-source-d29c3d13bd7fe7f326f06a4e2b06d058059d6a58f1b095b2533787cc633a3b13"
+        ],
+        "sensitivity": "public"
+      },
+      "sample_id": "e2-office-06dfbd6eeae9cd9a",
+      "source_record_id": "e2-office-06dfbd6eeae9cd9a",
+      "split": "dev",
+      "unsupported": [
+        "reviewed_language",
+        "independent_gold",
+        "family_completeness"
+      ]
+    },
+    {
+      "annotation": null,
+      "cohort": "pilot",
+      "dataset": "additional-xlsx",
+      "difficulty": [
+        "not_reviewed"
+      ],
+      "disposition": "admitted",
+      "document_type": "public_sector_office",
+      "family_id": "f-b3df500ce993df5f5a75ea6f",
+      "family_review": "unknown",
+      "family_review_reference": null,
+      "image": null,
+      "languages": [
+        "unknown"
+      ],
+      "near_duplicate_group": null,
+      "normalized_text_sha256": null,
+      "original": {
+        "format": "xlsx",
+        "path": "assets/e2-office-081ca479f8d7eebf.xlsx",
+        "sha256": "4eb61bf29f50b92940b6521a8b7d9eb7cb5d81518d2402b336ae76cd6de3e4df",
+        "size_bytes": 735341
+      },
+      "original_page_number": null,
+      "page": null,
+      "publicly_exposed": true,
+      "reasons": [],
+      "related_families": [],
+      "release": "GOV.UK-20261021",
+      "revision": "d6fa6c962d73cf4d97fb71094a62f42abcb7d0a5bf11281c9ddb8ae95ccefcb4",
+      "rights": {
+        "annotation_use": null,
+        "dataset_license": "Open Government Licence v3.0",
+        "local_evaluation": true,
+        "original_license": "Open Government Licence v3.0",
+        "redistribution": null,
+        "references": [
+          "docs/eda/corpus_v1_protocol.md",
+          "frozen-source-55b6b8f5c35aa0da085fb6847b3270d0d5c4d12a4360cab1e4c42bb0f71f58db"
+        ],
+        "sensitivity": "public"
+      },
+      "sample_id": "e2-office-081ca479f8d7eebf",
+      "source_record_id": "e2-office-081ca479f8d7eebf",
+      "split": "dev",
+      "unsupported": [
+        "reviewed_language",
+        "independent_gold",
+        "family_completeness"
+      ]
+    },
+    {
+      "annotation": null,
+      "cohort": "pilot",
+      "dataset": "additional-xlsx",
+      "difficulty": [
+        "not_reviewed"
+      ],
+      "disposition": "admitted",
+      "document_type": "public_sector_office",
+      "family_id": "f-0209294c95551f8fe8e17d3f",
+      "family_review": "unknown",
+      "family_review_reference": null,
+      "image": null,
+      "languages": [
+        "unknown"
+      ],
+      "near_duplicate_group": null,
+      "normalized_text_sha256": null,
+      "original": {
+        "format": "xlsx",
+        "path": "assets/e2-office-0b98928f48030222.xlsx",
+        "sha256": "62dfe98255e49aa4ff6ecf9d375c2d846da5dc7c169f398eb07e10fffe0f0aa4",
+        "size_bytes": 466830
+      },
+      "original_page_number": null,
+      "page": null,
+      "publicly_exposed": true,
+      "reasons": [],
+      "related_families": [],
+      "release": "GOV.UK-20261021",
+      "revision": "b15853ddc915b124e146f65c0d2287dfc0159abe3349a0a03e340527011e1f46",
+      "rights": {
+        "annotation_use": null,
+        "dataset_license": "Open Government Licence v3.0",
+        "local_evaluation": true,
+        "original_license": "Open Government Licence v3.0",
+        "redistribution": null,
+        "references": [
+          "docs/eda/corpus_v1_protocol.md",
+          "frozen-source-764d31775f1891a141b4e8f6ffd56fcecf8a690c84e3aaa392e9cd9155ec4044"
+        ],
+        "sensitivity": "public"
+      },
+      "sample_id": "e2-office-0b98928f48030222",
+      "source_record_id": "e2-office-0b98928f48030222",
+      "split": "dev",
+      "unsupported": [
+        "reviewed_language",
+        "independent_gold",
+        "family_completeness"
+      ]
+    },
+    {
+      "annotation": null,
+      "cohort": "pilot",
+      "dataset": "additional-docx",
+      "difficulty": [
+        "not_reviewed"
+      ],
+      "disposition": "admitted",
+      "document_type": "public_sector_office",
+      "family_id": "f-a0dfd38d2480b58d0c7a6cc7",
+      "family_review": "unknown",
+      "family_review_reference": null,
+      "image": null,
+      "languages": [
+        "unknown"
+      ],
+      "near_duplicate_group": null,
+      "normalized_text_sha256": null,
+      "original": {
+        "format": "docx",
+        "path": "assets/e2-office-12e4e53f72de5a73.docx",
+        "sha256": "ac389863e4b96be0c9eacb8a22fdd6ba4eb5ac3d2b317fd91d23bc09fff1fd45",
+        "size_bytes": 1306807
+      },
+      "original_page_number": null,
+      "page": null,
+      "publicly_exposed": true,
+      "reasons": [],
+      "related_families": [],
+      "release": "GOV.UK-20261021",
+      "revision": "a5b078923060df71d77ea530f191bfaa2ac88cb610740c851d745d4885a747a6",
+      "rights": {
+        "annotation_use": null,
+        "dataset_license": "Open Government Licence v3.0",
+        "local_evaluation": true,
+        "original_license": "Open Government Licence v3.0",
+        "redistribution": null,
+        "references": [
+          "docs/eda/corpus_v1_protocol.md",
+          "frozen-source-10a7acfc285d3ac3d9efa9b20a9669f303fa9e946c6e10632be484c77e80ba68"
+        ],
+        "sensitivity": "public"
+      },
+      "sample_id": "e2-office-12e4e53f72de5a73",
+      "source_record_id": "e2-office-12e4e53f72de5a73",
+      "split": "dev",
+      "unsupported": [
+        "reviewed_language",
+        "independent_gold",
+        "family_completeness"
+      ]
+    },
+    {
+      "annotation": null,
+      "cohort": "pilot",
+      "dataset": "additional-xlsx",
+      "difficulty": [
+        "not_reviewed"
+      ],
+      "disposition": "admitted",
+      "document_type": "public_sector_office",
+      "family_id": "f-9e44ca658a35e83a408c5864",
+      "family_review": "unknown",
+      "family_review_reference": null,
+      "image": null,
+      "languages": [
+        "unknown"
+      ],
+      "near_duplicate_group": null,
+      "normalized_text_sha256": null,
+      "original": {
+        "format": "xlsx",
+        "path": "assets/e2-office-13bbfb6a6b8a1c67.xlsx",
+        "sha256": "860fbdb831f2ba9da00e36b8969e06a3da1937cf06d2a58e7b65f382b6aa7bcd",
+        "size_bytes": 290275
+      },
+      "original_page_number": null,
+      "page": null,
+      "publicly_exposed": true,
+      "reasons": [],
+      "related_families": [],
+      "release": "GOV.UK-20261021",
+      "revision": "c7ba9a0715c07ad726ecad4486261fb2df9a19ecd27126edeb78b5eb91cfe60c",
+      "rights": {
+        "annotation_use": null,
+        "dataset_license": "Open Government Licence v3.0",
+        "local_evaluation": true,
+        "original_license": "Open Government Licence v3.0",
+        "redistribution": null,
+        "references": [
+          "docs/eda/corpus_v1_protocol.md",
+          "frozen-source-9eb9d98779296fb59468f7341af4c352be50f95f1a3e6da6dd9228a5807babe0"
+        ],
+        "sensitivity": "public"
+      },
+      "sample_id": "e2-office-13bbfb6a6b8a1c67",
+      "source_record_id": "e2-office-13bbfb6a6b8a1c67",
+      "split": "dev",
+      "unsupported": [
+        "reviewed_language",
+        "independent_gold",
+        "family_completeness"
+      ]
+    },
+    {
+      "annotation": null,
+      "cohort": "pilot",
+      "dataset": "additional-xlsx",
+      "difficulty": [
+        "not_reviewed"
+      ],
+      "disposition": "admitted",
+      "document_type": "public_sector_office",
+      "family_id": "f-a14fed00f94949a69cd39230",
+      "family_review": "unknown",
+      "family_review_reference": null,
+      "image": null,
+      "languages": [
+        "unknown"
+      ],
+      "near_duplicate_group": null,
+      "normalized_text_sha256": null,
+      "original": {
+        "format": "xlsx",
+        "path": "assets/e2-office-18d8ec96e0631802.xlsx",
+        "sha256": "c3587abd1de6cf7774d6181df18b20b77a93294665f3cd91461246cc6e92c666",
+        "size_bytes": 185796
+      },
+      "original_page_number": null,
+      "page": null,
+      "publicly_exposed": true,
+      "reasons": [],
+      "related_families": [],
+      "release": "GOV.UK-20261021",
+      "revision": "2764444ca2df09a5f9b3124da6b932fe331bb6934268d55a1d66083652dbc7fd",
+      "rights": {
+        "annotation_use": null,
+        "dataset_license": "Open Government Licence v3.0",
+        "local_evaluation": true,
+        "original_license": "Open Government Licence v3.0",
+        "redistribution": null,
+        "references": [
+          "docs/eda/corpus_v1_protocol.md",
+          "frozen-source-d026d416cf6d8bf4acc9f591e6a1a081b555554c31fec6ee7d10774cef619630"
+        ],
+        "sensitivity": "public"
+      },
+      "sample_id": "e2-office-18d8ec96e0631802",
+      "source_record_id": "e2-office-18d8ec96e0631802",
+      "split": "dev",
+      "unsupported": [
+        "reviewed_language",
+        "independent_gold",
+        "family_completeness"
+      ]
+    },
+    {
+      "annotation": null,
+      "cohort": "pilot",
+      "dataset": "additional-docx",
+      "difficulty": [
+        "not_reviewed"
+      ],
+      "disposition": "admitted",
+      "document_type": "public_sector_office",
+      "family_id": "f-a0dfd38d2480b58d0c7a6cc7",
+      "family_review": "unknown",
+      "family_review_reference": null,
+      "image": null,
+      "languages": [
+        "unknown"
+      ],
+      "near_duplicate_group": null,
+      "normalized_text_sha256": null,
+      "original": {
+        "format": "docx",
+        "path": "assets/e2-office-20ffd4320870b219.docx",
+        "sha256": "d26f531ec78786d97012b0213b669a796aebcb58f847f1ce469a6006f2e94b29",
+        "size_bytes": 820861
+      },
+      "original_page_number": null,
+      "page": null,
+      "publicly_exposed": true,
+      "reasons": [],
+      "related_families": [],
+      "release": "GOV.UK-20261021",
+      "revision": "a5b078923060df71d77ea530f191bfaa2ac88cb610740c851d745d4885a747a6",
+      "rights": {
+        "annotation_use": null,
+        "dataset_license": "Open Government Licence v3.0",
+        "local_evaluation": true,
+        "original_license": "Open Government Licence v3.0",
+        "redistribution": null,
+        "references": [
+          "docs/eda/corpus_v1_protocol.md",
+          "frozen-source-10a7acfc285d3ac3d9efa9b20a9669f303fa9e946c6e10632be484c77e80ba68"
+        ],
+        "sensitivity": "public"
+      },
+      "sample_id": "e2-office-20ffd4320870b219",
+      "source_record_id": "e2-office-20ffd4320870b219",
+      "split": "dev",
+      "unsupported": [
+        "reviewed_language",
+        "independent_gold",
+        "family_completeness"
+      ]
+    },
+    {
+      "annotation": null,
+      "cohort": "pilot",
+      "dataset": "additional-docx",
+      "difficulty": [
+        "not_reviewed"
+      ],
+      "disposition": "admitted",
+      "document_type": "public_sector_office",
+      "family_id": "f-747914e405d404dfc72f4dc0",
+      "family_review": "unknown",
+      "family_review_reference": null,
+      "image": null,
+      "languages": [
+        "unknown"
+      ],
+      "near_duplicate_group": null,
+      "normalized_text_sha256": null,
+      "original": {
+        "format": "docx",
+        "path": "assets/e2-office-28a174ed631cdcbb.docx",
+        "sha256": "d4a31c4af8f0a31f5022330e4072b7cd4719a9c97eafe03f969a77350b954ea3",
+        "size_bytes": 22923
+      },
+      "original_page_number": null,
+      "page": null,
+      "publicly_exposed": true,
+      "reasons": [],
+      "related_families": [],
+      "release": "GOV.UK-20261021",
+      "revision": "65b9859cabe555fc7ffe4eaa4ca38e8026c72d05f2d9b00e6230d5b49e272448",
+      "rights": {
+        "annotation_use": null,
+        "dataset_license": "Open Government Licence v3.0",
+        "local_evaluation": true,
+        "original_license": "Open Government Licence v3.0",
+        "redistribution": null,
+        "references": [
+          "docs/eda/corpus_v1_protocol.md",
+          "frozen-source-acbc2b19eb654ef8573ebed3d1a6ecd64e862f3d577fd4a8d87ba5b0b4e1e6fd"
+        ],
+        "sensitivity": "public"
+      },
+      "sample_id": "e2-office-28a174ed631cdcbb",
+      "source_record_id": "e2-office-28a174ed631cdcbb",
+      "split": "dev",
+      "unsupported": [
+        "reviewed_language",
+        "independent_gold",
+        "family_completeness"
+      ]
+    },
+    {
+      "annotation": null,
+      "cohort": "pilot",
+      "dataset": "additional-xlsx",
+      "difficulty": [
+        "not_reviewed"
+      ],
+      "disposition": "admitted",
+      "document_type": "public_sector_office",
+      "family_id": "f-0d93417332338976b13822b3",
+      "family_review": "unknown",
+      "family_review_reference": null,
+      "image": null,
+      "languages": [
+        "unknown"
+      ],
+      "near_duplicate_group": null,
+      "normalized_text_sha256": null,
+      "original": {
+        "format": "xlsx",
+        "path": "assets/e2-office-2e56e6dd88e4aca5.xlsx",
+        "sha256": "00cf11696ad3b56b47b62adbb37da7fca26a182d3919ba4deecf7dff91430ccd",
+        "size_bytes": 21825
+      },
+      "original_page_number": null,
+      "page": null,
+      "publicly_exposed": true,
+      "reasons": [],
+      "related_families": [],
+      "release": "GOV.UK-20261021",
+      "revision": "2702fcd28d9572ef70c961f81ad864dc5aae6fd7f02cc5e718c38e5c347e67af",
+      "rights": {
+        "annotation_use": null,
+        "dataset_license": "Open Government Licence v3.0",
+        "local_evaluation": true,
+        "original_license": "Open Government Licence v3.0",
+        "redistribution": null,
+        "references": [
+          "docs/eda/corpus_v1_protocol.md",
+          "frozen-source-bfcb41e6cf0a487d51a1089abd76a88773af1eef9b8e07f5b83b6ce89bd9d49d"
+        ],
+        "sensitivity": "public"
+      },
+      "sample_id": "e2-office-2e56e6dd88e4aca5",
+      "source_record_id": "e2-office-2e56e6dd88e4aca5",
+      "split": "dev",
+      "unsupported": [
+        "reviewed_language",
+        "independent_gold",
+        "family_completeness"
+      ]
+    },
+    {
+      "annotation": null,
+      "cohort": "pilot",
+      "dataset": "additional-xlsx",
+      "difficulty": [
+        "not_reviewed"
+      ],
+      "disposition": "admitted",
+      "document_type": "public_sector_office",
+      "family_id": "f-9e44ca658a35e83a408c5864",
+      "family_review": "unknown",
+      "family_review_reference": null,
+      "image": null,
+      "languages": [
+        "unknown"
+      ],
+      "near_duplicate_group": null,
+      "normalized_text_sha256": null,
+      "original": {
+        "format": "xlsx",
+        "path": "assets/e2-office-3320155211acbfd4.xlsx",
+        "sha256": "8636e09009238dce00ddd42b82ad7ea7a774623629cdbb3a5a42ec586727770b",
+        "size_bytes": 224560
+      },
+      "original_page_number": null,
+      "page": null,
+      "publicly_exposed": true,
+      "reasons": [],
+      "related_families": [],
+      "release": "GOV.UK-20261021",
+      "revision": "c7ba9a0715c07ad726ecad4486261fb2df9a19ecd27126edeb78b5eb91cfe60c",
+      "rights": {
+        "annotation_use": null,
+        "dataset_license": "Open Government Licence v3.0",
+        "local_evaluation": true,
+        "original_license": "Open Government Licence v3.0",
+        "redistribution": null,
+        "references": [
+          "docs/eda/corpus_v1_protocol.md",
+          "frozen-source-9eb9d98779296fb59468f7341af4c352be50f95f1a3e6da6dd9228a5807babe0"
+        ],
+        "sensitivity": "public"
+      },
+      "sample_id": "e2-office-3320155211acbfd4",
+      "source_record_id": "e2-office-3320155211acbfd4",
+      "split": "dev",
+      "unsupported": [
+        "reviewed_language",
+        "independent_gold",
+        "family_completeness"
+      ]
+    },
+    {
+      "annotation": null,
+      "cohort": "pilot",
+      "dataset": "additional-docx",
+      "difficulty": [
+        "not_reviewed"
+      ],
+      "disposition": "admitted",
+      "document_type": "public_sector_office",
+      "family_id": "f-c90c5cf2ef3cd307c831ed24",
+      "family_review": "unknown",
+      "family_review_reference": null,
+      "image": null,
+      "languages": [
+        "unknown"
+      ],
+      "near_duplicate_group": null,
+      "normalized_text_sha256": null,
+      "original": {
+        "format": "docx",
+        "path": "assets/e2-office-3377338b6feaa700.docx",
+        "sha256": "5fdd447e7d74d5cf2282bcd45320576a34ed804eb2b3f0baf60bc7c8ee4a3f07",
+        "size_bytes": 115901
+      },
+      "original_page_number": null,
+      "page": null,
+      "publicly_exposed": true,
+      "reasons": [],
+      "related_families": [],
+      "release": "GOV.UK-20261021",
+      "revision": "0e1e49278500489ba293abd27feb6b17cdf5866d758b0560ce8faf672a92bc27",
+      "rights": {
+        "annotation_use": null,
+        "dataset_license": "Open Government Licence v3.0",
+        "local_evaluation": true,
+        "original_license": "Open Government Licence v3.0",
+        "redistribution": null,
+        "references": [
+          "docs/eda/corpus_v1_protocol.md",
+          "frozen-source-f8eb5916e68e8a058132c8530db573b3fd521cdbc39642b9969dbdc5ac060957"
+        ],
+        "sensitivity": "public"
+      },
+      "sample_id": "e2-office-3377338b6feaa700",
+      "source_record_id": "e2-office-3377338b6feaa700",
+      "split": "dev",
+      "unsupported": [
+        "reviewed_language",
+        "independent_gold",
+        "family_completeness"
+      ]
+    },
+    {
+      "annotation": null,
+      "cohort": "pilot",
+      "dataset": "additional-xlsx",
+      "difficulty": [
+        "not_reviewed"
+      ],
+      "disposition": "admitted",
+      "document_type": "public_sector_office",
+      "family_id": "f-81fa9b61a35cd08b54603d74",
+      "family_review": "unknown",
+      "family_review_reference": null,
+      "image": null,
+      "languages": [
+        "unknown"
+      ],
+      "near_duplicate_group": null,
+      "normalized_text_sha256": null,
+      "original": {
+        "format": "xlsx",
+        "path": "assets/e2-office-39a738041ccbbf3f.xlsx",
+        "sha256": "aab2cde90d5c96c32b1afb74f2fa8be00b96de6f700f8e7f14b08d67d80e013c",
+        "size_bytes": 43305
+      },
+      "original_page_number": null,
+      "page": null,
+      "publicly_exposed": true,
+      "reasons": [],
+      "related_families": [],
+      "release": "GOV.UK-20261021",
+      "revision": "4ba7801acb57714820d8c88f5f4cda57fa70b9b051bb1b3361bb7d4248f15bee",
+      "rights": {
+        "annotation_use": null,
+        "dataset_license": "Open Government Licence v3.0",
+        "local_evaluation": true,
+        "original_license": "Open Government Licence v3.0",
+        "redistribution": null,
+        "references": [
+          "docs/eda/corpus_v1_protocol.md",
+          "frozen-source-989af8d54e3bb315519bb9dced8407eac740b532017bc7c2aa8c77fbb6eb01cc"
+        ],
+        "sensitivity": "public"
+      },
+      "sample_id": "e2-office-39a738041ccbbf3f",
+      "source_record_id": "e2-office-39a738041ccbbf3f",
+      "split": "dev",
+      "unsupported": [
+        "reviewed_language",
+        "independent_gold",
+        "family_completeness"
+      ]
+    },
+    {
+      "annotation": null,
+      "cohort": "pilot",
+      "dataset": "additional-docx",
+      "difficulty": [
+        "not_reviewed"
+      ],
+      "disposition": "admitted",
+      "document_type": "public_sector_office",
+      "family_id": "f-a0dfd38d2480b58d0c7a6cc7",
+      "family_review": "unknown",
+      "family_review_reference": null,
+      "image": null,
+      "languages": [
+        "unknown"
+      ],
+      "near_duplicate_group": null,
+      "normalized_text_sha256": null,
+      "original": {
+        "format": "docx",
+        "path": "assets/e2-office-3e87de0bb8660f9d.docx",
+        "sha256": "b2ca8ecba70e05a7d9735cbd3b6c4c49b7b6e662fae0677cdc57c904bee4f82a",
+        "size_bytes": 784395
+      },
+      "original_page_number": null,
+      "page": null,
+      "publicly_exposed": true,
+      "reasons": [],
+      "related_families": [],
+      "release": "GOV.UK-20261021",
+      "revision": "a5b078923060df71d77ea530f191bfaa2ac88cb610740c851d745d4885a747a6",
+      "rights": {
+        "annotation_use": null,
+        "dataset_license": "Open Government Licence v3.0",
+        "local_evaluation": true,
+        "original_license": "Open Government Licence v3.0",
+        "redistribution": null,
+        "references": [
+          "docs/eda/corpus_v1_protocol.md",
+          "frozen-source-10a7acfc285d3ac3d9efa9b20a9669f303fa9e946c6e10632be484c77e80ba68"
+        ],
+        "sensitivity": "public"
+      },
+      "sample_id": "e2-office-3e87de0bb8660f9d",
+      "source_record_id": "e2-office-3e87de0bb8660f9d",
+      "split": "dev",
+      "unsupported": [
+        "reviewed_language",
+        "independent_gold",
+        "family_completeness"
+      ]
+    },
+    {
+      "annotation": null,
+      "cohort": "pilot",
+      "dataset": "additional-xlsx",
+      "difficulty": [
+        "not_reviewed"
+      ],
+      "disposition": "admitted",
+      "document_type": "public_sector_office",
+      "family_id": "f-c90c5cf2ef3cd307c831ed24",
+      "family_review": "unknown",
+      "family_review_reference": null,
+      "image": null,
+      "languages": [
+        "unknown"
+      ],
+      "near_duplicate_group": null,
+      "normalized_text_sha256": null,
+      "original": {
+        "format": "xlsx",
+        "path": "assets/e2-office-42093d9dd7c328b7.xlsx",
+        "sha256": "dc40bab17ff596d44901fb444bf5abe570154a17bad7df6e181d5d8d8d50febb",
+        "size_bytes": 156305
+      },
+      "original_page_number": null,
+      "page": null,
+      "publicly_exposed": true,
+      "reasons": [],
+      "related_families": [],
+      "release": "GOV.UK-20261021",
+      "revision": "0e1e49278500489ba293abd27feb6b17cdf5866d758b0560ce8faf672a92bc27",
+      "rights": {
+        "annotation_use": null,
+        "dataset_license": "Open Government Licence v3.0",
+        "local_evaluation": true,
+        "original_license": "Open Government Licence v3.0",
+        "redistribution": null,
+        "references": [
+          "docs/eda/corpus_v1_protocol.md",
+          "frozen-source-f8eb5916e68e8a058132c8530db573b3fd521cdbc39642b9969dbdc5ac060957"
+        ],
+        "sensitivity": "public"
+      },
+      "sample_id": "e2-office-42093d9dd7c328b7",
+      "source_record_id": "e2-office-42093d9dd7c328b7",
+      "split": "dev",
+      "unsupported": [
+        "reviewed_language",
+        "independent_gold",
+        "family_completeness"
+      ]
+    },
+    {
+      "annotation": null,
+      "cohort": "pilot",
+      "dataset": "additional-docx",
+      "difficulty": [
+        "not_reviewed"
+      ],
+      "disposition": "admitted",
+      "document_type": "public_sector_office",
+      "family_id": "f-a0dfd38d2480b58d0c7a6cc7",
+      "family_review": "unknown",
+      "family_review_reference": null,
+      "image": null,
+      "languages": [
+        "unknown"
+      ],
+      "near_duplicate_group": null,
+      "normalized_text_sha256": null,
+      "original": {
+        "format": "docx",
+        "path": "assets/e2-office-44bdd5c6608da5e2.docx",
+        "sha256": "8ed48b8bffe26f9c57222e5ec02766b8a7876ff473e5f78db4ff300b13b002b8",
+        "size_bytes": 36203
+      },
+      "original_page_number": null,
+      "page": null,
+      "publicly_exposed": true,
+      "reasons": [],
+      "related_families": [],
+      "release": "GOV.UK-20261021",
+      "revision": "a5b078923060df71d77ea530f191bfaa2ac88cb610740c851d745d4885a747a6",
+      "rights": {
+        "annotation_use": null,
+        "dataset_license": "Open Government Licence v3.0",
+        "local_evaluation": true,
+        "original_license": "Open Government Licence v3.0",
+        "redistribution": null,
+        "references": [
+          "docs/eda/corpus_v1_protocol.md",
+          "frozen-source-10a7acfc285d3ac3d9efa9b20a9669f303fa9e946c6e10632be484c77e80ba68"
+        ],
+        "sensitivity": "public"
+      },
+      "sample_id": "e2-office-44bdd5c6608da5e2",
+      "source_record_id": "e2-office-44bdd5c6608da5e2",
+      "split": "dev",
+      "unsupported": [
+        "reviewed_language",
+        "independent_gold",
+        "family_completeness"
+      ]
+    },
+    {
+      "annotation": null,
+      "cohort": "pilot",
+      "dataset": "additional-docx",
+      "difficulty": [
+        "not_reviewed"
+      ],
+      "disposition": "admitted",
+      "document_type": "public_sector_office",
+      "family_id": "f-6a4a9a2c14438e5d54b34127",
+      "family_review": "unknown",
+      "family_review_reference": null,
+      "image": null,
+      "languages": [
+        "unknown"
+      ],
+      "near_duplicate_group": null,
+      "normalized_text_sha256": null,
+      "original": {
+        "format": "docx",
+        "path": "assets/e2-office-4725927cfda086a8.docx",
+        "sha256": "e0bd237df45c8c564a7ce5bff6c3ed4deca92011af3ce4ab769700d0c3e62ae8",
+        "size_bytes": 79773
+      },
+      "original_page_number": null,
+      "page": null,
+      "publicly_exposed": true,
+      "reasons": [],
+      "related_families": [],
+      "release": "GOV.UK-20261021",
+      "revision": "f4336fa309d9cfe9783748aff9a4ddec68797ae6298aa7baaa26108d568f1c2e",
+      "rights": {
+        "annotation_use": null,
+        "dataset_license": "Open Government Licence v3.0",
+        "local_evaluation": true,
+        "original_license": "Open Government Licence v3.0",
+        "redistribution": null,
+        "references": [
+          "docs/eda/corpus_v1_protocol.md",
+          "frozen-source-0c1499fa9b4c72da5c7c8536aac4c915d5fd9ae32c20ad7b9a5941606e602807"
+        ],
+        "sensitivity": "public"
+      },
+      "sample_id": "e2-office-4725927cfda086a8",
+      "source_record_id": "e2-office-4725927cfda086a8",
+      "split": "dev",
+      "unsupported": [
+        "reviewed_language",
+        "independent_gold",
+        "family_completeness"
+      ]
+    },
+    {
+      "annotation": null,
+      "cohort": "pilot",
+      "dataset": "additional-xlsx",
+      "difficulty": [
+        "not_reviewed"
+      ],
+      "disposition": "admitted",
+      "document_type": "public_sector_office",
+      "family_id": "f-102080e40ac2f3313b49591c",
+      "family_review": "unknown",
+      "family_review_reference": null,
+      "image": null,
+      "languages": [
+        "unknown"
+      ],
+      "near_duplicate_group": null,
+      "normalized_text_sha256": null,
+      "original": {
+        "format": "xlsx",
+        "path": "assets/e2-office-4ba25f4a6c27c9f3.xlsx",
+        "sha256": "544a476493c4c9c5b2410dfee688d467b3f0ec97a086ec69f94c7261d330dfb0",
+        "size_bytes": 43406
+      },
+      "original_page_number": null,
+      "page": null,
+      "publicly_exposed": true,
+      "reasons": [],
+      "related_families": [],
+      "release": "GOV.UK-20261021",
+      "revision": "d4125986fe31ef0f4339baf692d81376f1048371fb384d34d0704a91e3dce1cb",
+      "rights": {
+        "annotation_use": null,
+        "dataset_license": "Open Government Licence v3.0",
+        "local_evaluation": true,
+        "original_license": "Open Government Licence v3.0",
+        "redistribution": null,
+        "references": [
+          "docs/eda/corpus_v1_protocol.md",
+          "frozen-source-06893979933d12bb1d3a929b123dae13a77830d6578fae4963859d817e4584ab"
+        ],
+        "sensitivity": "public"
+      },
+      "sample_id": "e2-office-4ba25f4a6c27c9f3",
+      "source_record_id": "e2-office-4ba25f4a6c27c9f3",
+      "split": "dev",
+      "unsupported": [
+        "reviewed_language",
+        "independent_gold",
+        "family_completeness"
+      ]
+    },
+    {
+      "annotation": null,
+      "cohort": "pilot",
+      "dataset": "additional-xlsx",
+      "difficulty": [
+        "not_reviewed"
+      ],
+      "disposition": "admitted",
+      "document_type": "public_sector_office",
+      "family_id": "f-87e7cc96fe15f33815720e4d",
+      "family_review": "unknown",
+      "family_review_reference": null,
+      "image": null,
+      "languages": [
+        "unknown"
+      ],
+      "near_duplicate_group": null,
+      "normalized_text_sha256": null,
+      "original": {
+        "format": "xlsx",
+        "path": "assets/e2-office-51bd4fd25d37dd92.xlsx",
+        "sha256": "993d019ebb25f9fe580f80bcca96a4343fc71f6fb90b0b0b1f9f48a6b472247b",
+        "size_bytes": 1987099
+      },
+      "original_page_number": null,
+      "page": null,
+      "publicly_exposed": true,
+      "reasons": [],
+      "related_families": [],
+      "release": "GOV.UK-20261021",
+      "revision": "e240d2f0431d1100a074ee49fb25f0842a01c6ccd8e4202e6ce85387a2435878",
+      "rights": {
+        "annotation_use": null,
+        "dataset_license": "Open Government Licence v3.0",
+        "local_evaluation": true,
+        "original_license": "Open Government Licence v3.0",
+        "redistribution": null,
+        "references": [
+          "docs/eda/corpus_v1_protocol.md",
+          "frozen-source-c63180af70873187f48545104a885a7963874dbae474d5f0b73dc3314ba8f587"
+        ],
+        "sensitivity": "public"
+      },
+      "sample_id": "e2-office-51bd4fd25d37dd92",
+      "source_record_id": "e2-office-51bd4fd25d37dd92",
+      "split": "dev",
+      "unsupported": [
+        "reviewed_language",
+        "independent_gold",
+        "family_completeness"
+      ]
+    },
+    {
+      "annotation": null,
+      "cohort": "pilot",
+      "dataset": "additional-docx",
+      "difficulty": [
+        "not_reviewed"
+      ],
+      "disposition": "admitted",
+      "document_type": "public_sector_office",
+      "family_id": "f-a0dfd38d2480b58d0c7a6cc7",
+      "family_review": "unknown",
+      "family_review_reference": null,
+      "image": null,
+      "languages": [
+        "unknown"
+      ],
+      "near_duplicate_group": null,
+      "normalized_text_sha256": null,
+      "original": {
+        "format": "docx",
+        "path": "assets/e2-office-53215c5d4f3d1197.docx",
+        "sha256": "ec49059e0263d38eb9046f2f40964e37de7f305e2939af935a9b7afb7414af7b",
+        "size_bytes": 608720
+      },
+      "original_page_number": null,
+      "page": null,
+      "publicly_exposed": true,
+      "reasons": [],
+      "related_families": [],
+      "release": "GOV.UK-20261021",
+      "revision": "a5b078923060df71d77ea530f191bfaa2ac88cb610740c851d745d4885a747a6",
+      "rights": {
+        "annotation_use": null,
+        "dataset_license": "Open Government Licence v3.0",
+        "local_evaluation": true,
+        "original_license": "Open Government Licence v3.0",
+        "redistribution": null,
+        "references": [
+          "docs/eda/corpus_v1_protocol.md",
+          "frozen-source-10a7acfc285d3ac3d9efa9b20a9669f303fa9e946c6e10632be484c77e80ba68"
+        ],
+        "sensitivity": "public"
+      },
+      "sample_id": "e2-office-53215c5d4f3d1197",
+      "source_record_id": "e2-office-53215c5d4f3d1197",
+      "split": "dev",
+      "unsupported": [
+        "reviewed_language",
+        "independent_gold",
+        "family_completeness"
+      ]
+    },
+    {
+      "annotation": null,
+      "cohort": "pilot",
+      "dataset": "additional-xlsx",
+      "difficulty": [
+        "not_reviewed"
+      ],
+      "disposition": "admitted",
+      "document_type": "public_sector_office",
+      "family_id": "f-b3df500ce993df5f5a75ea6f",
+      "family_review": "unknown",
+      "family_review_reference": null,
+      "image": null,
+      "languages": [
+        "unknown"
+      ],
+      "near_duplicate_group": null,
+      "normalized_text_sha256": null,
+      "original": {
+        "format": "xlsx",
+        "path": "assets/e2-office-545836d5b9807326.xlsx",
+        "sha256": "0200aa99cb7ca72ac32bed5be2acb5f91ed8da2be964812ce7e1992bf2e2bb33",
+        "size_bytes": 735545
+      },
+      "original_page_number": null,
+      "page": null,
+      "publicly_exposed": true,
+      "reasons": [],
+      "related_families": [],
+      "release": "GOV.UK-20261021",
+      "revision": "d6fa6c962d73cf4d97fb71094a62f42abcb7d0a5bf11281c9ddb8ae95ccefcb4",
+      "rights": {
+        "annotation_use": null,
+        "dataset_license": "Open Government Licence v3.0",
+        "local_evaluation": true,
+        "original_license": "Open Government Licence v3.0",
+        "redistribution": null,
+        "references": [
+          "docs/eda/corpus_v1_protocol.md",
+          "frozen-source-55b6b8f5c35aa0da085fb6847b3270d0d5c4d12a4360cab1e4c42bb0f71f58db"
+        ],
+        "sensitivity": "public"
+      },
+      "sample_id": "e2-office-545836d5b9807326",
+      "source_record_id": "e2-office-545836d5b9807326",
+      "split": "dev",
+      "unsupported": [
+        "reviewed_language",
+        "independent_gold",
+        "family_completeness"
+      ]
+    },
+    {
+      "annotation": null,
+      "cohort": "pilot",
+      "dataset": "additional-docx",
+      "difficulty": [
+        "not_reviewed"
+      ],
+      "disposition": "admitted",
+      "document_type": "public_sector_office",
+      "family_id": "f-0209294c95551f8fe8e17d3f",
+      "family_review": "unknown",
+      "family_review_reference": null,
+      "image": null,
+      "languages": [
+        "unknown"
+      ],
+      "near_duplicate_group": null,
+      "normalized_text_sha256": null,
+      "original": {
+        "format": "docx",
+        "path": "assets/e2-office-5770ead3a21a9a82.docx",
+        "sha256": "5ab0ec55107413f240f9076dfb5a3ccfd5d043488f8af86f85636d40a4d079a3",
+        "size_bytes": 57548
+      },
+      "original_page_number": null,
+      "page": null,
+      "publicly_exposed": true,
+      "reasons": [],
+      "related_families": [],
+      "release": "GOV.UK-20261021",
+      "revision": "b15853ddc915b124e146f65c0d2287dfc0159abe3349a0a03e340527011e1f46",
+      "rights": {
+        "annotation_use": null,
+        "dataset_license": "Open Government Licence v3.0",
+        "local_evaluation": true,
+        "original_license": "Open Government Licence v3.0",
+        "redistribution": null,
+        "references": [
+          "docs/eda/corpus_v1_protocol.md",
+          "frozen-source-764d31775f1891a141b4e8f6ffd56fcecf8a690c84e3aaa392e9cd9155ec4044"
+        ],
+        "sensitivity": "public"
+      },
+      "sample_id": "e2-office-5770ead3a21a9a82",
+      "source_record_id": "e2-office-5770ead3a21a9a82",
+      "split": "dev",
+      "unsupported": [
+        "reviewed_language",
+        "independent_gold",
+        "family_completeness"
+      ]
+    },
+    {
+      "annotation": null,
+      "cohort": "pilot",
+      "dataset": "additional-docx",
+      "difficulty": [
+        "not_reviewed"
+      ],
+      "disposition": "admitted",
+      "document_type": "public_sector_office",
+      "family_id": "f-fe06b6e1c3b69e9155489b9a",
+      "family_review": "unknown",
+      "family_review_reference": null,
+      "image": null,
+      "languages": [
+        "unknown"
+      ],
+      "near_duplicate_group": null,
+      "normalized_text_sha256": null,
+      "original": {
+        "format": "docx",
+        "path": "assets/e2-office-5b32a888891b0775.docx",
+        "sha256": "dfd3b41246bf9f7b4a2c9cd143659f76b6995977706289a700353a48acb29145",
+        "size_bytes": 153343
+      },
+      "original_page_number": null,
+      "page": null,
+      "publicly_exposed": true,
+      "reasons": [],
+      "related_families": [],
+      "release": "GOV.UK-20261021",
+      "revision": "eaf2a1d516b64146e1867e8beed56e6b586862c4c18f263d1bde9d32fbf1d06b",
+      "rights": {
+        "annotation_use": null,
+        "dataset_license": "Open Government Licence v3.0",
+        "local_evaluation": true,
+        "original_license": "Open Government Licence v3.0",
+        "redistribution": null,
+        "references": [
+          "docs/eda/corpus_v1_protocol.md",
+          "frozen-source-08756129eb5cd9548cfa68bdd1edb4029980443447a73a0d9841cc9fe747051f"
+        ],
+        "sensitivity": "public"
+      },
+      "sample_id": "e2-office-5b32a888891b0775",
+      "source_record_id": "e2-office-5b32a888891b0775",
+      "split": "dev",
+      "unsupported": [
+        "reviewed_language",
+        "independent_gold",
+        "family_completeness"
+      ]
+    },
+    {
+      "annotation": null,
+      "cohort": "pilot",
+      "dataset": "additional-xlsx",
+      "difficulty": [
+        "not_reviewed"
+      ],
+      "disposition": "admitted",
+      "document_type": "public_sector_office",
+      "family_id": "f-5bfd3ebb0ecf7a6efc413b7c",
+      "family_review": "unknown",
+      "family_review_reference": null,
+      "image": null,
+      "languages": [
+        "unknown"
+      ],
+      "near_duplicate_group": null,
+      "normalized_text_sha256": null,
+      "original": {
+        "format": "xlsx",
+        "path": "assets/e2-office-5fe8e22215112bcf.xlsx",
+        "sha256": "5311a57d0130a49859724789cc23721ed2787f08ed8d5f16470412206efbadd2",
+        "size_bytes": 1422518
+      },
+      "original_page_number": null,
+      "page": null,
+      "publicly_exposed": true,
+      "reasons": [],
+      "related_families": [],
+      "release": "GOV.UK-20261021",
+      "revision": "40535d2f2d46ca4d6f77005fdd48996f51f77ac61f1ccb6fd307bf267a0c2690",
+      "rights": {
+        "annotation_use": null,
+        "dataset_license": "Open Government Licence v3.0",
+        "local_evaluation": true,
+        "original_license": "Open Government Licence v3.0",
+        "redistribution": null,
+        "references": [
+          "docs/eda/corpus_v1_protocol.md",
+          "frozen-source-9d3f5988be5ca30253b3d84de903158a54a486aee29c1877c6cfa0d575966147"
+        ],
+        "sensitivity": "public"
+      },
+      "sample_id": "e2-office-5fe8e22215112bcf",
+      "source_record_id": "e2-office-5fe8e22215112bcf",
+      "split": "dev",
+      "unsupported": [
+        "reviewed_language",
+        "independent_gold",
+        "family_completeness"
+      ]
+    },
+    {
+      "annotation": null,
+      "cohort": "pilot",
+      "dataset": "additional-xlsx",
+      "difficulty": [
+        "not_reviewed"
+      ],
+      "disposition": "admitted",
+      "document_type": "public_sector_office",
+      "family_id": "f-86bdd44ccee832630f8045d3",
+      "family_review": "unknown",
+      "family_review_reference": null,
+      "image": null,
+      "languages": [
+        "unknown"
+      ],
+      "near_duplicate_group": null,
+      "normalized_text_sha256": null,
+      "original": {
+        "format": "xlsx",
+        "path": "assets/e2-office-60444e0721322cfb.xlsx",
+        "sha256": "aa9a46717a6eae166cdf70a6c9730420b64306debbd765ace71f0cb8ee9fbe05",
+        "size_bytes": 79085
+      },
+      "original_page_number": null,
+      "page": null,
+      "publicly_exposed": true,
+      "reasons": [],
+      "related_families": [],
+      "release": "GOV.UK-20261021",
+      "revision": "3f0862f01f555e7a59d01b8393da541e5954eb40d2f6c8cee98272f5a64e1e5e",
+      "rights": {
+        "annotation_use": null,
+        "dataset_license": "Open Government Licence v3.0",
+        "local_evaluation": true,
+        "original_license": "Open Government Licence v3.0",
+        "redistribution": null,
+        "references": [
+          "docs/eda/corpus_v1_protocol.md",
+          "frozen-source-c0390e1fac6f3d219c69b715d4227406e9dde3f33194be88c0b04e0244059dc2"
+        ],
+        "sensitivity": "public"
+      },
+      "sample_id": "e2-office-60444e0721322cfb",
+      "source_record_id": "e2-office-60444e0721322cfb",
+      "split": "dev",
+      "unsupported": [
+        "reviewed_language",
+        "independent_gold",
+        "family_completeness"
+      ]
+    },
+    {
+      "annotation": null,
+      "cohort": "pilot",
+      "dataset": "additional-docx",
+      "difficulty": [
+        "not_reviewed"
+      ],
+      "disposition": "admitted",
+      "document_type": "public_sector_office",
+      "family_id": "f-a0dfd38d2480b58d0c7a6cc7",
+      "family_review": "unknown",
+      "family_review_reference": null,
+      "image": null,
+      "languages": [
+        "unknown"
+      ],
+      "near_duplicate_group": null,
+      "normalized_text_sha256": null,
+      "original": {
+        "format": "docx",
+        "path": "assets/e2-office-609b8693b5da918b.docx",
+        "sha256": "5bcc8ec0e9bcf952261c46a06412ed98b0807ed8c12408c9f0aabf756c9f2795",
+        "size_bytes": 499376
+      },
+      "original_page_number": null,
+      "page": null,
+      "publicly_exposed": true,
+      "reasons": [],
+      "related_families": [],
+      "release": "GOV.UK-20261021",
+      "revision": "a5b078923060df71d77ea530f191bfaa2ac88cb610740c851d745d4885a747a6",
+      "rights": {
+        "annotation_use": null,
+        "dataset_license": "Open Government Licence v3.0",
+        "local_evaluation": true,
+        "original_license": "Open Government Licence v3.0",
+        "redistribution": null,
+        "references": [
+          "docs/eda/corpus_v1_protocol.md",
+          "frozen-source-10a7acfc285d3ac3d9efa9b20a9669f303fa9e946c6e10632be484c77e80ba68"
+        ],
+        "sensitivity": "public"
+      },
+      "sample_id": "e2-office-609b8693b5da918b",
+      "source_record_id": "e2-office-609b8693b5da918b",
+      "split": "dev",
+      "unsupported": [
+        "reviewed_language",
+        "independent_gold",
+        "family_completeness"
+      ]
+    },
+    {
+      "annotation": null,
+      "cohort": "pilot",
+      "dataset": "additional-docx",
+      "difficulty": [
+        "not_reviewed"
+      ],
+      "disposition": "admitted",
+      "document_type": "public_sector_office",
+      "family_id": "f-9ffa9209f565a182cd9d9fde",
+      "family_review": "unknown",
+      "family_review_reference": null,
+      "image": null,
+      "languages": [
+        "unknown"
+      ],
+      "near_duplicate_group": null,
+      "normalized_text_sha256": null,
+      "original": {
+        "format": "docx",
+        "path": "assets/e2-office-63555ce938b1332e.docx",
+        "sha256": "cced76221cf3d36fc7b69673488dc24e23f552d273c5be2453cc96f39334d4b8",
+        "size_bytes": 54633
+      },
+      "original_page_number": null,
+      "page": null,
+      "publicly_exposed": true,
+      "reasons": [],
+      "related_families": [],
+      "release": "GOV.UK-20261021",
+      "revision": "9f18682c418c8b7de96e9616fc9215860b1d1751fdc1df807a12251a1325de58",
+      "rights": {
+        "annotation_use": null,
+        "dataset_license": "Open Government Licence v3.0",
+        "local_evaluation": true,
+        "original_license": "Open Government Licence v3.0",
+        "redistribution": null,
+        "references": [
+          "docs/eda/corpus_v1_protocol.md",
+          "frozen-source-a0b11343ea4056eadf5800976e52297b7242e77eee26ff5136f4b56947600247"
+        ],
+        "sensitivity": "public"
+      },
+      "sample_id": "e2-office-63555ce938b1332e",
+      "source_record_id": "e2-office-63555ce938b1332e",
+      "split": "dev",
+      "unsupported": [
+        "reviewed_language",
+        "independent_gold",
+        "family_completeness"
+      ]
+    },
+    {
+      "annotation": null,
+      "cohort": "pilot",
+      "dataset": "additional-docx",
+      "difficulty": [
+        "not_reviewed"
+      ],
+      "disposition": "admitted",
+      "document_type": "public_sector_office",
+      "family_id": "f-a0dfd38d2480b58d0c7a6cc7",
+      "family_review": "unknown",
+      "family_review_reference": null,
+      "image": null,
+      "languages": [
+        "unknown"
+      ],
+      "near_duplicate_group": null,
+      "normalized_text_sha256": null,
+      "original": {
+        "format": "docx",
+        "path": "assets/e2-office-69b2b4b38c92ace2.docx",
+        "sha256": "c212a1f3bd0d33d46738ed7c131875ecfc5dda7370af17061aee9caafccdfeb6",
+        "size_bytes": 580697
+      },
+      "original_page_number": null,
+      "page": null,
+      "publicly_exposed": true,
+      "reasons": [],
+      "related_families": [],
+      "release": "GOV.UK-20261021",
+      "revision": "a5b078923060df71d77ea530f191bfaa2ac88cb610740c851d745d4885a747a6",
+      "rights": {
+        "annotation_use": null,
+        "dataset_license": "Open Government Licence v3.0",
+        "local_evaluation": true,
+        "original_license": "Open Government Licence v3.0",
+        "redistribution": null,
+        "references": [
+          "docs/eda/corpus_v1_protocol.md",
+          "frozen-source-10a7acfc285d3ac3d9efa9b20a9669f303fa9e946c6e10632be484c77e80ba68"
+        ],
+        "sensitivity": "public"
+      },
+      "sample_id": "e2-office-69b2b4b38c92ace2",
+      "source_record_id": "e2-office-69b2b4b38c92ace2",
+      "split": "dev",
+      "unsupported": [
+        "reviewed_language",
+        "independent_gold",
+        "family_completeness"
+      ]
+    },
+    {
+      "annotation": null,
+      "cohort": "pilot",
+      "dataset": "additional-docx",
+      "difficulty": [
+        "not_reviewed"
+      ],
+      "disposition": "admitted",
+      "document_type": "public_sector_office",
+      "family_id": "f-a0dfd38d2480b58d0c7a6cc7",
+      "family_review": "unknown",
+      "family_review_reference": null,
+      "image": null,
+      "languages": [
+        "unknown"
+      ],
+      "near_duplicate_group": null,
+      "normalized_text_sha256": null,
+      "original": {
+        "format": "docx",
+        "path": "assets/e2-office-736173b7d266e9bf.docx",
+        "sha256": "17194f4857cb0e969d393e6668a64c44cec4531fb2b28fe7e5f73c65ef75c2e4",
+        "size_bytes": 725202
+      },
+      "original_page_number": null,
+      "page": null,
+      "publicly_exposed": true,
+      "reasons": [],
+      "related_families": [],
+      "release": "GOV.UK-20261021",
+      "revision": "a5b078923060df71d77ea530f191bfaa2ac88cb610740c851d745d4885a747a6",
+      "rights": {
+        "annotation_use": null,
+        "dataset_license": "Open Government Licence v3.0",
+        "local_evaluation": true,
+        "original_license": "Open Government Licence v3.0",
+        "redistribution": null,
+        "references": [
+          "docs/eda/corpus_v1_protocol.md",
+          "frozen-source-10a7acfc285d3ac3d9efa9b20a9669f303fa9e946c6e10632be484c77e80ba68"
+        ],
+        "sensitivity": "public"
+      },
+      "sample_id": "e2-office-736173b7d266e9bf",
+      "source_record_id": "e2-office-736173b7d266e9bf",
+      "split": "dev",
+      "unsupported": [
+        "reviewed_language",
+        "independent_gold",
+        "family_completeness"
+      ]
+    },
+    {
+      "annotation": null,
+      "cohort": "pilot",
+      "dataset": "additional-docx",
+      "difficulty": [
+        "not_reviewed"
+      ],
+      "disposition": "admitted",
+      "document_type": "public_sector_office",
+      "family_id": "f-a0dfd38d2480b58d0c7a6cc7",
+      "family_review": "unknown",
+      "family_review_reference": null,
+      "image": null,
+      "languages": [
+        "unknown"
+      ],
+      "near_duplicate_group": null,
+      "normalized_text_sha256": null,
+      "original": {
+        "format": "docx",
+        "path": "assets/e2-office-7697ba87770f74d2.docx",
+        "sha256": "a3bb093ca909207c13927882d49805ea5a72bc702abb7b13d5304fc1ea11f8e7",
+        "size_bytes": 1521469
+      },
+      "original_page_number": null,
+      "page": null,
+      "publicly_exposed": true,
+      "reasons": [],
+      "related_families": [],
+      "release": "GOV.UK-20261021",
+      "revision": "a5b078923060df71d77ea530f191bfaa2ac88cb610740c851d745d4885a747a6",
+      "rights": {
+        "annotation_use": null,
+        "dataset_license": "Open Government Licence v3.0",
+        "local_evaluation": true,
+        "original_license": "Open Government Licence v3.0",
+        "redistribution": null,
+        "references": [
+          "docs/eda/corpus_v1_protocol.md",
+          "frozen-source-10a7acfc285d3ac3d9efa9b20a9669f303fa9e946c6e10632be484c77e80ba68"
+        ],
+        "sensitivity": "public"
+      },
+      "sample_id": "e2-office-7697ba87770f74d2",
+      "source_record_id": "e2-office-7697ba87770f74d2",
+      "split": "dev",
+      "unsupported": [
+        "reviewed_language",
+        "independent_gold",
+        "family_completeness"
+      ]
+    },
+    {
+      "annotation": null,
+      "cohort": "pilot",
+      "dataset": "additional-docx",
+      "difficulty": [
+        "not_reviewed"
+      ],
+      "disposition": "admitted",
+      "document_type": "public_sector_office",
+      "family_id": "f-40f6b76bf973908880846006",
+      "family_review": "unknown",
+      "family_review_reference": null,
+      "image": null,
+      "languages": [
+        "unknown"
+      ],
+      "near_duplicate_group": null,
+      "normalized_text_sha256": null,
+      "original": {
+        "format": "docx",
+        "path": "assets/e2-office-77cdb15f5d2488b0.docx",
+        "sha256": "e5325aabebaf7d7a26fe4d3e5dbe0a108eba4337b0078b76a00085d0efe627ea",
+        "size_bytes": 38608
+      },
+      "original_page_number": null,
+      "page": null,
+      "publicly_exposed": true,
+      "reasons": [],
+      "related_families": [],
+      "release": "GOV.UK-20261021",
+      "revision": "429b3fd00956e12c9798f701eefeef785be8b8e3655ad8dd21664cd2500cfaf8",
+      "rights": {
+        "annotation_use": null,
+        "dataset_license": "Open Government Licence v3.0",
+        "local_evaluation": true,
+        "original_license": "Open Government Licence v3.0",
+        "redistribution": null,
+        "references": [
+          "docs/eda/corpus_v1_protocol.md",
+          "frozen-source-bb0cdb6db28460c142280bef5e01a755eccf258b3d326615d4f2b13fe40a0dec"
+        ],
+        "sensitivity": "public"
+      },
+      "sample_id": "e2-office-77cdb15f5d2488b0",
+      "source_record_id": "e2-office-77cdb15f5d2488b0",
+      "split": "dev",
+      "unsupported": [
+        "reviewed_language",
+        "independent_gold",
+        "family_completeness"
+      ]
+    },
+    {
+      "annotation": null,
+      "cohort": "pilot",
+      "dataset": "additional-xlsx",
+      "difficulty": [
+        "not_reviewed"
+      ],
+      "disposition": "admitted",
+      "document_type": "public_sector_office",
+      "family_id": "f-5dc17ab00c3b3a3d25aab23e",
+      "family_review": "unknown",
+      "family_review_reference": null,
+      "image": null,
+      "languages": [
+        "unknown"
+      ],
+      "near_duplicate_group": null,
+      "normalized_text_sha256": null,
+      "original": {
+        "format": "xlsx",
+        "path": "assets/e2-office-7b604ce0f3dfe336.xlsx",
+        "sha256": "9005280de80eb63967f676bbd84befffff5b6e8eb797e6ea029899e588e9d910",
+        "size_bytes": 137595
+      },
+      "original_page_number": null,
+      "page": null,
+      "publicly_exposed": true,
+      "reasons": [],
+      "related_families": [],
+      "release": "GOV.UK-20261021",
+      "revision": "bbd1d6de6bc76409295ca7ae238c0c09d7141f415ed3d7dbcc6d3fc18c1e5383",
+      "rights": {
+        "annotation_use": null,
+        "dataset_license": "Open Government Licence v3.0",
+        "local_evaluation": true,
+        "original_license": "Open Government Licence v3.0",
+        "redistribution": null,
+        "references": [
+          "docs/eda/corpus_v1_protocol.md",
+          "frozen-source-ec1229a2345e74444237bc91e8ccaa6acfd852c6746e3770881961d1ce755fc1"
+        ],
+        "sensitivity": "public"
+      },
+      "sample_id": "e2-office-7b604ce0f3dfe336",
+      "source_record_id": "e2-office-7b604ce0f3dfe336",
+      "split": "dev",
+      "unsupported": [
+        "reviewed_language",
+        "independent_gold",
+        "family_completeness"
+      ]
+    },
+    {
+      "annotation": null,
+      "cohort": "pilot",
+      "dataset": "additional-docx",
+      "difficulty": [
+        "not_reviewed"
+      ],
+      "disposition": "admitted",
+      "document_type": "public_sector_office",
+      "family_id": "f-a0dfd38d2480b58d0c7a6cc7",
+      "family_review": "unknown",
+      "family_review_reference": null,
+      "image": null,
+      "languages": [
+        "unknown"
+      ],
+      "near_duplicate_group": null,
+      "normalized_text_sha256": null,
+      "original": {
+        "format": "docx",
+        "path": "assets/e2-office-7ca9cff3e9dfd9a6.docx",
+        "sha256": "bcb9a33d9564c863d39e14866bac4298f0845c73c1c7ab91450a1e524b521150",
+        "size_bytes": 32075
+      },
+      "original_page_number": null,
+      "page": null,
+      "publicly_exposed": true,
+      "reasons": [],
+      "related_families": [],
+      "release": "GOV.UK-20261021",
+      "revision": "a5b078923060df71d77ea530f191bfaa2ac88cb610740c851d745d4885a747a6",
+      "rights": {
+        "annotation_use": null,
+        "dataset_license": "Open Government Licence v3.0",
+        "local_evaluation": true,
+        "original_license": "Open Government Licence v3.0",
+        "redistribution": null,
+        "references": [
+          "docs/eda/corpus_v1_protocol.md",
+          "frozen-source-10a7acfc285d3ac3d9efa9b20a9669f303fa9e946c6e10632be484c77e80ba68"
+        ],
+        "sensitivity": "public"
+      },
+      "sample_id": "e2-office-7ca9cff3e9dfd9a6",
+      "source_record_id": "e2-office-7ca9cff3e9dfd9a6",
+      "split": "dev",
+      "unsupported": [
+        "reviewed_language",
+        "independent_gold",
+        "family_completeness"
+      ]
+    },
+    {
+      "annotation": null,
+      "cohort": "pilot",
+      "dataset": "additional-xlsx",
+      "difficulty": [
+        "not_reviewed"
+      ],
+      "disposition": "admitted",
+      "document_type": "public_sector_office",
+      "family_id": "f-50ae1cabfc389688b1c43caa",
+      "family_review": "unknown",
+      "family_review_reference": null,
+      "image": null,
+      "languages": [
+        "unknown"
+      ],
+      "near_duplicate_group": null,
+      "normalized_text_sha256": null,
+      "original": {
+        "format": "xlsx",
+        "path": "assets/e2-office-7fc326cc7ece1efe.xlsx",
+        "sha256": "eae27998d4e211edf439d730257682e11dab7717968bc990047bf1d5b1916a72",
+        "size_bytes": 129020
+      },
+      "original_page_number": null,
+      "page": null,
+      "publicly_exposed": true,
+      "reasons": [],
+      "related_families": [],
+      "release": "GOV.UK-20261021",
+      "revision": "e90049ac679576ce826ff1bf79e39f877fd31b9b0fd14b57bd726ffb671eb80f",
+      "rights": {
+        "annotation_use": null,
+        "dataset_license": "Open Government Licence v3.0",
+        "local_evaluation": true,
+        "original_license": "Open Government Licence v3.0",
+        "redistribution": null,
+        "references": [
+          "docs/eda/corpus_v1_protocol.md",
+          "frozen-source-05c719d2a65af38da6c4fda2252dac113f748a3d5d916ea52cb56df7e90dc6df"
+        ],
+        "sensitivity": "public"
+      },
+      "sample_id": "e2-office-7fc326cc7ece1efe",
+      "source_record_id": "e2-office-7fc326cc7ece1efe",
+      "split": "dev",
+      "unsupported": [
+        "reviewed_language",
+        "independent_gold",
+        "family_completeness"
+      ]
+    },
+    {
+      "annotation": null,
+      "cohort": "pilot",
+      "dataset": "additional-xlsx",
+      "difficulty": [
+        "not_reviewed"
+      ],
+      "disposition": "admitted",
+      "document_type": "public_sector_office",
+      "family_id": "f-9e44ca658a35e83a408c5864",
+      "family_review": "unknown",
+      "family_review_reference": null,
+      "image": null,
+      "languages": [
+        "unknown"
+      ],
+      "near_duplicate_group": null,
+      "normalized_text_sha256": null,
+      "original": {
+        "format": "xlsx",
+        "path": "assets/e2-office-81b8482e33f111e1.xlsx",
+        "sha256": "563766c1dd7932bd597fdcbdfbf20f6a5a56f8798b9bc28c104d83ce9562767c",
+        "size_bytes": 294849
+      },
+      "original_page_number": null,
+      "page": null,
+      "publicly_exposed": true,
+      "reasons": [],
+      "related_families": [],
+      "release": "GOV.UK-20261021",
+      "revision": "c7ba9a0715c07ad726ecad4486261fb2df9a19ecd27126edeb78b5eb91cfe60c",
+      "rights": {
+        "annotation_use": null,
+        "dataset_license": "Open Government Licence v3.0",
+        "local_evaluation": true,
+        "original_license": "Open Government Licence v3.0",
+        "redistribution": null,
+        "references": [
+          "docs/eda/corpus_v1_protocol.md",
+          "frozen-source-9eb9d98779296fb59468f7341af4c352be50f95f1a3e6da6dd9228a5807babe0"
+        ],
+        "sensitivity": "public"
+      },
+      "sample_id": "e2-office-81b8482e33f111e1",
+      "source_record_id": "e2-office-81b8482e33f111e1",
+      "split": "dev",
+      "unsupported": [
+        "reviewed_language",
+        "independent_gold",
+        "family_completeness"
+      ]
+    },
+    {
+      "annotation": null,
+      "cohort": "pilot",
+      "dataset": "additional-docx",
+      "difficulty": [
+        "not_reviewed"
+      ],
+      "disposition": "admitted",
+      "document_type": "public_sector_office",
+      "family_id": "f-c90c5cf2ef3cd307c831ed24",
+      "family_review": "unknown",
+      "family_review_reference": null,
+      "image": null,
+      "languages": [
+        "unknown"
+      ],
+      "near_duplicate_group": null,
+      "normalized_text_sha256": null,
+      "original": {
+        "format": "docx",
+        "path": "assets/e2-office-86e500b1938eca3f.docx",
+        "sha256": "1149d0f4c14b017fb52b2e42ba814645c0c81b115cfd14e94e70a0d9b38dca3b",
+        "size_bytes": 25441
+      },
+      "original_page_number": null,
+      "page": null,
+      "publicly_exposed": true,
+      "reasons": [],
+      "related_families": [],
+      "release": "GOV.UK-20261021",
+      "revision": "0e1e49278500489ba293abd27feb6b17cdf5866d758b0560ce8faf672a92bc27",
+      "rights": {
+        "annotation_use": null,
+        "dataset_license": "Open Government Licence v3.0",
+        "local_evaluation": true,
+        "original_license": "Open Government Licence v3.0",
+        "redistribution": null,
+        "references": [
+          "docs/eda/corpus_v1_protocol.md",
+          "frozen-source-f8eb5916e68e8a058132c8530db573b3fd521cdbc39642b9969dbdc5ac060957"
+        ],
+        "sensitivity": "public"
+      },
+      "sample_id": "e2-office-86e500b1938eca3f",
+      "source_record_id": "e2-office-86e500b1938eca3f",
+      "split": "dev",
+      "unsupported": [
+        "reviewed_language",
+        "independent_gold",
+        "family_completeness"
+      ]
+    },
+    {
+      "annotation": null,
+      "cohort": "pilot",
+      "dataset": "additional-docx",
+      "difficulty": [
+        "not_reviewed"
+      ],
+      "disposition": "admitted",
+      "document_type": "public_sector_office",
+      "family_id": "f-6a4a9a2c14438e5d54b34127",
+      "family_review": "unknown",
+      "family_review_reference": null,
+      "image": null,
+      "languages": [
+        "unknown"
+      ],
+      "near_duplicate_group": null,
+      "normalized_text_sha256": null,
+      "original": {
+        "format": "docx",
+        "path": "assets/e2-office-8f8b935a18bfab0c.docx",
+        "sha256": "f96100506162c18e576a4b4fd5670492e5b5383a25d1860bed55eb9de7d2a34b",
+        "size_bytes": 87549
+      },
+      "original_page_number": null,
+      "page": null,
+      "publicly_exposed": true,
+      "reasons": [],
+      "related_families": [],
+      "release": "GOV.UK-20261021",
+      "revision": "f4336fa309d9cfe9783748aff9a4ddec68797ae6298aa7baaa26108d568f1c2e",
+      "rights": {
+        "annotation_use": null,
+        "dataset_license": "Open Government Licence v3.0",
+        "local_evaluation": true,
+        "original_license": "Open Government Licence v3.0",
+        "redistribution": null,
+        "references": [
+          "docs/eda/corpus_v1_protocol.md",
+          "frozen-source-0c1499fa9b4c72da5c7c8536aac4c915d5fd9ae32c20ad7b9a5941606e602807"
+        ],
+        "sensitivity": "public"
+      },
+      "sample_id": "e2-office-8f8b935a18bfab0c",
+      "source_record_id": "e2-office-8f8b935a18bfab0c",
+      "split": "dev",
+      "unsupported": [
+        "reviewed_language",
+        "independent_gold",
+        "family_completeness"
+      ]
+    },
+    {
+      "annotation": null,
+      "cohort": "pilot",
+      "dataset": "additional-docx",
+      "difficulty": [
+        "not_reviewed"
+      ],
+      "disposition": "admitted",
+      "document_type": "public_sector_office",
+      "family_id": "f-ca0e1e1d0193fb77d75fd707",
+      "family_review": "unknown",
+      "family_review_reference": null,
+      "image": null,
+      "languages": [
+        "unknown"
+      ],
+      "near_duplicate_group": null,
+      "normalized_text_sha256": null,
+      "original": {
+        "format": "docx",
+        "path": "assets/e2-office-901e5c14cd88ebbd.docx",
+        "sha256": "858a27783b0647d7dd8da60b6ab2f6a96dce665321868a9677bb35441b56377f",
+        "size_bytes": 58332
+      },
+      "original_page_number": null,
+      "page": null,
+      "publicly_exposed": true,
+      "reasons": [],
+      "related_families": [],
+      "release": "GOV.UK-20261021",
+      "revision": "db51603e4dbcf147b3a862b90b5585d56fae6c90d6e6818b7795e0ca187ca2c0",
+      "rights": {
+        "annotation_use": null,
+        "dataset_license": "Open Government Licence v3.0",
+        "local_evaluation": true,
+        "original_license": "Open Government Licence v3.0",
+        "redistribution": null,
+        "references": [
+          "docs/eda/corpus_v1_protocol.md",
+          "frozen-source-8173c3fc944f4bbde212e190cf14ffc7d32cb015dd8ee84084efc1fe4c49aa61"
+        ],
+        "sensitivity": "public"
+      },
+      "sample_id": "e2-office-901e5c14cd88ebbd",
+      "source_record_id": "e2-office-901e5c14cd88ebbd",
+      "split": "dev",
+      "unsupported": [
+        "reviewed_language",
+        "independent_gold",
+        "family_completeness"
+      ]
+    },
+    {
+      "annotation": null,
+      "cohort": "pilot",
+      "dataset": "additional-xlsx",
+      "difficulty": [
+        "not_reviewed"
+      ],
+      "disposition": "admitted",
+      "document_type": "public_sector_office",
+      "family_id": "f-2371b76dd63b6b7fe6552dc1",
+      "family_review": "unknown",
+      "family_review_reference": null,
+      "image": null,
+      "languages": [
+        "unknown"
+      ],
+      "near_duplicate_group": null,
+      "normalized_text_sha256": null,
+      "original": {
+        "format": "xlsx",
+        "path": "assets/e2-office-969193c6e25c5c79.xlsx",
+        "sha256": "f9ebcf1e4e02ce625d807ddf7e6f5c63e4895420a6e701f165fa635cbff563bb",
+        "size_bytes": 1830235
+      },
+      "original_page_number": null,
+      "page": null,
+      "publicly_exposed": true,
+      "reasons": [],
+      "related_families": [],
+      "release": "GOV.UK-20261021",
+      "revision": "db6309f8c27b7295ade7b674de72db48742884356372f64d47614abdde0325b3",
+      "rights": {
+        "annotation_use": null,
+        "dataset_license": "Open Government Licence v3.0",
+        "local_evaluation": true,
+        "original_license": "Open Government Licence v3.0",
+        "redistribution": null,
+        "references": [
+          "docs/eda/corpus_v1_protocol.md",
+          "frozen-source-8bb2caabd328383e453cf3f8eb07240722281a59773cf5b3984c024fcef4ec26"
+        ],
+        "sensitivity": "public"
+      },
+      "sample_id": "e2-office-969193c6e25c5c79",
+      "source_record_id": "e2-office-969193c6e25c5c79",
+      "split": "dev",
+      "unsupported": [
+        "reviewed_language",
+        "independent_gold",
+        "family_completeness"
+      ]
+    },
+    {
+      "annotation": null,
+      "cohort": "pilot",
+      "dataset": "additional-xlsx",
+      "difficulty": [
+        "not_reviewed"
+      ],
+      "disposition": "admitted",
+      "document_type": "public_sector_office",
+      "family_id": "f-51018aa9d847d10e9f60f476",
+      "family_review": "unknown",
+      "family_review_reference": null,
+      "image": null,
+      "languages": [
+        "unknown"
+      ],
+      "near_duplicate_group": null,
+      "normalized_text_sha256": null,
+      "original": {
+        "format": "xlsx",
+        "path": "assets/e2-office-992c609aeec890cd.xlsx",
+        "sha256": "2868f04a9a3e03d12d7d339ab900b80ebedaeb9c7d892be16c15ee5ed8d9bfa0",
+        "size_bytes": 25824
+      },
+      "original_page_number": null,
+      "page": null,
+      "publicly_exposed": true,
+      "reasons": [],
+      "related_families": [],
+      "release": "GOV.UK-20261021",
+      "revision": "d19bcedaea9eda124691b1e09a115084d2bd8df080723700f629d94e54c25722",
+      "rights": {
+        "annotation_use": null,
+        "dataset_license": "Open Government Licence v3.0",
+        "local_evaluation": true,
+        "original_license": "Open Government Licence v3.0",
+        "redistribution": null,
+        "references": [
+          "docs/eda/corpus_v1_protocol.md",
+          "frozen-source-f7982553337e024ce831ed988c9ee4c48608854bc297f79fa327e24fb2618ba8"
+        ],
+        "sensitivity": "public"
+      },
+      "sample_id": "e2-office-992c609aeec890cd",
+      "source_record_id": "e2-office-992c609aeec890cd",
+      "split": "dev",
+      "unsupported": [
+        "reviewed_language",
+        "independent_gold",
+        "family_completeness"
+      ]
+    },
+    {
+      "annotation": null,
+      "cohort": "pilot",
+      "dataset": "additional-docx",
+      "difficulty": [
+        "not_reviewed"
+      ],
+      "disposition": "admitted",
+      "document_type": "public_sector_office",
+      "family_id": "f-fe06b6e1c3b69e9155489b9a",
+      "family_review": "unknown",
+      "family_review_reference": null,
+      "image": null,
+      "languages": [
+        "unknown"
+      ],
+      "near_duplicate_group": null,
+      "normalized_text_sha256": null,
+      "original": {
+        "format": "docx",
+        "path": "assets/e2-office-9e49b29b78824c1f.docx",
+        "sha256": "7d95aec67ffa35bce376e7942ae95d9cc747551291ade64acc5647e740583968",
+        "size_bytes": 361793
+      },
+      "original_page_number": null,
+      "page": null,
+      "publicly_exposed": true,
+      "reasons": [],
+      "related_families": [],
+      "release": "GOV.UK-20261021",
+      "revision": "eaf2a1d516b64146e1867e8beed56e6b586862c4c18f263d1bde9d32fbf1d06b",
+      "rights": {
+        "annotation_use": null,
+        "dataset_license": "Open Government Licence v3.0",
+        "local_evaluation": true,
+        "original_license": "Open Government Licence v3.0",
+        "redistribution": null,
+        "references": [
+          "docs/eda/corpus_v1_protocol.md",
+          "frozen-source-08756129eb5cd9548cfa68bdd1edb4029980443447a73a0d9841cc9fe747051f"
+        ],
+        "sensitivity": "public"
+      },
+      "sample_id": "e2-office-9e49b29b78824c1f",
+      "source_record_id": "e2-office-9e49b29b78824c1f",
+      "split": "dev",
+      "unsupported": [
+        "reviewed_language",
+        "independent_gold",
+        "family_completeness"
+      ]
+    },
+    {
+      "annotation": null,
+      "cohort": "pilot",
+      "dataset": "additional-xlsx",
+      "difficulty": [
+        "not_reviewed"
+      ],
+      "disposition": "admitted",
+      "document_type": "public_sector_office",
+      "family_id": "f-9e44ca658a35e83a408c5864",
+      "family_review": "unknown",
+      "family_review_reference": null,
+      "image": null,
+      "languages": [
+        "unknown"
+      ],
+      "near_duplicate_group": null,
+      "normalized_text_sha256": null,
+      "original": {
+        "format": "xlsx",
+        "path": "assets/e2-office-a1e7393c6189453e.xlsx",
+        "sha256": "8e5a0d3f3a761a45082ac74f8e457d2c2568253b50ad1c71e33c27fea94c2e04",
+        "size_bytes": 260230
+      },
+      "original_page_number": null,
+      "page": null,
+      "publicly_exposed": true,
+      "reasons": [],
+      "related_families": [],
+      "release": "GOV.UK-20261021",
+      "revision": "c7ba9a0715c07ad726ecad4486261fb2df9a19ecd27126edeb78b5eb91cfe60c",
+      "rights": {
+        "annotation_use": null,
+        "dataset_license": "Open Government Licence v3.0",
+        "local_evaluation": true,
+        "original_license": "Open Government Licence v3.0",
+        "redistribution": null,
+        "references": [
+          "docs/eda/corpus_v1_protocol.md",
+          "frozen-source-9eb9d98779296fb59468f7341af4c352be50f95f1a3e6da6dd9228a5807babe0"
+        ],
+        "sensitivity": "public"
+      },
+      "sample_id": "e2-office-a1e7393c6189453e",
+      "source_record_id": "e2-office-a1e7393c6189453e",
+      "split": "dev",
+      "unsupported": [
+        "reviewed_language",
+        "independent_gold",
+        "family_completeness"
+      ]
+    },
+    {
+      "annotation": null,
+      "cohort": "pilot",
+      "dataset": "additional-xlsx",
+      "difficulty": [
+        "not_reviewed"
+      ],
+      "disposition": "admitted",
+      "document_type": "public_sector_office",
+      "family_id": "f-9e44ca658a35e83a408c5864",
+      "family_review": "unknown",
+      "family_review_reference": null,
+      "image": null,
+      "languages": [
+        "unknown"
+      ],
+      "near_duplicate_group": null,
+      "normalized_text_sha256": null,
+      "original": {
+        "format": "xlsx",
+        "path": "assets/e2-office-a27e1fe462748973.xlsx",
+        "sha256": "fc54c6a3672820314803fee753949ed43f97a11d550677fe66d8202d1373ac7e",
+        "size_bytes": 311231
+      },
+      "original_page_number": null,
+      "page": null,
+      "publicly_exposed": true,
+      "reasons": [],
+      "related_families": [],
+      "release": "GOV.UK-20261021",
+      "revision": "c7ba9a0715c07ad726ecad4486261fb2df9a19ecd27126edeb78b5eb91cfe60c",
+      "rights": {
+        "annotation_use": null,
+        "dataset_license": "Open Government Licence v3.0",
+        "local_evaluation": true,
+        "original_license": "Open Government Licence v3.0",
+        "redistribution": null,
+        "references": [
+          "docs/eda/corpus_v1_protocol.md",
+          "frozen-source-9eb9d98779296fb59468f7341af4c352be50f95f1a3e6da6dd9228a5807babe0"
+        ],
+        "sensitivity": "public"
+      },
+      "sample_id": "e2-office-a27e1fe462748973",
+      "source_record_id": "e2-office-a27e1fe462748973",
+      "split": "dev",
+      "unsupported": [
+        "reviewed_language",
+        "independent_gold",
+        "family_completeness"
+      ]
+    },
+    {
+      "annotation": null,
+      "cohort": "pilot",
+      "dataset": "additional-docx",
+      "difficulty": [
+        "not_reviewed"
+      ],
+      "disposition": "admitted",
+      "document_type": "public_sector_office",
+      "family_id": "f-a0dfd38d2480b58d0c7a6cc7",
+      "family_review": "unknown",
+      "family_review_reference": null,
+      "image": null,
+      "languages": [
+        "unknown"
+      ],
+      "near_duplicate_group": null,
+      "normalized_text_sha256": null,
+      "original": {
+        "format": "docx",
+        "path": "assets/e2-office-adf5471ec3fa6f94.docx",
+        "sha256": "688e395e09ae0ea5c29980c131e25fc2a914f111e81df245c9d4b28de88caf85",
+        "size_bytes": 507070
+      },
+      "original_page_number": null,
+      "page": null,
+      "publicly_exposed": true,
+      "reasons": [],
+      "related_families": [],
+      "release": "GOV.UK-20261021",
+      "revision": "a5b078923060df71d77ea530f191bfaa2ac88cb610740c851d745d4885a747a6",
+      "rights": {
+        "annotation_use": null,
+        "dataset_license": "Open Government Licence v3.0",
+        "local_evaluation": true,
+        "original_license": "Open Government Licence v3.0",
+        "redistribution": null,
+        "references": [
+          "docs/eda/corpus_v1_protocol.md",
+          "frozen-source-10a7acfc285d3ac3d9efa9b20a9669f303fa9e946c6e10632be484c77e80ba68"
+        ],
+        "sensitivity": "public"
+      },
+      "sample_id": "e2-office-adf5471ec3fa6f94",
+      "source_record_id": "e2-office-adf5471ec3fa6f94",
+      "split": "dev",
+      "unsupported": [
+        "reviewed_language",
+        "independent_gold",
+        "family_completeness"
+      ]
+    },
+    {
+      "annotation": null,
+      "cohort": "pilot",
+      "dataset": "additional-docx",
+      "difficulty": [
+        "not_reviewed"
+      ],
+      "disposition": "admitted",
+      "document_type": "public_sector_office",
+      "family_id": "f-a0dfd38d2480b58d0c7a6cc7",
+      "family_review": "unknown",
+      "family_review_reference": null,
+      "image": null,
+      "languages": [
+        "unknown"
+      ],
+      "near_duplicate_group": null,
+      "normalized_text_sha256": null,
+      "original": {
+        "format": "docx",
+        "path": "assets/e2-office-b2d8036bbbee29c4.docx",
+        "sha256": "84021f91cf663acaa1b7cca0c2d6ef68b03d46d0200900bccaeeaf2df224a42f",
+        "size_bytes": 998594
+      },
+      "original_page_number": null,
+      "page": null,
+      "publicly_exposed": true,
+      "reasons": [],
+      "related_families": [],
+      "release": "GOV.UK-20261021",
+      "revision": "a5b078923060df71d77ea530f191bfaa2ac88cb610740c851d745d4885a747a6",
+      "rights": {
+        "annotation_use": null,
+        "dataset_license": "Open Government Licence v3.0",
+        "local_evaluation": true,
+        "original_license": "Open Government Licence v3.0",
+        "redistribution": null,
+        "references": [
+          "docs/eda/corpus_v1_protocol.md",
+          "frozen-source-10a7acfc285d3ac3d9efa9b20a9669f303fa9e946c6e10632be484c77e80ba68"
+        ],
+        "sensitivity": "public"
+      },
+      "sample_id": "e2-office-b2d8036bbbee29c4",
+      "source_record_id": "e2-office-b2d8036bbbee29c4",
+      "split": "dev",
+      "unsupported": [
+        "reviewed_language",
+        "independent_gold",
+        "family_completeness"
+      ]
+    },
+    {
+      "annotation": null,
+      "cohort": "pilot",
+      "dataset": "additional-xlsx",
+      "difficulty": [
+        "not_reviewed"
+      ],
+      "disposition": "admitted",
+      "document_type": "public_sector_office",
+      "family_id": "f-50ae1cabfc389688b1c43caa",
+      "family_review": "unknown",
+      "family_review_reference": null,
+      "image": null,
+      "languages": [
+        "unknown"
+      ],
+      "near_duplicate_group": null,
+      "normalized_text_sha256": null,
+      "original": {
+        "format": "xlsx",
+        "path": "assets/e2-office-c26ac5da4c35466d.xlsx",
+        "sha256": "a98a7063a4eba89490fb56fad9c8437cf289449adb36f8a2b0d24b6b57239102",
+        "size_bytes": 75169
+      },
+      "original_page_number": null,
+      "page": null,
+      "publicly_exposed": true,
+      "reasons": [],
+      "related_families": [],
+      "release": "GOV.UK-20261021",
+      "revision": "e90049ac679576ce826ff1bf79e39f877fd31b9b0fd14b57bd726ffb671eb80f",
+      "rights": {
+        "annotation_use": null,
+        "dataset_license": "Open Government Licence v3.0",
+        "local_evaluation": true,
+        "original_license": "Open Government Licence v3.0",
+        "redistribution": null,
+        "references": [
+          "docs/eda/corpus_v1_protocol.md",
+          "frozen-source-05c719d2a65af38da6c4fda2252dac113f748a3d5d916ea52cb56df7e90dc6df"
+        ],
+        "sensitivity": "public"
+      },
+      "sample_id": "e2-office-c26ac5da4c35466d",
+      "source_record_id": "e2-office-c26ac5da4c35466d",
+      "split": "dev",
+      "unsupported": [
+        "reviewed_language",
+        "independent_gold",
+        "family_completeness"
+      ]
+    },
+    {
+      "annotation": null,
+      "cohort": "pilot",
+      "dataset": "additional-xlsx",
+      "difficulty": [
+        "not_reviewed"
+      ],
+      "disposition": "admitted",
+      "document_type": "public_sector_office",
+      "family_id": "f-eba227541d78dc993859554b",
+      "family_review": "unknown",
+      "family_review_reference": null,
+      "image": null,
+      "languages": [
+        "unknown"
+      ],
+      "near_duplicate_group": null,
+      "normalized_text_sha256": null,
+      "original": {
+        "format": "xlsx",
+        "path": "assets/e2-office-c492bef9daae10ca.xlsx",
+        "sha256": "991495aee6c5c162a97358c651cbdf5b7396723b09ae57353ea8800e548c4651",
+        "size_bytes": 84033
+      },
+      "original_page_number": null,
+      "page": null,
+      "publicly_exposed": true,
+      "reasons": [],
+      "related_families": [],
+      "release": "GOV.UK-20261021",
+      "revision": "1aedc187697c9a26e4a63920fed2f520c05a80a226b340619ecb727153535d35",
+      "rights": {
+        "annotation_use": null,
+        "dataset_license": "Open Government Licence v3.0",
+        "local_evaluation": true,
+        "original_license": "Open Government Licence v3.0",
+        "redistribution": null,
+        "references": [
+          "docs/eda/corpus_v1_protocol.md",
+          "frozen-source-aaf0bd22e30720518c4681aa316bc92812f47136e25762581b256a2b9ce18ad5"
+        ],
+        "sensitivity": "public"
+      },
+      "sample_id": "e2-office-c492bef9daae10ca",
+      "source_record_id": "e2-office-c492bef9daae10ca",
+      "split": "dev",
+      "unsupported": [
+        "reviewed_language",
+        "independent_gold",
+        "family_completeness"
+      ]
+    },
+    {
+      "annotation": null,
+      "cohort": "pilot",
+      "dataset": "additional-docx",
+      "difficulty": [
+        "not_reviewed"
+      ],
+      "disposition": "admitted",
+      "document_type": "public_sector_office",
+      "family_id": "f-a0dfd38d2480b58d0c7a6cc7",
+      "family_review": "unknown",
+      "family_review_reference": null,
+      "image": null,
+      "languages": [
+        "unknown"
+      ],
+      "near_duplicate_group": null,
+      "normalized_text_sha256": null,
+      "original": {
+        "format": "docx",
+        "path": "assets/e2-office-c6fe3682e1f6c35f.docx",
+        "sha256": "5a8d6164f6cf08c4694b36044514f8a2f99d295f0b94581d24d59575a3f06cdd",
+        "size_bytes": 608959
+      },
+      "original_page_number": null,
+      "page": null,
+      "publicly_exposed": true,
+      "reasons": [],
+      "related_families": [],
+      "release": "GOV.UK-20261021",
+      "revision": "a5b078923060df71d77ea530f191bfaa2ac88cb610740c851d745d4885a747a6",
+      "rights": {
+        "annotation_use": null,
+        "dataset_license": "Open Government Licence v3.0",
+        "local_evaluation": true,
+        "original_license": "Open Government Licence v3.0",
+        "redistribution": null,
+        "references": [
+          "docs/eda/corpus_v1_protocol.md",
+          "frozen-source-10a7acfc285d3ac3d9efa9b20a9669f303fa9e946c6e10632be484c77e80ba68"
+        ],
+        "sensitivity": "public"
+      },
+      "sample_id": "e2-office-c6fe3682e1f6c35f",
+      "source_record_id": "e2-office-c6fe3682e1f6c35f",
+      "split": "dev",
+      "unsupported": [
+        "reviewed_language",
+        "independent_gold",
+        "family_completeness"
+      ]
+    },
+    {
+      "annotation": null,
+      "cohort": "pilot",
+      "dataset": "additional-xlsx",
+      "difficulty": [
+        "not_reviewed"
+      ],
+      "disposition": "admitted",
+      "document_type": "public_sector_office",
+      "family_id": "f-f063c0f4ccf9cdb51f70ed0b",
+      "family_review": "unknown",
+      "family_review_reference": null,
+      "image": null,
+      "languages": [
+        "unknown"
+      ],
+      "near_duplicate_group": null,
+      "normalized_text_sha256": null,
+      "original": {
+        "format": "xlsx",
+        "path": "assets/e2-office-d2523ecbcb700848.xlsx",
+        "sha256": "97afb5db8a1a988486091b6543553ed66be99217d9418370ac7df10e91b82487",
+        "size_bytes": 14556
+      },
+      "original_page_number": null,
+      "page": null,
+      "publicly_exposed": true,
+      "reasons": [],
+      "related_families": [],
+      "release": "GOV.UK-20261021",
+      "revision": "abd306dd19a5e7dc393a7ccfa97b72c68950515e64e9983ae5ef63e231712acb",
+      "rights": {
+        "annotation_use": null,
+        "dataset_license": "Open Government Licence v3.0",
+        "local_evaluation": true,
+        "original_license": "Open Government Licence v3.0",
+        "redistribution": null,
+        "references": [
+          "docs/eda/corpus_v1_protocol.md",
+          "frozen-source-c6d0feaf7ec82ecd51af37d9945f570ef0a23a68258963bcb5e1b2ac36bf2aea"
+        ],
+        "sensitivity": "public"
+      },
+      "sample_id": "e2-office-d2523ecbcb700848",
+      "source_record_id": "e2-office-d2523ecbcb700848",
+      "split": "dev",
+      "unsupported": [
+        "reviewed_language",
+        "independent_gold",
+        "family_completeness"
+      ]
+    },
+    {
+      "annotation": null,
+      "cohort": "pilot",
+      "dataset": "additional-docx",
+      "difficulty": [
+        "not_reviewed"
+      ],
+      "disposition": "admitted",
+      "document_type": "public_sector_office",
+      "family_id": "f-9ffa9209f565a182cd9d9fde",
+      "family_review": "unknown",
+      "family_review_reference": null,
+      "image": null,
+      "languages": [
+        "unknown"
+      ],
+      "near_duplicate_group": null,
+      "normalized_text_sha256": null,
+      "original": {
+        "format": "docx",
+        "path": "assets/e2-office-d2642cf709d58d94.docx",
+        "sha256": "5e9009fdf082fcd9e37e909ecd4611227b762ef7df8b926c8eb72479447f68f7",
+        "size_bytes": 83671
+      },
+      "original_page_number": null,
+      "page": null,
+      "publicly_exposed": true,
+      "reasons": [],
+      "related_families": [],
+      "release": "GOV.UK-20261021",
+      "revision": "9f18682c418c8b7de96e9616fc9215860b1d1751fdc1df807a12251a1325de58",
+      "rights": {
+        "annotation_use": null,
+        "dataset_license": "Open Government Licence v3.0",
+        "local_evaluation": true,
+        "original_license": "Open Government Licence v3.0",
+        "redistribution": null,
+        "references": [
+          "docs/eda/corpus_v1_protocol.md",
+          "frozen-source-a0b11343ea4056eadf5800976e52297b7242e77eee26ff5136f4b56947600247"
+        ],
+        "sensitivity": "public"
+      },
+      "sample_id": "e2-office-d2642cf709d58d94",
+      "source_record_id": "e2-office-d2642cf709d58d94",
+      "split": "dev",
+      "unsupported": [
+        "reviewed_language",
+        "independent_gold",
+        "family_completeness"
+      ]
+    },
+    {
+      "annotation": null,
+      "cohort": "pilot",
+      "dataset": "additional-docx",
+      "difficulty": [
+        "not_reviewed"
+      ],
+      "disposition": "admitted",
+      "document_type": "public_sector_office",
+      "family_id": "f-a0dfd38d2480b58d0c7a6cc7",
+      "family_review": "unknown",
+      "family_review_reference": null,
+      "image": null,
+      "languages": [
+        "unknown"
+      ],
+      "near_duplicate_group": null,
+      "normalized_text_sha256": null,
+      "original": {
+        "format": "docx",
+        "path": "assets/e2-office-d7868e62892f1951.docx",
+        "sha256": "658eeebf52cf2f6bb6f783d7ee03b25c01fad51d0bf41ae60672d6ec2e523939",
+        "size_bytes": 36057
+      },
+      "original_page_number": null,
+      "page": null,
+      "publicly_exposed": true,
+      "reasons": [],
+      "related_families": [],
+      "release": "GOV.UK-20261021",
+      "revision": "a5b078923060df71d77ea530f191bfaa2ac88cb610740c851d745d4885a747a6",
+      "rights": {
+        "annotation_use": null,
+        "dataset_license": "Open Government Licence v3.0",
+        "local_evaluation": true,
+        "original_license": "Open Government Licence v3.0",
+        "redistribution": null,
+        "references": [
+          "docs/eda/corpus_v1_protocol.md",
+          "frozen-source-10a7acfc285d3ac3d9efa9b20a9669f303fa9e946c6e10632be484c77e80ba68"
+        ],
+        "sensitivity": "public"
+      },
+      "sample_id": "e2-office-d7868e62892f1951",
+      "source_record_id": "e2-office-d7868e62892f1951",
+      "split": "dev",
+      "unsupported": [
+        "reviewed_language",
+        "independent_gold",
+        "family_completeness"
+      ]
+    },
+    {
+      "annotation": null,
+      "cohort": "pilot",
+      "dataset": "additional-docx",
+      "difficulty": [
+        "not_reviewed"
+      ],
+      "disposition": "admitted",
+      "document_type": "public_sector_office",
+      "family_id": "f-a0dfd38d2480b58d0c7a6cc7",
+      "family_review": "unknown",
+      "family_review_reference": null,
+      "image": null,
+      "languages": [
+        "unknown"
+      ],
+      "near_duplicate_group": null,
+      "normalized_text_sha256": null,
+      "original": {
+        "format": "docx",
+        "path": "assets/e2-office-d8c55470ba477011.docx",
+        "sha256": "e3d07acd91b480681e00993e95e30f1ea0095997e86428dc37d6451703f6763e",
+        "size_bytes": 32432
+      },
+      "original_page_number": null,
+      "page": null,
+      "publicly_exposed": true,
+      "reasons": [],
+      "related_families": [],
+      "release": "GOV.UK-20261021",
+      "revision": "a5b078923060df71d77ea530f191bfaa2ac88cb610740c851d745d4885a747a6",
+      "rights": {
+        "annotation_use": null,
+        "dataset_license": "Open Government Licence v3.0",
+        "local_evaluation": true,
+        "original_license": "Open Government Licence v3.0",
+        "redistribution": null,
+        "references": [
+          "docs/eda/corpus_v1_protocol.md",
+          "frozen-source-10a7acfc285d3ac3d9efa9b20a9669f303fa9e946c6e10632be484c77e80ba68"
+        ],
+        "sensitivity": "public"
+      },
+      "sample_id": "e2-office-d8c55470ba477011",
+      "source_record_id": "e2-office-d8c55470ba477011",
+      "split": "dev",
+      "unsupported": [
+        "reviewed_language",
+        "independent_gold",
+        "family_completeness"
+      ]
+    },
+    {
+      "annotation": null,
+      "cohort": "pilot",
+      "dataset": "additional-docx",
+      "difficulty": [
+        "not_reviewed"
+      ],
+      "disposition": "admitted",
+      "document_type": "public_sector_office",
+      "family_id": "f-a0dfd38d2480b58d0c7a6cc7",
+      "family_review": "unknown",
+      "family_review_reference": null,
+      "image": null,
+      "languages": [
+        "unknown"
+      ],
+      "near_duplicate_group": null,
+      "normalized_text_sha256": null,
+      "original": {
+        "format": "docx",
+        "path": "assets/e2-office-dca7a02fc71408c4.docx",
+        "sha256": "96c7ff3955bf816facf19fd4df508620d08f12f6926ea6ea5d329fd65ff3433e",
+        "size_bytes": 344508
+      },
+      "original_page_number": null,
+      "page": null,
+      "publicly_exposed": true,
+      "reasons": [],
+      "related_families": [],
+      "release": "GOV.UK-20261021",
+      "revision": "a5b078923060df71d77ea530f191bfaa2ac88cb610740c851d745d4885a747a6",
+      "rights": {
+        "annotation_use": null,
+        "dataset_license": "Open Government Licence v3.0",
+        "local_evaluation": true,
+        "original_license": "Open Government Licence v3.0",
+        "redistribution": null,
+        "references": [
+          "docs/eda/corpus_v1_protocol.md",
+          "frozen-source-10a7acfc285d3ac3d9efa9b20a9669f303fa9e946c6e10632be484c77e80ba68"
+        ],
+        "sensitivity": "public"
+      },
+      "sample_id": "e2-office-dca7a02fc71408c4",
+      "source_record_id": "e2-office-dca7a02fc71408c4",
+      "split": "dev",
+      "unsupported": [
+        "reviewed_language",
+        "independent_gold",
+        "family_completeness"
+      ]
+    },
+    {
+      "annotation": null,
+      "cohort": "pilot",
+      "dataset": "additional-docx",
+      "difficulty": [
+        "not_reviewed"
+      ],
+      "disposition": "admitted",
+      "document_type": "public_sector_office",
+      "family_id": "f-ca0e1e1d0193fb77d75fd707",
+      "family_review": "unknown",
+      "family_review_reference": null,
+      "image": null,
+      "languages": [
+        "unknown"
+      ],
+      "near_duplicate_group": null,
+      "normalized_text_sha256": null,
+      "original": {
+        "format": "docx",
+        "path": "assets/e2-office-dcab8313148975f3.docx",
+        "sha256": "5287fe7226ae99b379fa48185351e69ed72949ea013d9dcc0308672442b04567",
+        "size_bytes": 43370
+      },
+      "original_page_number": null,
+      "page": null,
+      "publicly_exposed": true,
+      "reasons": [],
+      "related_families": [],
+      "release": "GOV.UK-20261021",
+      "revision": "db51603e4dbcf147b3a862b90b5585d56fae6c90d6e6818b7795e0ca187ca2c0",
+      "rights": {
+        "annotation_use": null,
+        "dataset_license": "Open Government Licence v3.0",
+        "local_evaluation": true,
+        "original_license": "Open Government Licence v3.0",
+        "redistribution": null,
+        "references": [
+          "docs/eda/corpus_v1_protocol.md",
+          "frozen-source-8173c3fc944f4bbde212e190cf14ffc7d32cb015dd8ee84084efc1fe4c49aa61"
+        ],
+        "sensitivity": "public"
+      },
+      "sample_id": "e2-office-dcab8313148975f3",
+      "source_record_id": "e2-office-dcab8313148975f3",
+      "split": "dev",
+      "unsupported": [
+        "reviewed_language",
+        "independent_gold",
+        "family_completeness"
+      ]
+    },
+    {
+      "annotation": null,
+      "cohort": "pilot",
+      "dataset": "additional-xlsx",
+      "difficulty": [
+        "not_reviewed"
+      ],
+      "disposition": "admitted",
+      "document_type": "public_sector_office",
+      "family_id": "f-eba227541d78dc993859554b",
+      "family_review": "unknown",
+      "family_review_reference": null,
+      "image": null,
+      "languages": [
+        "unknown"
+      ],
+      "near_duplicate_group": null,
+      "normalized_text_sha256": null,
+      "original": {
+        "format": "xlsx",
+        "path": "assets/e2-office-ed3233c774d78621.xlsx",
+        "sha256": "5170e7c95d7f92c6a1fe3a47bb625ac077b69b5e3c1c770b803f4247c8ed6f43",
+        "size_bytes": 85314
+      },
+      "original_page_number": null,
+      "page": null,
+      "publicly_exposed": true,
+      "reasons": [],
+      "related_families": [],
+      "release": "GOV.UK-20261021",
+      "revision": "1aedc187697c9a26e4a63920fed2f520c05a80a226b340619ecb727153535d35",
+      "rights": {
+        "annotation_use": null,
+        "dataset_license": "Open Government Licence v3.0",
+        "local_evaluation": true,
+        "original_license": "Open Government Licence v3.0",
+        "redistribution": null,
+        "references": [
+          "docs/eda/corpus_v1_protocol.md",
+          "frozen-source-aaf0bd22e30720518c4681aa316bc92812f47136e25762581b256a2b9ce18ad5"
+        ],
+        "sensitivity": "public"
+      },
+      "sample_id": "e2-office-ed3233c774d78621",
+      "source_record_id": "e2-office-ed3233c774d78621",
+      "split": "dev",
+      "unsupported": [
+        "reviewed_language",
+        "independent_gold",
+        "family_completeness"
+      ]
+    },
+    {
+      "annotation": null,
+      "cohort": "pilot",
+      "dataset": "additional-xlsx",
+      "difficulty": [
+        "not_reviewed"
+      ],
+      "disposition": "admitted",
+      "document_type": "public_sector_office",
+      "family_id": "f-2cb7b77d368bcb6eab1f9b72",
+      "family_review": "unknown",
+      "family_review_reference": null,
+      "image": null,
+      "languages": [
+        "unknown"
+      ],
+      "near_duplicate_group": null,
+      "normalized_text_sha256": null,
+      "original": {
+        "format": "xlsx",
+        "path": "assets/e2-office-ed3246cb74092593.xlsx",
+        "sha256": "cedb887d425ab4850984fec0f846d7720d7cb051a7082370862664b4ea9d1416",
+        "size_bytes": 552525
+      },
+      "original_page_number": null,
+      "page": null,
+      "publicly_exposed": true,
+      "reasons": [],
+      "related_families": [],
+      "release": "GOV.UK-20261021",
+      "revision": "2bfc29234d86f9ff8a535656b3d4af62c96c8931f6e12bcda61c0da1630e283c",
+      "rights": {
+        "annotation_use": null,
+        "dataset_license": "Open Government Licence v3.0",
+        "local_evaluation": true,
+        "original_license": "Open Government Licence v3.0",
+        "redistribution": null,
+        "references": [
+          "docs/eda/corpus_v1_protocol.md",
+          "frozen-source-e25518050c6d65125d9f3684b46482031c8e0694f4381a84367e530b8abf0a86"
+        ],
+        "sensitivity": "public"
+      },
+      "sample_id": "e2-office-ed3246cb74092593",
+      "source_record_id": "e2-office-ed3246cb74092593",
+      "split": "dev",
+      "unsupported": [
+        "reviewed_language",
+        "independent_gold",
+        "family_completeness"
+      ]
+    },
+    {
+      "annotation": null,
+      "cohort": "pilot",
+      "dataset": "additional-xlsx",
+      "difficulty": [
+        "not_reviewed"
+      ],
+      "disposition": "admitted",
+      "document_type": "public_sector_office",
+      "family_id": "f-c90c5cf2ef3cd307c831ed24",
+      "family_review": "unknown",
+      "family_review_reference": null,
+      "image": null,
+      "languages": [
+        "unknown"
+      ],
+      "near_duplicate_group": null,
+      "normalized_text_sha256": null,
+      "original": {
+        "format": "xlsx",
+        "path": "assets/e2-office-ef9bb253eef287c8.xlsx",
+        "sha256": "e8481ceedaae8cdd29169642422170480176c16eede55b1b7aab2247b8c5ffae",
+        "size_bytes": 76469
+      },
+      "original_page_number": null,
+      "page": null,
+      "publicly_exposed": true,
+      "reasons": [],
+      "related_families": [],
+      "release": "GOV.UK-20261021",
+      "revision": "0e1e49278500489ba293abd27feb6b17cdf5866d758b0560ce8faf672a92bc27",
+      "rights": {
+        "annotation_use": null,
+        "dataset_license": "Open Government Licence v3.0",
+        "local_evaluation": true,
+        "original_license": "Open Government Licence v3.0",
+        "redistribution": null,
+        "references": [
+          "docs/eda/corpus_v1_protocol.md",
+          "frozen-source-f8eb5916e68e8a058132c8530db573b3fd521cdbc39642b9969dbdc5ac060957"
+        ],
+        "sensitivity": "public"
+      },
+      "sample_id": "e2-office-ef9bb253eef287c8",
+      "source_record_id": "e2-office-ef9bb253eef287c8",
+      "split": "dev",
+      "unsupported": [
+        "reviewed_language",
+        "independent_gold",
+        "family_completeness"
+      ]
+    },
+    {
+      "annotation": null,
+      "cohort": "pilot",
+      "dataset": "additional-docx",
+      "difficulty": [
+        "not_reviewed"
+      ],
+      "disposition": "admitted",
+      "document_type": "public_sector_office",
+      "family_id": "f-40f6b76bf973908880846006",
+      "family_review": "unknown",
+      "family_review_reference": null,
+      "image": null,
+      "languages": [
+        "unknown"
+      ],
+      "near_duplicate_group": null,
+      "normalized_text_sha256": null,
+      "original": {
+        "format": "docx",
+        "path": "assets/e2-office-f0a1fbef05a3b9ba.docx",
+        "sha256": "118decb7c023f992e1754dcebedd950c9861c53ba63eff128f32cc8b0284856e",
+        "size_bytes": 40661
+      },
+      "original_page_number": null,
+      "page": null,
+      "publicly_exposed": true,
+      "reasons": [],
+      "related_families": [],
+      "release": "GOV.UK-20261021",
+      "revision": "429b3fd00956e12c9798f701eefeef785be8b8e3655ad8dd21664cd2500cfaf8",
+      "rights": {
+        "annotation_use": null,
+        "dataset_license": "Open Government Licence v3.0",
+        "local_evaluation": true,
+        "original_license": "Open Government Licence v3.0",
+        "redistribution": null,
+        "references": [
+          "docs/eda/corpus_v1_protocol.md",
+          "frozen-source-bb0cdb6db28460c142280bef5e01a755eccf258b3d326615d4f2b13fe40a0dec"
+        ],
+        "sensitivity": "public"
+      },
+      "sample_id": "e2-office-f0a1fbef05a3b9ba",
+      "source_record_id": "e2-office-f0a1fbef05a3b9ba",
+      "split": "dev",
+      "unsupported": [
+        "reviewed_language",
+        "independent_gold",
+        "family_completeness"
+      ]
+    },
+    {
+      "annotation": null,
+      "cohort": "pilot",
+      "dataset": "additional-xlsx",
+      "difficulty": [
+        "not_reviewed"
+      ],
+      "disposition": "admitted",
+      "document_type": "public_sector_office",
+      "family_id": "f-f063c0f4ccf9cdb51f70ed0b",
+      "family_review": "unknown",
+      "family_review_reference": null,
+      "image": null,
+      "languages": [
+        "unknown"
+      ],
+      "near_duplicate_group": null,
+      "normalized_text_sha256": null,
+      "original": {
+        "format": "xlsx",
+        "path": "assets/e2-office-f0e930ab9734ecb3.xlsx",
+        "sha256": "635b5e5943b84e8a03b6864feb8c1a60bf90b0efdc6aaff4b15ae437851deb92",
+        "size_bytes": 13545
+      },
+      "original_page_number": null,
+      "page": null,
+      "publicly_exposed": true,
+      "reasons": [],
+      "related_families": [],
+      "release": "GOV.UK-20261021",
+      "revision": "abd306dd19a5e7dc393a7ccfa97b72c68950515e64e9983ae5ef63e231712acb",
+      "rights": {
+        "annotation_use": null,
+        "dataset_license": "Open Government Licence v3.0",
+        "local_evaluation": true,
+        "original_license": "Open Government Licence v3.0",
+        "redistribution": null,
+        "references": [
+          "docs/eda/corpus_v1_protocol.md",
+          "frozen-source-c6d0feaf7ec82ecd51af37d9945f570ef0a23a68258963bcb5e1b2ac36bf2aea"
+        ],
+        "sensitivity": "public"
+      },
+      "sample_id": "e2-office-f0e930ab9734ecb3",
+      "source_record_id": "e2-office-f0e930ab9734ecb3",
+      "split": "dev",
+      "unsupported": [
+        "reviewed_language",
+        "independent_gold",
+        "family_completeness"
+      ]
+    },
+    {
+      "annotation": null,
+      "cohort": "pilot",
+      "dataset": "additional-xlsx",
+      "difficulty": [
+        "not_reviewed"
+      ],
+      "disposition": "admitted",
+      "document_type": "public_sector_office",
+      "family_id": "f-9e44ca658a35e83a408c5864",
+      "family_review": "unknown",
+      "family_review_reference": null,
+      "image": null,
+      "languages": [
+        "unknown"
+      ],
+      "near_duplicate_group": null,
+      "normalized_text_sha256": null,
+      "original": {
+        "format": "xlsx",
+        "path": "assets/e2-office-f1ead1feca9f5f3e.xlsx",
+        "sha256": "dbec31774eab0c1941735d45625556e26611d814f41506bd359a1d6c11178c9b",
+        "size_bytes": 218204
+      },
+      "original_page_number": null,
+      "page": null,
+      "publicly_exposed": true,
+      "reasons": [],
+      "related_families": [],
+      "release": "GOV.UK-20261021",
+      "revision": "c7ba9a0715c07ad726ecad4486261fb2df9a19ecd27126edeb78b5eb91cfe60c",
+      "rights": {
+        "annotation_use": null,
+        "dataset_license": "Open Government Licence v3.0",
+        "local_evaluation": true,
+        "original_license": "Open Government Licence v3.0",
+        "redistribution": null,
+        "references": [
+          "docs/eda/corpus_v1_protocol.md",
+          "frozen-source-9eb9d98779296fb59468f7341af4c352be50f95f1a3e6da6dd9228a5807babe0"
+        ],
+        "sensitivity": "public"
+      },
+      "sample_id": "e2-office-f1ead1feca9f5f3e",
+      "source_record_id": "e2-office-f1ead1feca9f5f3e",
+      "split": "dev",
+      "unsupported": [
+        "reviewed_language",
+        "independent_gold",
+        "family_completeness"
+      ]
+    },
+    {
+      "annotation": null,
+      "cohort": "pilot",
+      "dataset": "additional-xlsx",
+      "difficulty": [
+        "not_reviewed"
+      ],
+      "disposition": "admitted",
+      "document_type": "public_sector_office",
+      "family_id": "f-a14fed00f94949a69cd39230",
+      "family_review": "unknown",
+      "family_review_reference": null,
+      "image": null,
+      "languages": [
+        "unknown"
+      ],
+      "near_duplicate_group": null,
+      "normalized_text_sha256": null,
+      "original": {
+        "format": "xlsx",
+        "path": "assets/e2-office-f202322826064e55.xlsx",
+        "sha256": "9e7dc89ef758c9aaaf685cc4b54299197ea936c6e4e41b272c151f69685b0e7b",
+        "size_bytes": 117760
+      },
+      "original_page_number": null,
+      "page": null,
+      "publicly_exposed": true,
+      "reasons": [],
+      "related_families": [],
+      "release": "GOV.UK-20261021",
+      "revision": "2764444ca2df09a5f9b3124da6b932fe331bb6934268d55a1d66083652dbc7fd",
+      "rights": {
+        "annotation_use": null,
+        "dataset_license": "Open Government Licence v3.0",
+        "local_evaluation": true,
+        "original_license": "Open Government Licence v3.0",
+        "redistribution": null,
+        "references": [
+          "docs/eda/corpus_v1_protocol.md",
+          "frozen-source-d026d416cf6d8bf4acc9f591e6a1a081b555554c31fec6ee7d10774cef619630"
+        ],
+        "sensitivity": "public"
+      },
+      "sample_id": "e2-office-f202322826064e55",
+      "source_record_id": "e2-office-f202322826064e55",
+      "split": "dev",
+      "unsupported": [
+        "reviewed_language",
+        "independent_gold",
+        "family_completeness"
+      ]
+    }
+  ],
+  "schema_version": "extraction-corpus-2.0",
+  "selection_rule": "govuk-office-url-sha256-v1",
+  "selection_seed": "extraction-v2-office-1",
+  "split_revision": "family-components-v1",
+  "targets": [
+    {
+      "blockers": [
+        "source_pdf_rights_unresolved",
+        "bounded_original_annotation_pairs_unavailable"
+      ],
+      "dataset": "doclaynet",
+      "maximum": 100,
+      "minimum": 100,
+      "unit": "pages"
+    },
+    {
+      "blockers": [
+        "source_article_rights_and_pairing_unresolved",
+        "automatic_labels_not_independent_gold"
+      ],
+      "dataset": "pubtables-1m",
+      "maximum": 100,
+      "minimum": 100,
+      "unit": "table_pages"
+    },
+    {
+      "blockers": [
+        "source_report_rights_and_original_pairs_unresolved",
+        "automatic_labels_not_independent_gold"
+      ],
+      "dataset": "fintabnet-c",
+      "maximum": 50,
+      "minimum": 50,
+      "unit": "tables"
+    },
+    {
+      "blockers": [
+        "research_only_use_scope_unresolved",
+        "original_vs_image_pdf_pairing_unverified"
+      ],
+      "dataset": "omnidocbench",
+      "maximum": 50,
+      "minimum": 50,
+      "unit": "pages"
+    },
+    {
+      "blockers": [
+        "no_authorized_sources_or_reviewed_gold"
+      ],
+      "dataset": "own-ru-kk",
+      "maximum": 50,
+      "minimum": 50,
+      "unit": "documents"
+    },
+    {
+      "blockers": [],
+      "dataset": "additional-docx",
+      "maximum": 50,
+      "minimum": 30,
+      "unit": "documents"
+    },
+    {
+      "blockers": [],
+      "dataset": "additional-xlsx",
+      "maximum": 50,
+      "minimum": 30,
+      "unit": "documents"
+    }
+  ]
+}

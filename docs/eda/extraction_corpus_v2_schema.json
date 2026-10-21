@@ -1,0 +1,768 @@
+{
+  "$defs": {
+    "Annotation": {
+      "additionalProperties": false,
+      "properties": {
+        "asset": {
+          "$ref": "#/$defs/Asset"
+        },
+        "auxiliary": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Asset"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "coordinate_system": {
+          "enum": [
+            "image_top_left_xywh",
+            "publisher_pymupdf_top_left",
+            "image_polygon",
+            "none"
+          ],
+          "title": "Coordinate System",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "doclaynet_coco",
+            "pubtables_pdf",
+            "fintabnet_c",
+            "omnidocbench",
+            "ocr_text"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "provenance": {
+          "maxLength": 200,
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Provenance",
+          "type": "string"
+        },
+        "review": {
+          "$ref": "#/$defs/Review"
+        },
+        "revision": {
+          "maxLength": 200,
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Revision",
+          "type": "string"
+        },
+        "source_page": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Page"
+        },
+        "source_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Source Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "asset",
+        "kind",
+        "revision",
+        "provenance",
+        "coordinate_system",
+        "source_sha256",
+        "review"
+      ],
+      "title": "Annotation",
+      "type": "object"
+    },
+    "Asset": {
+      "additionalProperties": false,
+      "properties": {
+        "format": {
+          "enum": [
+            "pdf",
+            "docx",
+            "xlsx",
+            "png",
+            "json"
+          ],
+          "title": "Format",
+          "type": "string"
+        },
+        "path": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Path",
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        },
+        "size_bytes": {
+          "exclusiveMinimum": 0,
+          "maximum": 52428800,
+          "title": "Size Bytes",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "path",
+        "sha256",
+        "size_bytes",
+        "format"
+      ],
+      "title": "Asset",
+      "type": "object"
+    },
+    "Page": {
+      "additionalProperties": false,
+      "properties": {
+        "crop_box": {
+          "maxItems": 4,
+          "minItems": 4,
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "title": "Crop Box",
+          "type": "array"
+        },
+        "media_box": {
+          "maxItems": 4,
+          "minItems": 4,
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "title": "Media Box",
+          "type": "array"
+        },
+        "number": {
+          "exclusiveMinimum": 0,
+          "maximum": 100000,
+          "title": "Number",
+          "type": "integer"
+        },
+        "rotation": {
+          "enum": [
+            0,
+            90,
+            180,
+            270
+          ],
+          "title": "Rotation",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "number",
+        "media_box",
+        "crop_box",
+        "rotation"
+      ],
+      "title": "Page",
+      "type": "object"
+    },
+    "Review": {
+      "additionalProperties": false,
+      "properties": {
+        "adjudication": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "minLength": 1,
+              "pattern": "\\S",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Adjudication"
+        },
+        "attestation": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "minLength": 1,
+              "pattern": "\\S",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Attestation"
+        },
+        "independent": {
+          "default": false,
+          "title": "Independent",
+          "type": "boolean"
+        },
+        "original_inspected": {
+          "default": false,
+          "title": "Original Inspected",
+          "type": "boolean"
+        },
+        "reviewed_on": {
+          "anyOf": [
+            {
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reviewed On"
+        },
+        "reviewer": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "minLength": 1,
+              "pattern": "\\S",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reviewer"
+        },
+        "status": {
+          "enum": [
+            "none",
+            "automatic",
+            "publisher_human",
+            "independent_human",
+            "synthetic"
+          ],
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "title": "Review",
+      "type": "object"
+    },
+    "Rights": {
+      "additionalProperties": false,
+      "properties": {
+        "annotation_use": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Annotation Use"
+        },
+        "dataset_license": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "minLength": 1,
+              "pattern": "\\S",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Dataset License"
+        },
+        "local_evaluation": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Local Evaluation"
+        },
+        "original_license": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "minLength": 1,
+              "pattern": "\\S",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Original License"
+        },
+        "redistribution": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Redistribution"
+        },
+        "references": {
+          "items": {
+            "maxLength": 200,
+            "minLength": 1,
+            "pattern": "\\S",
+            "type": "string"
+          },
+          "title": "References",
+          "type": "array"
+        },
+        "sensitivity": {
+          "enum": [
+            "public",
+            "private_authorized",
+            "unknown"
+          ],
+          "title": "Sensitivity",
+          "type": "string"
+        }
+      },
+      "required": [
+        "dataset_license",
+        "original_license",
+        "local_evaluation",
+        "annotation_use",
+        "redistribution",
+        "references",
+        "sensitivity"
+      ],
+      "title": "Rights",
+      "type": "object"
+    },
+    "Sample": {
+      "additionalProperties": false,
+      "properties": {
+        "annotation": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Annotation"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "cohort": {
+          "enum": [
+            "pilot",
+            "legacy_control",
+            "synthetic"
+          ],
+          "title": "Cohort",
+          "type": "string"
+        },
+        "dataset": {
+          "maxLength": 200,
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Dataset",
+          "type": "string"
+        },
+        "difficulty": {
+          "items": {
+            "maxLength": 200,
+            "minLength": 1,
+            "pattern": "\\S",
+            "type": "string"
+          },
+          "title": "Difficulty",
+          "type": "array"
+        },
+        "disposition": {
+          "enum": [
+            "attempted",
+            "admitted",
+            "rejected",
+            "unavailable",
+            "excluded"
+          ],
+          "title": "Disposition",
+          "type": "string"
+        },
+        "document_type": {
+          "maxLength": 200,
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Document Type",
+          "type": "string"
+        },
+        "family_id": {
+          "maxLength": 200,
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Family Id",
+          "type": "string"
+        },
+        "family_review": {
+          "enum": [
+            "unknown",
+            "automatic",
+            "human"
+          ],
+          "title": "Family Review",
+          "type": "string"
+        },
+        "family_review_reference": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "minLength": 1,
+              "pattern": "\\S",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Family Review Reference"
+        },
+        "image": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Asset"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "languages": {
+          "items": {
+            "pattern": "^(?:[a-z]{2,3}(?:-[A-Za-z0-9]{2,8})*|unknown|other)$",
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Languages",
+          "type": "array"
+        },
+        "near_duplicate_group": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "minLength": 1,
+              "pattern": "\\S",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Near Duplicate Group"
+        },
+        "normalized_text_sha256": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Normalized Text Sha256"
+        },
+        "original": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Asset"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "original_page_number": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Original Page Number"
+        },
+        "page": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Page"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "publicly_exposed": {
+          "title": "Publicly Exposed",
+          "type": "boolean"
+        },
+        "reasons": {
+          "default": [],
+          "items": {
+            "maxLength": 200,
+            "minLength": 1,
+            "pattern": "\\S",
+            "type": "string"
+          },
+          "title": "Reasons",
+          "type": "array"
+        },
+        "related_families": {
+          "default": [],
+          "items": {
+            "maxLength": 200,
+            "minLength": 1,
+            "pattern": "\\S",
+            "type": "string"
+          },
+          "title": "Related Families",
+          "type": "array"
+        },
+        "release": {
+          "maxLength": 200,
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Release",
+          "type": "string"
+        },
+        "revision": {
+          "maxLength": 200,
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Revision",
+          "type": "string"
+        },
+        "rights": {
+          "$ref": "#/$defs/Rights"
+        },
+        "sample_id": {
+          "pattern": "^e2-[a-z0-9-]{1,80}$",
+          "title": "Sample Id",
+          "type": "string"
+        },
+        "source_record_id": {
+          "maxLength": 200,
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Source Record Id",
+          "type": "string"
+        },
+        "split": {
+          "enum": [
+            "train",
+            "dev",
+            "test",
+            "exposed_test"
+          ],
+          "title": "Split",
+          "type": "string"
+        },
+        "unsupported": {
+          "default": [],
+          "items": {
+            "maxLength": 200,
+            "minLength": 1,
+            "pattern": "\\S",
+            "type": "string"
+          },
+          "title": "Unsupported",
+          "type": "array"
+        }
+      },
+      "required": [
+        "sample_id",
+        "dataset",
+        "release",
+        "revision",
+        "source_record_id",
+        "cohort",
+        "disposition",
+        "original",
+        "rights",
+        "languages",
+        "document_type",
+        "difficulty",
+        "family_id",
+        "family_review",
+        "split",
+        "publicly_exposed"
+      ],
+      "title": "Sample",
+      "type": "object"
+    },
+    "Target": {
+      "additionalProperties": false,
+      "properties": {
+        "blockers": {
+          "items": {
+            "maxLength": 200,
+            "minLength": 1,
+            "pattern": "\\S",
+            "type": "string"
+          },
+          "title": "Blockers",
+          "type": "array"
+        },
+        "dataset": {
+          "maxLength": 200,
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Dataset",
+          "type": "string"
+        },
+        "maximum": {
+          "minimum": 0,
+          "title": "Maximum",
+          "type": "integer"
+        },
+        "minimum": {
+          "minimum": 0,
+          "title": "Minimum",
+          "type": "integer"
+        },
+        "unit": {
+          "enum": [
+            "pages",
+            "table_pages",
+            "tables",
+            "documents"
+          ],
+          "title": "Unit",
+          "type": "string"
+        }
+      },
+      "required": [
+        "dataset",
+        "unit",
+        "minimum",
+        "maximum",
+        "blockers"
+      ],
+      "title": "Target",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "revision": {
+      "maxLength": 200,
+      "minLength": 1,
+      "pattern": "\\S",
+      "title": "Revision",
+      "type": "string"
+    },
+    "samples": {
+      "items": {
+        "$ref": "#/$defs/Sample"
+      },
+      "maxItems": 2000,
+      "title": "Samples",
+      "type": "array"
+    },
+    "schema_version": {
+      "const": "extraction-corpus-2.0",
+      "default": "extraction-corpus-2.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "selection_rule": {
+      "default": "sha256-seed-dataset-record-v1",
+      "enum": [
+        "sha256-seed-dataset-record-v1",
+        "govuk-office-url-sha256-v1"
+      ],
+      "title": "Selection Rule",
+      "type": "string"
+    },
+    "selection_seed": {
+      "maxLength": 200,
+      "minLength": 1,
+      "pattern": "\\S",
+      "title": "Selection Seed",
+      "type": "string"
+    },
+    "split_revision": {
+      "maxLength": 200,
+      "minLength": 1,
+      "pattern": "\\S",
+      "title": "Split Revision",
+      "type": "string"
+    },
+    "targets": {
+      "items": {
+        "$ref": "#/$defs/Target"
+      },
+      "title": "Targets",
+      "type": "array"
+    }
+  },
+  "required": [
+    "revision",
+    "selection_seed",
+    "split_revision",
+    "targets",
+    "samples"
+  ],
+  "title": "Corpus",
+  "type": "object"
+}
