@@ -6,10 +6,12 @@ import csv
 import hashlib
 import json
 import math
+import re
 import time
+from bisect import bisect_right
 from collections import Counter
 from collections.abc import Iterable
-from dataclasses import dataclass, fields, replace
+from dataclasses import asdict, dataclass, fields, replace
 from pathlib import Path
 from typing import Any
 
@@ -24,6 +26,8 @@ from doclens_ai.chunking.models import (
     ChunkingStatus,
     ChunkingStrategy,
     ChunkSourceSpan,
+    NormalizationRange,
+    TextBlockOffsetMap,
     config_as_dict,
 )
 from doclens_ai.extraction.models import (
@@ -47,6 +51,7 @@ class _SourceUnit:
     scope_key: str
     group_key: str
     context_ids: tuple[str, ...] = ()
+    text_block_map: TextBlockOffsetMap | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -365,7 +370,7 @@ def _build_source_units(extraction: ExtractionResult) -> tuple[_SourceUnit, ...]
                         )
                     )
         if isinstance(block, TextBlock):
-            text = _normalize_text(block.text)
+            text, text_block_map = _normalize_text_block(block.text)
             if not text:
                 units.extend(reference_units)
                 continue
@@ -387,6 +392,7 @@ def _build_source_units(extraction: ExtractionResult) -> tuple[_SourceUnit, ...]
                     source=block.source,
                     scope_key=scope_key,
                     group_key=group_key,
+                    text_block_map=text_block_map,
                     context_ids=tuple(
                         f"docx-note-reference:{index}"
                         for index, ref in enumerate(extraction.note_references)
@@ -786,6 +792,7 @@ def _make_chunk(
             source_start=span.source_start,
             source_end=span.source_end,
             source_length=len(span.unit.text),
+            text_block_map=_slice_text_block_map(span),
         )
         for span in rendered.spans
     )
@@ -818,13 +825,12 @@ def _make_chunk(
 
 def _source_span_identity(span: ChunkSourceSpan) -> dict[str, Any]:
     return {
-        "source": {
-            field.name: getattr(span.source, field.name) for field in fields(span.source)
-        },
+        "source": {field.name: getattr(span.source, field.name) for field in fields(span.source)},
         "source_end": span.source_end,
         "source_length": span.source_length,
         "source_start": span.source_start,
         "unit_id": span.unit_id,
+        **({"text_block_map": asdict(span.text_block_map)} if span.text_block_map else {}),
     }
 
 
@@ -871,6 +877,77 @@ def _empty_outcome(
 
 def _normalize_text(value: str) -> str:
     return value.replace("\r\n", "\n").replace("\r", "\n").strip()
+
+
+def _normalize_text_block(value: str) -> tuple[str, TextBlockOffsetMap]:
+    """Keep the existing normalization and map surviving Python code points."""
+    text = _normalize_text(value)
+    start = len(value) - len(value.lstrip())
+    end = len(value.rstrip())
+    ranges: list[NormalizationRange] = []
+    original_cursor, normalized_cursor = start, 0
+    for match in re.finditer(r"\r\n|\r", value[start:end]):
+        left, right = start + match.start(), start + match.end()
+        if left > original_cursor:
+            width = left - original_cursor
+            ranges.append(
+                NormalizationRange(
+                    normalized_cursor,
+                    normalized_cursor + width,
+                    original_cursor,
+                    left,
+                )
+            )
+            normalized_cursor += width
+        ranges.append(NormalizationRange(normalized_cursor, normalized_cursor + 1, left, right))
+        normalized_cursor += 1
+        original_cursor = right
+    if end > original_cursor:
+        ranges.append(
+            NormalizationRange(
+                normalized_cursor,
+                normalized_cursor + end - original_cursor,
+                original_cursor,
+                end,
+            )
+        )
+    return text, TextBlockOffsetMap(
+        original_text_sha256=hashlib.sha256(value.encode()).hexdigest(),
+        original_text_length=len(value),
+        chunk_start=0,
+        chunk_end=len(text),
+        ranges=tuple(ranges),
+    )
+
+
+def _slice_text_block_map(span: _RenderedSpan) -> TextBlockOffsetMap | None:
+    mapping = span.unit.text_block_map
+    if mapping is None:
+        return None
+    ranges = []
+    # Binary search avoids rescanning an oversized block's whole map per chunk.
+    first = bisect_right(mapping.ranges, span.source_start, key=lambda item: item.normalized_end)
+    for index in range(first, len(mapping.ranges)):
+        item = mapping.ranges[index]
+        left, right = (
+            max(item.normalized_start, span.source_start),
+            min(
+                item.normalized_end,
+                span.source_end,
+            ),
+        )
+        if left >= right:
+            break
+        if item.original_end - item.original_start == item.normalized_end - item.normalized_start:
+            original_start = item.original_start + left - item.normalized_start
+            original_end = original_start + right - left
+        else:
+            # A CRLF pair is one indivisible normalized character.
+            original_start, original_end = item.original_start, item.original_end
+        ranges.append(NormalizationRange(left, right, original_start, original_end))
+    return replace(
+        mapping, chunk_start=span.rendered_start, chunk_end=span.rendered_end, ranges=tuple(ranges)
+    )
 
 
 def _safe_outcome_summary(

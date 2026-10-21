@@ -6,10 +6,11 @@ import hashlib
 import json
 from dataclasses import asdict, dataclass
 from enum import StrEnum
+from typing import Literal
 
 from doclens_ai.extraction.models import DocumentFormat, SourceLocation
 
-CHUNKING_SCHEMA_VERSION = "1.2"
+CHUNKING_SCHEMA_VERSION = "1.3"
 
 
 class ChunkingStrategy(StrEnum):
@@ -90,6 +91,38 @@ class ChunkingConfig:
 
 
 @dataclass(frozen=True, slots=True)
+class NormalizationRange:
+    """Half-open code-point ranges in a normalized unit and TextBlock.text.
+
+    Equal lengths map one-to-one; a single normalized LF may instead cover an
+    original CRLF pair. No range denotes bytes, XML positions or PDF glyphs.
+    """
+
+    normalized_start: int
+    normalized_end: int
+    original_start: int
+    original_end: int
+
+
+@dataclass(frozen=True, slots=True)
+class TextBlockOffsetMap:
+    """Original text identity and mappings for one emitted TextBlock slice.
+
+    chunk_start/end locate the slice in Chunk.text. Range normalized positions
+    address the complete normalized source unit; original positions address the
+    exact TextBlock.text Python string. The digest hashes that string as UTF-8.
+    Trimmed characters emit no range; callers retain the original extraction.
+    """
+
+    original_text_sha256: str
+    original_text_length: int
+    chunk_start: int
+    chunk_end: int
+    ranges: tuple[NormalizationRange, ...]
+    offset_basis: Literal["text_block_code_points"] = "text_block_code_points"
+
+
+@dataclass(frozen=True, slots=True)
 class ChunkSourceSpan:
     """A range from one normalized source unit represented in a chunk."""
 
@@ -98,6 +131,9 @@ class ChunkSourceSpan:
     source_start: int
     source_end: int
     source_length: int
+    # None explicitly means no original TextBlock mapping is supplied (e.g.
+    # tables, XLSX, generated references, or legacy manually constructed spans).
+    text_block_map: TextBlockOffsetMap | None = None
 
 
 @dataclass(frozen=True, slots=True)

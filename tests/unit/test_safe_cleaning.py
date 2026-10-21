@@ -9,6 +9,7 @@ from dataclasses import replace
 import pytest
 
 from doclens_ai.chunking import (
+    CHUNKING_SCHEMA_VERSION,
     ChunkingConfig,
     ChunkingReason,
     ChunkingStatus,
@@ -87,6 +88,7 @@ def test_xlsx_cleaning_preserves_literal_line_endings_and_whitespace(
     assert len(outcome.chunks) == 1
     assert outcome.chunks[0].text == rendered
     (span,) = outcome.chunks[0].provenance
+    assert span.text_block_map is None
     assert span.source == source
     assert (span.source_start, span.source_end, span.source_length) == (
         0,
@@ -126,6 +128,7 @@ def test_xlsx_literal_offsets_survive_overlapping_chunks(
     restored: dict[int, str] = {}
     for chunk in outcome.chunks:
         (span,) = chunk.provenance
+        assert span.text_block_map is None
         assert span.unit_id == "sheet:0:cell:A1"
         assert span.source == source
         assert chunk.source_sha256 == extraction.source_sha256
@@ -201,5 +204,5 @@ def test_cleaned_identity_is_source_scoped_and_missing_identity_emits_no_referen
 
 def test_literal_preservation_changes_the_default_configuration_identity() -> None:
     current = ChunkingConfig(strategy=ChunkingStrategy.STRUCTURE_AWARE)
-    assert current.version == "1.2"
+    assert current.version == CHUNKING_SCHEMA_VERSION
     assert current.fingerprint() != replace(current, version="1.1").fingerprint()

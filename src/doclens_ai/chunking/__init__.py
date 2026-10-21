@@ -13,6 +13,8 @@ from doclens_ai.chunking.models import (
     ChunkingStrategy,
     ChunkSourceSpan,
     FormulaPolicy,
+    NormalizationRange,
+    TextBlockOffsetMap,
 )
 
 if TYPE_CHECKING:
@@ -47,6 +49,8 @@ __all__ = [
     "ChunkingStrategy",
     "EvaluationConfigurationError",
     "FormulaPolicy",
+    "NormalizationRange",
+    "TextBlockOffsetMap",
     "chunk_document",
     "chunk_documents",
     "evaluate_corpus",
