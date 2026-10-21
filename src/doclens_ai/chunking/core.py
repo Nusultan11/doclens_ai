@@ -346,6 +346,15 @@ def evaluate_corpus(
     return payload
 
 
+def _same_note_id(left: str, right: str) -> bool:
+    # OOXML decimal IDs have numeric identity; retain both original lexical forms.
+    return (
+        re.fullmatch(r"[+-]?[0-9]{1,10}", left) is not None
+        and re.fullmatch(r"[+-]?[0-9]{1,10}", right) is not None
+        and int(left) == int(right)
+    )
+
+
 def _build_source_units(extraction: ExtractionResult) -> tuple[_SourceUnit, ...]:
     if extraction.document_format is DocumentFormat.XLSX:
         return _xlsx_source_units(extraction)
@@ -397,7 +406,7 @@ def _build_source_units(extraction: ExtractionResult) -> tuple[_SourceUnit, ...]
                         f"docx-note-reference:{index}"
                         for index, ref in enumerate(extraction.note_references)
                         if block.source.note_id is not None
-                        and ref.note_id == block.source.note_id
+                        and _same_note_id(ref.note_id, block.source.note_id)
                         and ref.target_part_uri == block.source.part_uri
                     ),
                 )
