@@ -176,10 +176,10 @@ def resolve_unit(result: ExtractionResult, locator: dict, *, start=None, end=Non
             locator.get(key) is not None for key in ("table_index", "row_index", "column_index")
         ):
             return "not_evaluated"
-        if locator.get("block_index") is not None and not any(
-            b.source.block_index == locator["block_index"] for b in blocks
-        ):
-            return "not_evaluated"  # No independent PDF layout block inventory.
+        if locator.get("block_index") is not None:
+            blocks = [b for b in blocks if b.source.block_index == locator["block_index"]]
+            if not blocks:
+                return "not_evaluated"  # No independent PDF layout block inventory.
         fields = [b.text for b in blocks if isinstance(b, TextBlock)]
     elif result.document_format == "docx":
         blocks = [b for b in result.blocks if b.source.block_index == locator["block_index"]]
