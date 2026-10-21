@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import re
 import zipfile
 from collections import Counter, defaultdict
@@ -245,7 +246,22 @@ def read_json(path: Path, *, max_bytes: int = 20 * 1024**2):
     raw = path.read_bytes()
     if len(raw) > max_bytes:
         raise ValueError("JSON limit")
-    return json.loads(raw, object_pairs_hook=_unique_pairs)
+
+    def finite_number(value: str) -> float:
+        number = float(value)
+        if not math.isfinite(number):
+            raise ValueError("nonfinite JSON number")
+        return number
+
+    def invalid_constant(value: str):
+        raise ValueError("nonfinite JSON number")
+
+    return json.loads(
+        raw,
+        object_pairs_hook=_unique_pairs,
+        parse_float=finite_number,
+        parse_constant=invalid_constant,
+    )
 
 
 def load(path: Path) -> Corpus:
@@ -267,6 +283,8 @@ def asset_path(root: Path, asset: Asset) -> Path:
         raise ValueError("PDF signature mismatch")
     if asset.format == "png" and signature != b"\x89PNG\r\n\x1a\n":
         raise ValueError("PNG signature mismatch")
+    if asset.format == "json":
+        read_json(path, max_bytes=asset.size_bytes)
     if asset.format in {"docx", "xlsx"}:
         member = "word/document.xml" if asset.format == "docx" else "xl/workbook.xml"
         with zipfile.ZipFile(path) as archive:
@@ -370,6 +388,14 @@ def near_duplicate_pairs(texts: dict[str, str], *, threshold: float = 0.9) -> li
 
 def audit(corpus: Corpus, root: Path) -> dict:
     components = family_components(corpus.samples)
+    # Exposure is a property of the whole family, even when an exposed source
+    # was rejected or could not be acquired for this particular evaluation.
+    exposed = {components[s.sample_id] for s in corpus.samples if s.publicly_exposed}
+    contaminated = {
+        components[s.sample_id]
+        for s in corpus.samples
+        if s.disposition == "admitted" and s.split == "test" and components[s.sample_id] in exposed
+    }
     splits: dict[str, set[str]] = defaultdict(set)
     for sample in corpus.samples:
         # Rejected/known-unavailable samples remain visible, but aren't split members.
@@ -421,6 +447,8 @@ def audit(corpus: Corpus, root: Path) -> dict:
             issues.append("annotation_rights_unresolved")
         if components[sample.sample_id] in leaking:
             issues.append("family_split_leakage")
+        if sample.split == "test" and components[sample.sample_id] in contaminated:
+            issues.append("exposed_family_in_sealed_test")
         rows.append(
             {
                 "sample_id": sample.sample_id,
@@ -446,5 +474,5 @@ def audit(corpus: Corpus, root: Path) -> dict:
         if any(s.family_review != "human" for s in corpus.samples)
         else "declared_review_only",
         "rows": rows,
-        "qg_00": "FAIL" if leaking or critical_integrity else "NOT_EVALUATED",
+        "qg_00": "FAIL" if leaking or contaminated or critical_integrity else "NOT_EVALUATED",
     }

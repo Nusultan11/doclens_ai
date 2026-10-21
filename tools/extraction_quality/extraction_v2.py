@@ -351,10 +351,13 @@ def evaluate(
     limits = limits or bounded.Limits(max_pages=2000, max_process_bytes=1024**3, timeout_seconds=60)
     pins = frozen_identity(manifest, gold, limits)
     pin_id = fingerprint(pins)
+    controls = [s for s in value.samples if s.cohort == "legacy_control"]
+    if len({s.source_record_id for s in controls}) != len(controls):
+        raise ValueError("ambiguous legacy control identity")
     expected = {
         s.source_record_id: (s.original.sha256, s.original.size_bytes, s.original.format)
-        for s in value.samples
-        if s.original and s.cohort == "legacy_control"
+        for s in controls
+        if s.original
     }
     labels = {r.document_id: r for r in load_gold(gold, expected)} if gold else {}
     output.mkdir(parents=True)
@@ -368,6 +371,9 @@ def evaluate(
         rows, texts = [], {}
         for sample in value.samples:
             eligible = by_id[sample.sample_id]["native_eligible"]
+            label = (
+                labels.get(sample.source_record_id) if sample.cohort == "legacy_control" else None
+            )
             row = {
                 "sample_id": sample.sample_id,
                 "cohort": sample.cohort,
@@ -381,9 +387,7 @@ def evaluate(
                 "runtime": None,
                 "failure": None,
                 "legacy_scores": None,
-                "legacy_expected": expected_metrics(labels[sample.source_record_id])
-                if sample.source_record_id in labels
-                else None,
+                "legacy_expected": expected_metrics(label) if label else None,
             }
             if eligible:
                 try:
@@ -429,10 +433,8 @@ def evaluate(
                         )
                         # Text stays local; shingles only diagnose leakage.
                         texts[sample.sample_id] = "\n".join(o.text for o in observations)
-                        if sample.source_record_id in labels and result.status.value != "failed":
-                            row["legacy_scores"] = historical_scores(
-                                labels[sample.source_record_id], result
-                            )
+                        if label and result.status.value != "failed":
+                            row["legacy_scores"] = historical_scores(label, result)
                     except (ValueError, OSError):
                         row.update(status="failed", failure="invalid_or_changed_capture")
             rows.append(row)
@@ -460,7 +462,7 @@ def evaluate(
             "slices": slices,
             "near_duplicate_pairs": pairs,
             "near_duplicate_cross_split": cross_split,
-            "quality": "FAIL" if cross_split else "NOT_EVALUATED",
+            "quality": "FAIL" if integrity["qg_00"] == "FAIL" or cross_split else "NOT_EVALUATED",
             "experiment": "INCONCLUSIVE",
             "production_authorized": False,
         }

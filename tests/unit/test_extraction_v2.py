@@ -193,6 +193,80 @@ def test_worker_failure_stays_in_denominator(tmp_path, monkeypatch, failure):
     assert row["failure"] == failure and row["legacy_scores"] is None
 
 
+def test_known_integrity_failure_survives_evaluation_summary(tmp_path, monkeypatch):
+    value = manifest(sample(tmp_path))
+    path = tmp_path / "manifest.json"
+    path.write_text(value.model_dump_json(), encoding="utf-8")
+    (tmp_path / "source.pdf").write_bytes(b"changed source")
+    monkeypatch.setattr(runner, "private_destination", lambda _: None)
+    monkeypatch.setattr(bounded, "isolated", lambda *a, **k: pytest.fail("ineligible capture"))
+    result = runner.evaluate(path, tmp_path, tmp_path / "results")
+    assert result["execution"] == "BLOCKED"
+    assert result["quality"] == "FAIL"
+    for repetition in (1, 2):
+        report = json.loads((tmp_path / f"results/run-{repetition}/results.json").read_text())
+        assert report["quality"] == "FAIL"
+
+
+def test_pilot_record_id_collision_never_receives_legacy_labels(tmp_path, monkeypatch):
+    from doclens_ai.extraction.fidelity_gold import load_gold
+    from doclens_ai.extraction.parsers import extract_file
+    from tests.unit.test_extraction_fidelity import _gold
+
+    control = sample(tmp_path, cohort="legacy_control", source_record_id="c1-0001")
+    pilot = control.model_copy(
+        update={"sample_id": "e2-pilot", "dataset": "pilot", "cohort": "pilot"}
+    )
+    path = tmp_path / "manifest.json"
+    path.write_text(manifest(control, pilot).model_dump_json(), encoding="utf-8")
+    gold = tmp_path / "gold.jsonl"
+    gold.write_text(
+        json.dumps(
+            _gold()
+            | {
+                "source_sha256": control.original.sha256,
+                "source_size_bytes": control.original.size_bytes,
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(runner, "private_destination", lambda _: None)
+    monkeypatch.setattr(runner, "load_gold", lambda p, e: load_gold(p, e, allow_synthetic=True))
+    monkeypatch.setattr(
+        bounded,
+        "isolated",
+        lambda *a, **k: {
+            "result": extract_file(tmp_path / "source.pdf").to_dict(),
+            "failure": None,
+            "runtime": {"seconds": 0.01, "peak_tree_rss_bytes": 1},
+        },
+    )
+    result = runner.evaluate(path, tmp_path, tmp_path / "results", gold=gold)
+    assert result["execution"] == "PASS"
+    assert result["summaries"][0]["legacy_labelled_documents"] == 1
+    rows = json.loads((tmp_path / "results/run-1/results.json").read_text())["rows"]
+    assert rows[0]["legacy_scores"] is not None
+    assert rows[1]["legacy_scores"] is None and rows[1]["legacy_expected"] is None
+
+
+@pytest.mark.parametrize("missing_original", [False, True])
+def test_ambiguous_legacy_record_ids_rejected_before_capture(
+    tmp_path, monkeypatch, missing_original
+):
+    a = sample(tmp_path, cohort="legacy_control", source_record_id="c1-0001")
+    b = a.model_copy(update={"sample_id": "e2-second", "dataset": "other-release"})
+    if missing_original:
+        b = b.model_copy(
+            update={"original": None, "disposition": "unavailable", "reasons": ("fixture",)}
+        )
+    path = tmp_path / "manifest.json"
+    path.write_text(manifest(a, b).model_dump_json(), encoding="utf-8")
+    monkeypatch.setattr(runner, "private_destination", lambda _: None)
+    monkeypatch.setattr(bounded, "isolated", lambda *a, **k: pytest.fail("ambiguous capture"))
+    with pytest.raises(ValueError, match="legacy"):
+        runner.evaluate(path, tmp_path, tmp_path / "results")
+
+
 def test_native_parser_rejection_is_a_measured_outcome_not_worker_failure(tmp_path, monkeypatch):
     from dataclasses import replace
 

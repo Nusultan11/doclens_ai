@@ -450,10 +450,32 @@ def _docx_table_block(
 ) -> tuple[TableBlock, int, int, int]:
     positions_by_cell: dict[int, list[tuple[int, int, Any]]] = {}
     grid_position_count = 0
+    previous_merges: set[tuple[int, int]] = set()
     for row_index, row in enumerate(table.rows):
         before, after = row.grid_cols_before, row.grid_cols_after
         if before < 0 or after < 0:
             raise _ExtractionFailure(ErrorCategory.CORRUPT_DOCUMENT)
+        # python-docx expands gridSpan and resolves vertical continuations in
+        # row.cells. Validate declared topology and budgets before that allocation;
+        # an orphan continuation would otherwise silently reuse unrelated text.
+        column = before
+        current_merges: set[tuple[int, int]] = set()
+        for tc in row._tr.tc_lst:  # noqa: SLF001 - validate original OOXML topology
+            span = tc.grid_span
+            if span < 1:
+                raise _ExtractionFailure(ErrorCategory.CORRUPT_DOCUMENT)
+            if grid_position_count + column - before + span > max_grid_positions:
+                raise _ExtractionFailure(ErrorCategory.LIMIT_EXCEEDED)
+            if tc.vMerge not in (None, "restart", "continue"):
+                raise _ExtractionFailure(ErrorCategory.CORRUPT_DOCUMENT)
+            if tc.vMerge == "continue" and (column, span) not in previous_merges:
+                raise _ExtractionFailure(ErrorCategory.CORRUPT_DOCUMENT)
+            if tc.vMerge is not None:
+                current_merges.add((column, span))
+            column += span
+        if column + after != len(table.columns):
+            raise _ExtractionFailure(ErrorCategory.CORRUPT_DOCUMENT)
+        previous_merges = current_merges
         row_cells = row.cells
         if before + len(row_cells) + after != len(table.columns):
             raise _ExtractionFailure(ErrorCategory.CORRUPT_DOCUMENT)
@@ -1254,13 +1276,11 @@ def _validate_archive_member_name(name: str) -> None:
 
 
 def _container_has_text(container: Any) -> bool:
-    if any(paragraph.text.strip() for paragraph in container.paragraphs):
-        return True
+    # Inspect source paragraphs without materializing table grids. This probe
+    # runs before the bounded table reader, including for headers and footers.
     return any(
-        cell.text.strip()
-        for table in container.tables
-        for row in table.rows
-        for cell in row.cells
+        _docx_paragraph_text(paragraph).strip()
+        for paragraph in container._element.iter(f"{{{_WORD_NS}}}p")
     )
 
 

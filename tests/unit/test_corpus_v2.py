@@ -304,3 +304,38 @@ def test_annotation_kind_rejects_false_coordinate_basis(kind, coordinates):
             source_sha256="1" * 64,
             review=v2.Review(status="automatic"),
         )
+
+
+@pytest.mark.parametrize("disposition", ["admitted", "rejected", "unavailable", "excluded"])
+def test_exposed_family_member_cannot_hide_behind_disposition(tmp_path, disposition):
+    exposed = sample(tmp_path, publicly_exposed=True, disposition=disposition, reasons=("fixture",))
+    sealed = sample(
+        tmp_path,
+        sample_id="e2-sealed",
+        source_record_id="sealed-record",
+        cohort="pilot",
+        family_review="human",
+        split="test",
+    )
+    report = v2.audit(manifest(exposed, sealed), tmp_path)
+    row = next(r for r in report["rows"] if r["sample_id"] == sealed.sample_id)
+    assert "exposed_family_in_sealed_test" in row["issues"]
+    assert not row["native_eligible"]
+    assert report["qg_00"] == "FAIL"
+
+
+@pytest.mark.parametrize("raw", [b"not JSON", b'{"a":1,"a":2}', b'{"a":NaN}', b'{"a":1e999}'])
+def test_annotation_json_is_validated_even_when_hash_matches(tmp_path, raw):
+    from tests.unit.test_dataset_adapters_v2 import pair
+
+    value = pair(tmp_path)
+    path = tmp_path / value.annotation.asset.path
+    path.write_bytes(raw)
+    asset = v2.Asset(path=path.name, format="json", size_bytes=len(raw), sha256=v2.sha256(path))
+    value = value.model_copy(
+        update={"annotation": value.annotation.model_copy(update={"asset": asset})}
+    )
+    report = v2.audit(manifest(value), tmp_path)
+    assert report["native_eligible"] == 0
+    assert report["qg_00"] == "FAIL"
+    assert "asset_integrity_failed" in report["rows"][0]["issues"]

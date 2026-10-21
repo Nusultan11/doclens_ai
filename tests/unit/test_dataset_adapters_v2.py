@@ -174,6 +174,14 @@ def test_tables_keep_empty_spanning_cells_and_automatic_provenance(dataset):
         adapters.table_pdf([record], dataset=dataset)
 
 
+@pytest.mark.parametrize("axis", ["row_nums", "column_nums"])
+def test_sparse_extreme_topology_is_rejected_without_expanding_range(axis):
+    cell = {"row_nums": [0], "column_nums": [0]}
+    cell[axis] = [0, 10**100]
+    with pytest.raises(ValueError, match="topology"):
+        adapters.table_pdf([{"cells": [cell]}], dataset="pubtables-1m")
+
+
 def test_omnidocbench_order_and_ignored_regions_are_preserved():
     record = {
         "page_info": {"width": 100, "height": 100},

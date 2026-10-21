@@ -230,8 +230,8 @@ def table_pdf(records: list[dict], *, dataset: str) -> dict:
                 or len(rows) > 256
                 or len(columns) > 64
                 or any(type(n) is not int or n < 0 for n in rows + columns)
-                or rows != list(range(min(rows), max(rows) + 1))
-                or columns != list(range(min(columns), max(columns) + 1))
+                or any(n != rows[0] + i for i, n in enumerate(rows))
+                or any(n != columns[0] + i for i, n in enumerate(columns))
             ):
                 raise ValueError("noncontiguous cell topology")
             slots = {(r, c) for r in rows for c in columns}

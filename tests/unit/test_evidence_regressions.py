@@ -150,6 +150,49 @@ def test_docx_invalid_grid_cannot_publish_partial_cells(tmp_path):
     assert result.status is ExtractionStatus.FAILED and not result.blocks
 
 
+def test_docx_orphan_vertical_continuation_does_not_discard_facts(tmp_path):
+    doc = Document()
+    table = doc.add_table(rows=2, cols=1)
+    table.cell(0, 0).text = "10 kg"
+    table.cell(1, 0).text = "999 kg"
+    continuation = OxmlElement("w:vMerge")
+    table.cell(1, 0)._tc.get_or_add_tcPr().append(continuation)
+    path = tmp_path / "orphan-merge.docx"
+    doc.save(path)
+    result = extract_file(path)
+    assert result.status is ExtractionStatus.FAILED
+    assert result.error_category is ErrorCategory.CORRUPT_DOCUMENT
+    assert not result.blocks
+
+
+@pytest.mark.parametrize("part", ["body", "header", "footer"])
+def test_docx_grid_span_budget_checked_before_library_expansion(tmp_path, monkeypatch, part):
+    from docx.shared import Inches
+    from docx.table import _Row
+
+    from doclens_ai.extraction.parsers import ExtractionLimits
+
+    doc = Document()
+    table = (
+        doc.add_table(rows=1, cols=1)
+        if part == "body"
+        else getattr(doc.sections[0], part).add_table(rows=1, cols=1, width=Inches(2))
+    )
+    table.cell(0, 0).text = "bounded evidence"
+    span = OxmlElement("w:gridSpan")
+    span.set(qn("w:val"), "1000000")
+    table.cell(0, 0)._tc.get_or_add_tcPr().append(span)
+    path = tmp_path / "large-span.docx"
+    doc.save(path)
+    monkeypatch.setattr(
+        _Row, "cells", property(lambda _: pytest.fail("unbounded cell expansion invoked"))
+    )
+    result = extract_file(path, limits=ExtractionLimits(max_table_cells=10))
+    assert result.status is ExtractionStatus.FAILED
+    assert result.error_category is ErrorCategory.LIMIT_EXCEEDED
+    assert not result.blocks
+
+
 def test_docx_unicode_controls_and_unsupported_inline_content(tmp_path):
     doc = Document()
     paragraph = doc.add_paragraph("Қазақ −001.50")
