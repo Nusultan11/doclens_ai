@@ -223,6 +223,13 @@ def fingerprint(value: object) -> str:
     ).hexdigest()
 
 
+def _unique_fields(pairs: list[tuple[str, object]]) -> dict[str, object]:
+    value = dict(pairs)
+    if len(value) != len(pairs):
+        raise GoldError("Duplicate Gold field")
+    return value
+
+
 def load_gold(
     path: Path,
     sources: dict[str, tuple[str, int, str]],
@@ -234,11 +241,14 @@ def load_gold(
     try:
         if path.is_symlink() or path.stat().st_size > 20 * 1024 * 1024:
             raise GoldError("Gold file rejected")
-        records = tuple(
-            FidelityRecord.model_validate_json(line)
-            for line in path.read_text(encoding="utf-8").splitlines()
-            if line.strip()
-        )
+        parsed = []
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if line.strip():
+                # Pydantic's JSON parser accepts duplicate keys using the last value.
+                # Check decoded keys first, retaining strict JSON-mode model validation.
+                json.loads(line, object_pairs_hook=_unique_fields)
+                parsed.append(FidelityRecord.model_validate_json(line))
+        records = tuple(parsed)
         if not records or len(records) > 90:
             raise GoldError("Gold coverage rejected")
         ids = {record.document_id for record in records}
