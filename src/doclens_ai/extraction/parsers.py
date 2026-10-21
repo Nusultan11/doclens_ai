@@ -361,9 +361,24 @@ def _extract_docx(
     from doclens_ai.extraction.docx_footnote_candidate import extract_footnotes
 
     ancillary = extract_footnotes(path)
+    if ancillary.status is ExtractionStatus.FAILED:
+        if any(
+            issue
+            in {
+                "input_limit",
+                "archive_limit",
+                "xml_limit",
+                "reference_limit",
+                "note_limit",
+                "output_limit",
+                "timeout",
+            }
+            for issue in ancillary.issues
+        ):
+            raise _ExtractionFailure(ErrorCategory.LIMIT_EXCEEDED)
+        raise _ExtractionFailure(ErrorCategory.CORRUPT_DOCUMENT)
     if (
-        ancillary.status is ExtractionStatus.FAILED
-        or ancillary.source_sha256 != source_sha256
+        ancillary.source_sha256 != source_sha256
         or ancillary.source_size_bytes != source_size
         or ancillary.main_part_uri != main_part_uri
     ):
