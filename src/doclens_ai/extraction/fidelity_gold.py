@@ -165,7 +165,14 @@ class FidelityRecord(StrictModel):
                 raise ValueError("relationship needs grid locators")
             if self.document_format != "xlsx" and left.table_index is None:
                 raise ValueError("explicit table scope required")
-            scope = ("page_number", "table_index", "sheet_index", "region")
+            scope = (
+                "page_number",
+                "block_index",
+                "table_index",
+                "sheet_index",
+                "region",
+                "part_index",
+            )
             if any(getattr(left, key) != getattr(right, key) for key in scope):
                 raise ValueError("different table scopes")
             key = "row_index" if pair.relationship == "same_row" else "column_index"
