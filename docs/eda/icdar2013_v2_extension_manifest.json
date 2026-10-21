@@ -1,0 +1,46 @@
+{
+  "revision": "icdar2013-corrected-qualification-20261021",
+  "samples": [],
+  "schema_version": "extraction-corpus-2.0",
+  "selection_rule": "sha256-seed-dataset-record-v1",
+  "selection_seed": "icdar2013-3pair-20261021",
+  "split_revision": "external-dev-only-1",
+  "targets": [
+    {
+      "blockers": [
+        "original_pdf_rights_unresolved",
+        "upstream_annotation_scope_unresolved",
+        "individual_source_annotation_endpoints_unestablished",
+        "icdar_xml_not_a_supported_frozen_v2_annotation_kind"
+      ],
+      "dataset": "icdar2013-regular",
+      "maximum": 1,
+      "minimum": 0,
+      "unit": "tables"
+    },
+    {
+      "blockers": [
+        "original_pdf_rights_unresolved",
+        "upstream_annotation_scope_unresolved",
+        "individual_source_annotation_endpoints_unestablished",
+        "icdar_xml_not_a_supported_frozen_v2_annotation_kind"
+      ],
+      "dataset": "icdar2013-spanning",
+      "maximum": 1,
+      "minimum": 0,
+      "unit": "tables"
+    },
+    {
+      "blockers": [
+        "original_pdf_rights_unresolved",
+        "upstream_annotation_scope_unresolved",
+        "individual_source_annotation_endpoints_unestablished",
+        "icdar_xml_not_a_supported_frozen_v2_annotation_kind"
+      ],
+      "dataset": "icdar2013-multilevel-header",
+      "maximum": 1,
+      "minimum": 0,
+      "unit": "tables"
+    }
+  ]
+}

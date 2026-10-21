@@ -1,0 +1,469 @@
+{
+  "annotation_contract": {
+    "blank_cells": "Original cell model omits blank cells; absence is not a verified empty-value label.",
+    "cell_spans": "Schema supports start/end row and column indices; no real sample span or multilevel-header coverage verified.",
+    "coordinate_convention": "Organizer states PDF coordinates with text-enclosing boxes. Origin/CropBox/rotation transform must be verified against each original; no top-left/native mapping asserted for an unobtained pair.",
+    "frozen_schema_support": "No ICDAR XML annotation kind exists in frozen Corpus v2; not substituted with another dataset kind. Extension remains empty; schema/Gold unchanged.",
+    "literal_fidelity": "NOT_EVALUATED; preserve original XML bytes and literal content including signs/zeros/spacing; organizer adjacency scorer normalization is not DocLens exact literal fidelity.",
+    "original_format": "Organizer XML cell/region models; 1-based excerpt pages and zero-based logical row/column positions; inclusive optional end-row/end-col default to start.",
+    "review_provenance": "Correcting authors document expert annotations plus manual corrections, with later .c automatic alignment. No new local human review or per-cell independent attestation was performed.",
+    "semantics": "Competition does not provide functional analysis; header/value/unit/period links remain unknown."
+  },
+  "counts": {
+    "archive_head_requests": 3,
+    "bounded_http_requests": 20,
+    "coverage_slots_blocked": 3,
+    "coverage_slots_requested": 3,
+    "http_200_responses": 20,
+    "independent_human_attestations": 0,
+    "metadata_get_requests": 17,
+    "pair_payload_requests_attempted": 0,
+    "pairs_admitted": 0,
+    "pairs_available": 0,
+    "pairs_failed_after_download": 0,
+    "pairs_geometry_checked": 0,
+    "pairs_literal_checked": 0,
+    "pairs_rights_resolved": 0,
+    "parser_or_model_experiments": 0,
+    "semantic_relations_verified": 0,
+    "source_bound_pair_ids_identified": 0,
+    "transport_failures_in_bounded_http": 0
+  },
+  "coverage_slots": [
+    {
+      "corrected_annotation": null,
+      "family_id": null,
+      "independent_review": null,
+      "original": null,
+      "original_annotation": null,
+      "page_identity": null,
+      "reason": "No qualified individual original/annotation pair with established usage rights; category not verified on a sample.",
+      "relationships": null,
+      "slot": "regular",
+      "source_record_id": null,
+      "status": "BLOCKED"
+    },
+    {
+      "corrected_annotation": null,
+      "family_id": null,
+      "independent_review": null,
+      "original": null,
+      "original_annotation": null,
+      "page_identity": null,
+      "reason": "No qualified individual original/annotation pair with established usage rights; category not verified on a sample.",
+      "relationships": null,
+      "slot": "spanning_cells",
+      "source_record_id": null,
+      "status": "BLOCKED"
+    },
+    {
+      "corrected_annotation": null,
+      "family_id": null,
+      "independent_review": null,
+      "original": null,
+      "original_annotation": null,
+      "page_identity": null,
+      "reason": "No qualified individual original/annotation pair with established usage rights; category not verified on a sample.",
+      "relationships": null,
+      "slot": "multilevel_headers",
+      "source_record_id": null,
+      "status": "BLOCKED"
+    }
+  ],
+  "engineering_execution": "PASS",
+  "extension_manifest_fingerprint": "3e36ff3df45ec2071a0e25a8c8fb515a6bed54bebf58432a04b626e911a3f1db",
+  "extension_manifest_sha256": "d9be0bcf09c7b9534013d39c03b03dce974ccf65f0f1d7b90fa79b754c88389c",
+  "frozen_base": {
+    "docs/eda/extraction_corpus_v2_manifest.json": "8e40445669b209af568d81c20c41c34257cd41f3cbc19ced2a5eebc77ccc8b54",
+    "docs/eda/extraction_corpus_v2_schema.json": "625ad65fcffd86d02c1e6141c3e63f93d6312e3188c106c92806f66d78eadab5",
+    "src/doclens_ai/eda/corpus_v2.py": "4b46bacb9a99999f3c2d931dd6b0b5cff8c633b490225a4ca1e619230dcd73f7"
+  },
+  "gold_readiness": "NOT_EVALUATED",
+  "limitations": [
+    "Original organizer archive HEAD is now reachable; prior ML-31 fetch failure is historical, not a current 403 claim.",
+    "Legacy /en/ dataset/download links and current menu page_id=62 redirected to the About root; current non-/en/ dataset pages were inspected separately.",
+    "No individual corrected pair endpoint was established in the inspected organizer/publisher listings; not a claim that none exists elsewhere.",
+    "Whole archives were not downloaded even when individually below the byte budget, as requested.",
+    "No known individual candidate population, sample classification or family diversity is fabricated from coverage goals.",
+    "Hugging Face connector reported UNAVAILABLE; web discovery and bounded public HTTP supplied the recorded evidence."
+  ],
+  "observed_on": "2026-10-21",
+  "pair_qualification": "BLOCKED",
+  "production_release": "NOT AUTHORIZED",
+  "qg_00": "NOT_EVALUATED",
+  "qualification_fingerprint": "373dd60c718399f71ad6ed821ab185a605524cec1b791acdb4bd5f40e98c1610",
+  "releases": [
+    {
+      "archives": [
+        {
+          "path": "ICDAR-2013-Table-Competition-Corrected.tar.gz",
+          "payload_retrieved": false,
+          "publisher_lfs_sha256": "fbea3d39d186256c56cca5640c197af458d06e1f73210adb78526b92068c193a",
+          "publisher_size_bytes": 12340973,
+          "retrieved_sha256": null
+        }
+      ],
+      "card_sha256": "5643d0b2ebfb59a866d24838517aaf472c74ce42fb84dd664dea0ef29de474dc",
+      "card_url": "https://huggingface.co/datasets/bsmock/ICDAR-2013-Table-Competition-Corrected/raw/bdb9585690d261e568fd86e3db78df5f24fbf3ae/README.md",
+      "individual_pdf_or_annotation_files_in_pinned_tree": 0,
+      "release": "2023 manual-corrected release",
+      "repository": "bsmock/ICDAR-2013-Table-Competition-Corrected",
+      "revision": "bdb9585690d261e568fd86e3db78df5f24fbf3ae"
+    },
+    {
+      "archives": [
+        {
+          "path": "ICDAR-2013.c-PDF_Annotations.tar.gz",
+          "payload_retrieved": false,
+          "publisher_lfs_sha256": "5605ed09df9ebe15cec65eaaad615d5a7c6f833be0cdd5aea39ffab3d72c856c",
+          "publisher_size_bytes": 1158109,
+          "retrieved_sha256": null
+        },
+        {
+          "path": "ICDAR-2013.c-Structure.tar.gz",
+          "payload_retrieved": false,
+          "publisher_lfs_sha256": "3aa4538f13fc92006d20ec6914bfadb0fb4e0b84e4f835a03e72904cd2a83f7a",
+          "publisher_size_bytes": 8283024,
+          "retrieved_sha256": null
+        }
+      ],
+      "card_sha256": "49d4d54d6b9dae6b433ba733d16ae10198d894a7b72e6e98b6da43fefdbfb1c5",
+      "card_url": "https://huggingface.co/datasets/bsmock/ICDAR-2013.c/raw/e36de0d7a9a4e9673dc8fab7e5f01ee170f93ef9/README.md",
+      "individual_pdf_or_annotation_files_in_pinned_tree": 0,
+      "release": "2023 separately aligned/canonicalized release; not a substitute",
+      "repository": "bsmock/ICDAR-2013.c",
+      "revision": "e36de0d7a9a4e9673dc8fab7e5f01ee170f93ef9"
+    }
+  ],
+  "retrieval_budget": {
+    "bounded_http_body_bytes_read": 303546,
+    "full_archive_gets": 0,
+    "limit_bytes": 10485760,
+    "pdf_or_annotation_payload_bytes": 0,
+    "remaining_bytes": 10182214,
+    "scope": "Direct HTTP body reads including metadata; archives HEAD only. Browser search/navigation is discovery, not source-payload acquisition."
+  },
+  "retrieval_events": [
+    {
+      "bytes_read": 7977,
+      "final_url": "https://tamirhassan.com/html/competition.html",
+      "headers": {
+        "accept-ranges": "bytes",
+        "content-length": "7977",
+        "content-type": "text/html; charset=UTF-8",
+        "etag": "\"1f29-5678da3b2b180\"",
+        "last-modified": "Fri, 16 Mar 2018 20:41:58 GMT"
+      },
+      "label": "organizer",
+      "method": "GET",
+      "outcome": "obtained",
+      "sha256": "33cc8be0ca27a95a113c6d3291d58e4da2a50e66918ba4986a768e5498c79834",
+      "status": 200,
+      "url": "https://tamirhassan.com/html/competition.html"
+    },
+    {
+      "bytes_read": 14249,
+      "final_url": "https://tamirhassan.com/html/competition/dataset-format.html",
+      "headers": {
+        "accept-ranges": "bytes",
+        "content-length": "14249",
+        "content-type": "text/html; charset=UTF-8",
+        "etag": "\"37a9-57791b084a6c0\"",
+        "last-modified": "Sat, 06 Oct 2018 16:14:59 GMT"
+      },
+      "label": "format",
+      "method": "GET",
+      "outcome": "obtained",
+      "sha256": "4e18dc0e7a7179382292e1d6e5d13a5363ed9316bdc2c65e3857b2162da6c224",
+      "status": 200,
+      "url": "https://tamirhassan.com/html/competition/dataset-format.html"
+    },
+    {
+      "bytes_read": 3682,
+      "final_url": "https://www.tamirhassan.com/html/dataset.html",
+      "headers": {
+        "accept-ranges": "bytes",
+        "content-length": "3682",
+        "content-type": "text/html; charset=UTF-8",
+        "etag": "\"e62-5678da520e780\"",
+        "last-modified": "Fri, 16 Mar 2018 20:42:22 GMT"
+      },
+      "label": "rights",
+      "method": "GET",
+      "outcome": "obtained",
+      "sha256": "4ad1918f58ce005549ea57070e08152cd1a34461395cad9198d98ed71aa909c7",
+      "status": 200,
+      "url": "https://www.tamirhassan.com/html/dataset.html"
+    },
+    {
+      "bytes_read": 1377,
+      "final_url": "https://huggingface.co/api/datasets/bsmock/ICDAR-2013-Table-Competition-Corrected",
+      "headers": {
+        "content-length": "1377",
+        "content-type": "application/json; charset=utf-8",
+        "etag": "W/\"561-t/b7PqvM+lF8DRiehu9hzsyiMX4\""
+      },
+      "label": "corrected-api",
+      "method": "GET",
+      "outcome": "obtained",
+      "sha256": "464e0af406f5e9eaae0a4419284aa4311b229ac1346548b085293b3eadb22d4b",
+      "status": 200,
+      "url": "https://huggingface.co/api/datasets/bsmock/ICDAR-2013-Table-Competition-Corrected"
+    },
+    {
+      "bytes_read": 1369,
+      "final_url": "https://huggingface.co/api/datasets/bsmock/ICDAR-2013.c",
+      "headers": {
+        "content-length": "1369",
+        "content-type": "application/json; charset=utf-8",
+        "etag": "W/\"559-EhuIPcws8DAztDcHo66C2IpOpFw\""
+      },
+      "label": "aligned-api",
+      "method": "GET",
+      "outcome": "obtained",
+      "sha256": "6c80e1b30eb13c11d40fb48b95a0602d4d51864c5be9f237bed489dd213df9b9",
+      "status": 200,
+      "url": "https://huggingface.co/api/datasets/bsmock/ICDAR-2013.c"
+    },
+    {
+      "bytes_read": 4704,
+      "final_url": "https://tamirhassan.com/html/files/competition-entry-structure-model.xsd",
+      "headers": {
+        "accept-ranges": "bytes",
+        "content-length": "4704",
+        "content-type": "text/xml",
+        "etag": "\"1260-4d6b7d1f9a240\"",
+        "last-modified": "Wed, 27 Feb 2013 17:08:17 GMT"
+      },
+      "label": "structure-xsd",
+      "method": "GET",
+      "outcome": "obtained",
+      "sha256": "55efd22b39030fe4428fd6105ce549e98c0224faa83eb894914ac0f67695c649",
+      "status": 200,
+      "url": "https://tamirhassan.com/html/files/competition-entry-structure-model.xsd"
+    },
+    {
+      "bytes_read": 1427,
+      "final_url": "https://huggingface.co/datasets/bsmock/ICDAR-2013-Table-Competition-Corrected/raw/bdb9585690d261e568fd86e3db78df5f24fbf3ae/README.md",
+      "headers": {
+        "accept-ranges": "bytes",
+        "content-length": "1427",
+        "content-type": "text/plain; charset=utf-8",
+        "etag": "\"9c0e04ad4e9babb6974c7236f728bdad61e07677\""
+      },
+      "label": "corrected-card",
+      "method": "GET",
+      "outcome": "obtained",
+      "sha256": "5643d0b2ebfb59a866d24838517aaf472c74ce42fb84dd664dea0ef29de474dc",
+      "status": 200,
+      "url": "https://huggingface.co/datasets/bsmock/ICDAR-2013-Table-Competition-Corrected/raw/bdb9585690d261e568fd86e3db78df5f24fbf3ae/README.md"
+    },
+    {
+      "bytes_read": 526,
+      "final_url": "https://huggingface.co/api/datasets/bsmock/ICDAR-2013-Table-Competition-Corrected/tree/bdb9585690d261e568fd86e3db78df5f24fbf3ae?expand=false",
+      "headers": {
+        "content-length": "526",
+        "content-type": "application/json; charset=utf-8",
+        "etag": "W/\"20e-vC7SFFstReHld9k4oKRGmjl9UyU\""
+      },
+      "label": "corrected-tree",
+      "method": "GET",
+      "outcome": "obtained",
+      "sha256": "0a5606e58af4e48e0744838a072439fba5ca9a1d7e43eb86b363e6160b37988e",
+      "status": 200,
+      "url": "https://huggingface.co/api/datasets/bsmock/ICDAR-2013-Table-Competition-Corrected/tree/bdb9585690d261e568fd86e3db78df5f24fbf3ae?expand=false"
+    },
+    {
+      "bytes_read": 2443,
+      "final_url": "https://huggingface.co/datasets/bsmock/ICDAR-2013.c/raw/e36de0d7a9a4e9673dc8fab7e5f01ee170f93ef9/README.md",
+      "headers": {
+        "accept-ranges": "bytes",
+        "content-length": "2443",
+        "content-type": "text/plain; charset=utf-8",
+        "etag": "\"227dfcd2d559f34426e0bf6c912444ee77d4f207\""
+      },
+      "label": "aligned-card",
+      "method": "GET",
+      "outcome": "obtained",
+      "sha256": "49d4d54d6b9dae6b433ba733d16ae10198d894a7b72e6e98b6da43fefdbfb1c5",
+      "status": 200,
+      "url": "https://huggingface.co/datasets/bsmock/ICDAR-2013.c/raw/e36de0d7a9a4e9673dc8fab7e5f01ee170f93ef9/README.md"
+    },
+    {
+      "bytes_read": 930,
+      "final_url": "https://huggingface.co/api/datasets/bsmock/ICDAR-2013.c/tree/e36de0d7a9a4e9673dc8fab7e5f01ee170f93ef9?expand=false",
+      "headers": {
+        "content-length": "930",
+        "content-type": "application/json; charset=utf-8",
+        "etag": "W/\"3a2-rvsx0osvHwnlwbLfEuJgE7I+d18\""
+      },
+      "label": "aligned-tree",
+      "method": "GET",
+      "outcome": "obtained",
+      "sha256": "222db80e7d16c740a5b0c3deb0dcd6afdb4069986737a2898ea45b1b7e580348",
+      "status": 200,
+      "url": "https://huggingface.co/api/datasets/bsmock/ICDAR-2013.c/tree/e36de0d7a9a4e9673dc8fab7e5f01ee170f93ef9?expand=false"
+    },
+    {
+      "bytes_read": 0,
+      "headers": {
+        "accept-ranges": "bytes",
+        "content-length": "5632009",
+        "content-type": "application/zip",
+        "etag": "\"55f009-4ebfec0b2b380\"",
+        "last-modified": "Mon, 25 Nov 2013 11:34:54 GMT"
+      },
+      "label": "original-archive-head",
+      "method": "HEAD",
+      "outcome": "headers_only",
+      "sha256": null,
+      "status": 200,
+      "url": "https://tamirhassan.com/html/files/icdar2013-competition-dataset-with-gt.zip"
+    },
+    {
+      "bytes_read": 44699,
+      "final_url": "https://roundtrippdf.com/",
+      "headers": {
+        "content-type": "text/html; charset=UTF-8"
+      },
+      "label": "organizer-current-rights",
+      "method": "GET",
+      "outcome": "obtained",
+      "sha256": "9ff7c3d7fbb0799f645b3c9d11072464c656552169bf2b9e510a1d340f614ff9",
+      "status": 200,
+      "url": "https://roundtrippdf.com/en/data-extraction/pdf-table-recognition-dataset/"
+    },
+    {
+      "bytes_read": 44699,
+      "final_url": "https://roundtrippdf.com/",
+      "headers": {
+        "content-type": "text/html; charset=UTF-8"
+      },
+      "label": "organizer-downloads",
+      "method": "GET",
+      "outcome": "obtained",
+      "sha256": "9ff7c3d7fbb0799f645b3c9d11072464c656552169bf2b9e510a1d340f614ff9",
+      "status": 200,
+      "url": "https://roundtrippdf.com/en/downloads/"
+    },
+    {
+      "bytes_read": 0,
+      "headers": {
+        "accept-ranges": "bytes",
+        "content-length": "12340973",
+        "content-type": "application/gzip",
+        "etag": "\"f1ae3f53e14d6f86d6049c73007883d49e3f9f1165c4fe6fb9335cda44ea3eb8\""
+      },
+      "label": "corrected-archive-head",
+      "method": "HEAD",
+      "outcome": "headers_only",
+      "sha256": null,
+      "status": 200,
+      "url": "https://huggingface.co/datasets/bsmock/ICDAR-2013-Table-Competition-Corrected/resolve/bdb9585690d261e568fd86e3db78df5f24fbf3ae/ICDAR-2013-Table-Competition-Corrected.tar.gz"
+    },
+    {
+      "bytes_read": 0,
+      "headers": {
+        "accept-ranges": "bytes",
+        "content-length": "1158109",
+        "content-type": "application/gzip",
+        "etag": "\"7912f8205bcb3994e06ff1463dd239283668dc466b59c1fedfddf44946c26fd9\""
+      },
+      "label": "aligned-archive-head",
+      "method": "HEAD",
+      "outcome": "headers_only",
+      "sha256": null,
+      "status": 200,
+      "url": "https://huggingface.co/datasets/bsmock/ICDAR-2013.c/resolve/e36de0d7a9a4e9673dc8fab7e5f01ee170f93ef9/ICDAR-2013.c-PDF_Annotations.tar.gz"
+    },
+    {
+      "bytes_read": 182,
+      "final_url": "https://huggingface.co/datasets/bsmock/ICDAR-2013.c/raw/e36de0d7a9a4e9673dc8fab7e5f01ee170f93ef9/extract_icdar2013.sh",
+      "headers": {
+        "accept-ranges": "bytes",
+        "content-length": "182",
+        "content-type": "text/plain; charset=utf-8",
+        "etag": "\"c3df04699da5a3723634487db0c033bf425618b9\""
+      },
+      "label": "aligned-extraction-instructions",
+      "method": "GET",
+      "outcome": "obtained",
+      "sha256": "8955d8cbe872862154364f06966da6c196e9208fd183c21d5a282e7375ece221",
+      "status": 200,
+      "url": "https://huggingface.co/datasets/bsmock/ICDAR-2013.c/raw/e36de0d7a9a4e9673dc8fab7e5f01ee170f93ef9/extract_icdar2013.sh"
+    },
+    {
+      "bytes_read": 39197,
+      "final_url": "https://roundtrippdf.com/data-extraction/pdf-table-recognition-dataset/",
+      "headers": {
+        "content-type": "text/html; charset=UTF-8"
+      },
+      "label": "current-dataset",
+      "method": "GET",
+      "outcome": "obtained",
+      "sha256": "e396fee0b5fd9d5f159dc459c4d61b058277a2914a6e4ddf317fb4451b4a08db",
+      "status": 200,
+      "url": "https://roundtrippdf.com/data-extraction/pdf-table-recognition-dataset/"
+    },
+    {
+      "bytes_read": 42942,
+      "final_url": "https://roundtrippdf.com/data-extraction/icdar-2013-table-competition/",
+      "headers": {
+        "content-type": "text/html; charset=UTF-8"
+      },
+      "label": "current-competition",
+      "method": "GET",
+      "outcome": "obtained",
+      "sha256": "4d5edd86a4a0fe1d522d4ce3fca320c2d80929fd22ddcaecbb44e4341b78ac3b",
+      "status": 200,
+      "url": "https://roundtrippdf.com/data-extraction/icdar-2013-table-competition/"
+    },
+    {
+      "bytes_read": 48444,
+      "final_url": "https://roundtrippdf.com/data-extraction/dataset-format/",
+      "headers": {
+        "content-type": "text/html; charset=UTF-8"
+      },
+      "label": "current-format",
+      "method": "GET",
+      "outcome": "obtained",
+      "sha256": "70639ddb7fae72155961fcadd960d0c71e02f9fd005f11781a669f677099d09a",
+      "status": 200,
+      "url": "https://roundtrippdf.com/data-extraction/dataset-format/"
+    },
+    {
+      "bytes_read": 44699,
+      "final_url": "https://roundtrippdf.com/",
+      "headers": {
+        "content-type": "text/html; charset=UTF-8"
+      },
+      "label": "current-downloads-menu",
+      "method": "GET",
+      "outcome": "obtained",
+      "sha256": "9ff7c3d7fbb0799f645b3c9d11072464c656552169bf2b9e510a1d340f614ff9",
+      "status": 200,
+      "url": "https://roundtrippdf.com/?page_id=62"
+    }
+  ],
+  "rights": {
+    "code_license_scope": "Apache-2.0 is described for organizer code, not proof of data/PDF permission",
+    "corrected_card_declaration": "CDLA-Permissive-2.0; original-license scope expressly unresolved in card",
+    "local_evaluation_permission": null,
+    "organizer_statement": "An expectation of public-domain status based on EU/US government collection; no item-level grant established",
+    "original_pdf_license": null,
+    "redistribution_permission": null,
+    "sensitivity": "NOT_EVALUATED_PER_ITEM",
+    "upstream_annotation_license": null
+  },
+  "schema_version": "icdar2013-qualification-1",
+  "selection": {
+    "eligible_population": 0,
+    "family_completeness": "NOT_EVALUATED",
+    "publicly_exposed": true,
+    "rule": "Use frozen Corpus v2 selected_ids SHA256([seed,dataset,record_id]) after legal/source-pair qualification; one per documented coverage slot, prefer distinct verified parent families.",
+    "sealed_test": false,
+    "selected_ids": [],
+    "split": "dev"
+  },
+  "starting_head": "b816531e292739bb7f7a12a2ad25f18ae49464c6"
+}
