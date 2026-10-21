@@ -628,9 +628,15 @@ def validate_workflow(
     *,
     expected: Expected | None = None,
     allow_synthetic: bool = False,
+    eligibility: Path | None = None,
 ) -> tuple[dict, tuple[ReviewedDocument, ...]]:
     identity, paths, records, _ = preflight(
-        manifest, corpus, gold, expected or Expected(), allow_synthetic=allow_synthetic
+        manifest,
+        corpus,
+        gold,
+        expected or Expected(),
+        allow_synthetic=allow_synthetic,
+        eligibility=eligibility,
     )
     if set(scopes) != {r.document_id for r in records}:
         raise PacketError("Scope population mismatch")
@@ -673,19 +679,33 @@ def validate_workflow(
                 }
             )
     after = preflight(
-        manifest, corpus, gold, expected or Expected(), allow_synthetic=allow_synthetic
+        manifest,
+        corpus,
+        gold,
+        expected or Expected(),
+        allow_synthetic=allow_synthetic,
+        eligibility=eligibility,
     )[0]
     if after != identity:
         raise PacketError("Frozen inputs changed")
     summary = aggregate(records, page_counts)
+    if eligibility is not None:
+        summary["eligibility"] = identity["eligibility"]
+        summary["excluded_documents"] = identity["eligibility"]["pool"] - len(records)
     family_splits: dict[str, set[str]] = {}
     for document in documents:
         family_splits.setdefault(document.family_id, set()).add(document.split)
     if any(len(splits) != 1 for splits in family_splits.values()):
         discrepancies.append({"code": "FAMILY_SPLIT_CONFLICT"})
-    if not allow_synthetic and (
-        summary["totals"]["unresolved_assertions"] != 110
-        or summary["totals"]["legacy_source_regions"] != 19
+    if eligibility is not None and any(d.split != "dev" for d in documents):
+        discrepancies.append({"code": "EXPOSED_CONTROL_REQUIRES_DEV_SPLIT"})
+    if (
+        not allow_synthetic
+        and eligibility is None
+        and (
+            summary["totals"]["unresolved_assertions"] != 110
+            or summary["totals"]["legacy_source_regions"] != 19
+        )
     ):
         raise PacketError("Frozen assertion population mismatch")
     summary.update(
@@ -712,12 +732,19 @@ def main() -> int:
         parser.add_argument(f"--{name}", type=Path, required=True)
     parser.add_argument("--revision", required=True)
     parser.add_argument("--export", action="store_true")
+    parser.add_argument("--eligibility", type=Path)
     args = parser.parse_args()
     try:
         fresh_output(args.output, args.corpus, root=ROOT)
         scopes = {k: Scope.model_validate(v) for k, v in read_json(args.scopes).items()}
         summary, documents = validate_workflow(
-            args.manifest, args.corpus, args.gold, args.review_dir, scopes, args.revision
+            args.manifest,
+            args.corpus,
+            args.gold,
+            args.review_dir,
+            scopes,
+            args.revision,
+            eligibility=args.eligibility,
         )
         args.output.mkdir(parents=True)
         write_json(args.output / "validation.json", summary)

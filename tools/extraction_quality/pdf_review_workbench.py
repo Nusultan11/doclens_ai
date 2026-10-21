@@ -86,14 +86,21 @@ class Workbench:
         root: Path = packet.ROOT,
         expected: packet.Expected | None = None,
         allow_synthetic: bool = False,
+        eligibility: Path | None = None,
     ):
         for path in (bundle, output, root):
             packet.no_links(path)
         self.manifest, self.corpus, self.gold = manifest, corpus, gold
         self.bundle, self.output, self.root = bundle.resolve(), output.resolve(), root.resolve()
         self.expected, self.allow_synthetic = expected or packet.Expected(), allow_synthetic
+        self.eligibility = eligibility
         self.identity, self.paths, records, _ = packet.preflight(
-            manifest, corpus, gold, self.expected, allow_synthetic=allow_synthetic
+            manifest,
+            corpus,
+            gold,
+            self.expected,
+            allow_synthetic=allow_synthetic,
+            eligibility=eligibility,
         )
         self.records = {r.document_id: r for r in records}
         self.pages = {
@@ -225,6 +232,19 @@ class Workbench:
             box(anchor["locator"]["page"], anchor["locator"]["bbox"])
 
     def _validate_independent(self, key: str, draft: dict) -> None:
+        if self.eligibility is not None:
+            identity = packet.preflight(
+                self.manifest,
+                self.corpus,
+                self.gold,
+                self.expected,
+                allow_synthetic=self.allow_synthetic,
+                eligibility=self.eligibility,
+            )[0]
+            if identity != self.identity:
+                raise WorkbenchError("Annotation eligibility changed; rebuild handoff")
+            if draft["family_language"]["split"] != "dev":
+                raise WorkbenchError("Exposed control requires dev split")
         proposals = self.output / "grid-proposals"
         packet.no_links(proposals)
         if any(proposals.glob(f"{key}-*.json")) or any(
@@ -786,6 +806,7 @@ class Workbench:
             gold_revision,
             expected=self.expected,
             allow_synthetic=self.allow_synthetic,
+            eligibility=self.eligibility,
         )
         packet.write_json(destination / "validation.json", summary)
         if export:
@@ -933,11 +954,18 @@ def main() -> int:
     for name in ("manifest", "corpus", "gold", "packet", "output"):
         parser.add_argument(f"--{name}", type=Path, required=True)
     parser.add_argument("--resume", action="store_true")
+    parser.add_argument("--eligibility", type=Path)
     parser.add_argument("--port", type=int, default=0)
     args = parser.parse_args()
     try:
         workbench = Workbench(
-            args.manifest, args.corpus, args.gold, args.packet, args.output, resume=args.resume
+            args.manifest,
+            args.corpus,
+            args.gold,
+            args.packet,
+            args.output,
+            resume=args.resume,
+            eligibility=args.eligibility,
         )
         with ReviewServer(workbench, args.port) as server:
             print(

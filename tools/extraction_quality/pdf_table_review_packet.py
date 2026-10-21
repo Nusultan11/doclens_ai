@@ -73,6 +73,7 @@ def preflight(
     expected: Expected,
     *,
     allow_synthetic: bool = False,
+    eligibility: Path | None = None,
 ) -> tuple[dict, dict[str, Path], tuple[FidelityRecord, ...], dict]:
     for path in (manifest, corpus, gold):
         no_links(path)
@@ -110,6 +111,15 @@ def preflight(
         "gold_normalized_fingerprint": fingerprint([r.model_dump(mode="json") for r in records]),
         "selected_ids": [r.document_id for r in selected],
     }
+    if eligibility is not None:
+        from tools.extraction_quality.pdf_review_eligibility import validate
+
+        if not allow_synthetic:
+            totals = aggregate(selected, {r.document_id: 0 for r in selected})["totals"]
+            if (totals["unresolved_assertions"], totals["legacy_source_regions"]) != (110, 19):
+                raise PacketError("Frozen assertion population mismatch")
+        selected, authorization = validate(eligibility, manifest, gold, selected, paths, metadata)
+        identity.update(selected_ids=[r.document_id for r in selected], eligibility=authorization)
     return identity, paths, selected, metadata
 
 
@@ -331,6 +341,7 @@ def generate(
     expected: Expected | None = None,
     allow_synthetic: bool = False,
     root: Path = ROOT,
+    eligibility: Path | None = None,
 ) -> dict:
     from pypdf import PdfReader
 
@@ -339,7 +350,7 @@ def generate(
     start = time.monotonic()
     expected = expected or Expected()
     before, paths, records, metadata = preflight(
-        manifest, corpus, gold, expected, allow_synthetic=allow_synthetic
+        manifest, corpus, gold, expected, allow_synthetic=allow_synthetic, eligibility=eligibility
     )
     provenance = {
         "version": VERSION,
@@ -350,6 +361,14 @@ def generate(
         "max_seconds": MAX_SECONDS,
         "max_pages_per_source": MAX_PAGES,
     }
+    if eligibility is not None:
+        for name in (
+            "tools/extraction_quality/pdf_review_eligibility.py",
+            "tools/extraction_quality/pdf_review_validation.py",
+            "src/doclens_ai/eda/corpus_v2.py",
+            "tests/unit/test_pdf_review_eligibility.py",
+        ):
+            provenance["code"][name] = sha(ROOT / name)
     output.mkdir(parents=True)
     (output / "sources").mkdir()
     write_json(output / "inputs.json", provenance)
@@ -385,12 +404,17 @@ def generate(
             shutil.copyfileobj(source, destination, length=1024**2)
         if copy.stat().st_size != record.source_size_bytes or sha(copy) != record.source_sha256:
             raise PacketError("Review copy identity mismatch")
-    after, _, _, _ = preflight(manifest, corpus, gold, expected, allow_synthetic=allow_synthetic)
-    if before != after or provenance["code"] != {p: sha(ROOT / p) for p in CODE}:
+    after, _, _, _ = preflight(
+        manifest, corpus, gold, expected, allow_synthetic=allow_synthetic, eligibility=eligibility
+    )
+    if before != after or provenance["code"] != {p: sha(ROOT / p) for p in provenance["code"]}:
         raise PacketError("Frozen input or code drift")
     if time.monotonic() - start >= MAX_SECONDS:
         raise PacketError("Packet preparation timeout")
     summary = aggregate(records, counts)
+    if eligibility is not None:
+        summary["eligibility"] = before["eligibility"]
+        summary["excluded_documents"] = before["eligibility"]["pool"] - len(records)
     summary["input_identity_fingerprint"] = fingerprint(before)
     write_json(output / "summary.json", summary)
     (output / "REVIEW.md").write_text(
@@ -426,10 +450,16 @@ def main() -> int:
     parser.add_argument("--corpus", type=Path, required=True)
     parser.add_argument("--gold", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--eligibility", type=Path)
     args = parser.parse_args()
     try:
         print(
-            json.dumps(generate(args.manifest, args.corpus, args.gold, args.output), sort_keys=True)
+            json.dumps(
+                generate(
+                    args.manifest, args.corpus, args.gold, args.output, eligibility=args.eligibility
+                ),
+                sort_keys=True,
+            )
         )
         return 0
     except Exception:
