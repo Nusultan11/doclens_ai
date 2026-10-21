@@ -644,16 +644,19 @@ def _docx_unsupported_content_warnings(
     warnings: list[ExtractionWarning] = []
     header_parts: set[str] = set()
     footer_parts: set[str] = set()
+    ancillary_parts: set[str] = set()
     header_count = 0
     footer_count = 0
     for section in document.sections:
         for header in (section.header, section.first_page_header, section.even_page_header):
             part_name = str(header.part.partname)
+            ancillary_parts.add(part_name)
             if part_name not in header_parts and _container_has_text(header):
                 header_parts.add(part_name)
                 header_count += 1
         for footer in (section.footer, section.first_page_footer, section.even_page_footer):
             part_name = str(footer.part.partname)
+            ancillary_parts.add(part_name)
             if part_name not in footer_parts and _container_has_text(footer):
                 footer_parts.add(part_name)
                 footer_count += 1
@@ -683,20 +686,30 @@ def _docx_unsupported_content_warnings(
             if part_name in names and _xml_has_text(archive.read(part_name)):
                 warnings.append(ExtractionWarning(warning_code, WarningSeverity.REVIEW))
 
-        root = _parse_xml(archive.read(str(document.part.partname).lstrip("/")))
+        roots = [_parse_xml(archive.read(str(document.part.partname).lstrip("/")))]
+        roots.extend(
+            _parse_xml(archive.read(part.lstrip("/")))
+            for part in sorted(ancillary_parts)
+            if part.lstrip("/") in names
+        )
         for tag, code in (
             ("endnoteReference", WarningCode.ENDNOTES_NOT_EXTRACTED),
             ("commentReference", WarningCode.COMMENTS_NOT_EXTRACTED),
         ):
-            references = root.findall(f".//{{{_WORD_NS}}}{tag}")
+            references = [
+                node for root in roots for node in root.findall(f".//{{{_WORD_NS}}}{tag}")
+            ]
             if references and not any(warning.code is code for warning in warnings):
                 warnings.append(ExtractionWarning(code, WarningSeverity.REVIEW, len(references)))
-        drawing_count = len(root.findall(f".//{{{_WORD_NS}}}drawing")) + len(
-            root.findall(f".//{{{_WORD_NS}}}pict")
+        drawing_count = sum(
+            len(root.findall(f".//{{{_WORD_NS}}}{tag}"))
+            for root in roots
+            for tag in ("drawing", "pict")
         )
-        text_box_count = len(root.findall(f".//{{{_WORD_NS}}}txbxContent"))
+        text_box_count = sum(len(root.findall(f".//{{{_WORD_NS}}}txbxContent")) for root in roots)
         unsupported_inline = sum(
             len(root.findall(f".//{{{_WORD_NS}}}{tag}"))
+            for root in roots
             for tag in ("ins", "del", "sdt", "fldSimple", "fldChar", "sym", "altChunk")
         )
         if unsupported_inline:
