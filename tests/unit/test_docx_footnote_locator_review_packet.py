@@ -7,7 +7,9 @@ import json
 import os
 import subprocess
 import sys
+from collections.abc import Iterator
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
 import pytest
 
@@ -15,6 +17,15 @@ from doclens_ai.extraction.docx_footnote_candidate import FootnoteLimits, extrac
 from doclens_ai.extraction.fidelity_gold import FidelityRecord, GoldError
 from tests.unit.test_docx_footnote_candidate import note, package
 from tools.docx_footnote_candidate import locator_review_packet as tool
+
+
+@pytest.fixture
+def tmp_path() -> Iterator[Path]:
+    """Exercise real output guards independently of pytest's global basetemp."""
+    root = tool.ROOT / "evaluation-output"
+    root.mkdir(exist_ok=True)
+    with TemporaryDirectory(prefix="docx-locator-test-", dir=root) as directory:
+        yield Path(directory)
 
 
 def record(path: Path, *, text: str = "Synthetic note 007.50") -> FidelityRecord:
@@ -281,6 +292,9 @@ def test_fresh_output_rejects_existing_raw_and_unignored_paths(tmp_path):
     ):
         with pytest.raises(tool.PacketError):
             tool.fresh_output(path, corpus)
+    with TemporaryDirectory() as outside:
+        with pytest.raises(tool.PacketError):
+            tool.fresh_output(Path(outside) / "fresh", tmp_path / "raw")
 
 
 def test_internal_worker_allows_parent_journal_without_accepting_old_capture(tmp_path, monkeypatch):

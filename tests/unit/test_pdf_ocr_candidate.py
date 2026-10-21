@@ -353,6 +353,83 @@ def test_isolated_worker_capture_or_unknown_on_termination(tmp_path, failure) ->
         assert ocr.restore(capture["result"]) == extract_file(source)
 
 
+@pytest.mark.parametrize("reap_root", [True, False])
+def test_tree_cleanup_leaves_multiprocessing_root_for_its_owner(monkeypatch, reap_root) -> None:
+    import psutil
+
+    killed, waited = [], []
+    descendant = SimpleNamespace(kill=lambda: killed.append("descendant"))
+    root = SimpleNamespace(
+        children=lambda **kw: [descendant], kill=lambda: killed.append("root")
+    )
+    monkeypatch.setattr(psutil, "Process", lambda pid: root)
+
+    def wait(processes, timeout):
+        waited.extend(processes)
+        return processes, []
+
+    monkeypatch.setattr(psutil, "wait_procs", wait)
+    assert ocr.stop_tree(123, reap_root=reap_root) is True
+    assert set(killed) == {"root", "descendant"}
+    assert any(process is descendant for process in waited)
+    assert any(process is root for process in waited) is reap_root
+
+
+@pytest.mark.parametrize("case", ["joined", "kill_fallback", "still_running", "descendant_alive"])
+def test_isolated_never_closes_live_worker_or_accepts_failed_cleanup(tmp_path, monkeypatch, case):
+    events = []
+
+    class Child:
+        pid = 123
+        alive = True
+
+        def start(self):
+            # A completed payload cannot override a resource/cleanup failure.
+            (output / "result.json").write_text(
+                '{"result": {"untrusted": true}, "pages": []}'
+            )
+
+        def is_alive(self):
+            return self.alive
+
+        def join(self, timeout):
+            events.append("join")
+
+        def kill(self):
+            events.append("kill")
+            self.alive = case == "still_running"
+
+        def close(self):
+            assert not self.alive and "join" in events
+            events.append("close")
+
+    child = Child()
+
+    def stop(pid, *, reap_root):
+        assert pid == child.pid and reap_root is False
+        events.append("stop")
+        child.alive = case in {"kill_fallback", "still_running"}
+        return case != "descendant_alive"
+
+    monkeypatch.setattr(
+        ocr.multiprocessing, "get_context", lambda _: SimpleNamespace(Process=lambda **kw: child)
+    )
+    monkeypatch.setattr(ocr, "tree_rss", lambda pid: 0)
+    monkeypatch.setattr(ocr, "stop_tree", stop)
+    output = tmp_path / "capture"
+    capture = ocr.isolated(
+        tmp_path / "source.pdf", RUNTIME, replace(ocr.Limits(), timeout_seconds=0),
+        output, candidate=False,
+    )
+    failed = case in {"still_running", "descendant_alive"}
+    assert capture["runtime"]["cleanup"] is not failed
+    assert capture["failure"] == ("cleanup_failed" if failed else "timeout")
+    assert capture["result"] is None
+    assert ("close" in events) is (case != "still_running")
+    if case in {"kill_fallback", "still_running"}:
+        assert events[:4] == ["stop", "join", "kill", "join"]
+
+
 def test_output_directory_must_be_ignored(tmp_path) -> None:
     with pytest.raises(ValueError, match="ignored"):
         ocr.ignored(Path("docs/eda/not-an-output-directory"))

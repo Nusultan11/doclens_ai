@@ -5,6 +5,7 @@ from __future__ import annotations
 import copy
 import json
 import sys
+from pathlib import Path
 
 import pytest
 
@@ -166,7 +167,7 @@ def test_duplicate_text_remains_unknown_and_false_cells_are_counted():
     assert benchmark._pr(["a"], ["a", "a", "b"])["duplicates"] == 1
 
 
-def run_probe(tmp_path, content, *, budgets=None):
+def run_probe(tmp_path, content, *, budgets=None, executable=None, executable_sha256=None):
     pytest.importorskip("psutil", reason="offline process-tree monitor not installed")
     scope, _, rows = captures()
     source = tmp_path / "source.pdf"
@@ -195,8 +196,8 @@ def run_probe(tmp_path, content, *, budgets=None):
         source,
         scope,
         frozen_pin,
-        executable=__import__("pathlib").Path(sys.executable),
-        executable_sha256=sha(__import__("pathlib").Path(sys.executable)),
+        executable=executable or Path(sys.executable),
+        executable_sha256=executable_sha256 or sha(Path(sys.executable)),
         runner=runner,
         output=tmp_path / "capture",
         budgets=budgets or benchmark.Budgets(),
@@ -211,6 +212,52 @@ def test_real_isolated_subprocess_capture(tmp_path):
     assert result.status == "success" and result.failure is None
     assert result.seconds > 0 and result.peak_rss_bytes > 0
     assert result.page_text == {int(k): v for k, v in template["page_text"].items()}
+
+
+@pytest.mark.parametrize("valid_hash", [True, False])
+def test_trusted_interpreter_link_resolves_but_still_requires_hash(
+    tmp_path, monkeypatch, valid_hash
+):
+    executable = Path(sys.executable).resolve()
+    alias = tmp_path / "python-link"
+    resolve, is_link = Path.resolve, Path.is_symlink
+    # Model a Linux interpreter symlink even on Windows without symlink privileges.
+    monkeypatch.setattr(
+        Path, "resolve",
+        lambda path, *a, **kw: executable if path == alias else resolve(path, *a, **kw),
+    )
+    monkeypatch.setattr(Path, "is_symlink", lambda path: path == alias or is_link(path))
+    launches = []
+    popen = benchmark.subprocess.Popen
+
+    def launch(args, **kwargs):
+        launches.append(args[0])
+        return popen(args, **kwargs)
+
+    monkeypatch.setattr(benchmark.subprocess, "Popen", launch)
+    result, _ = run_probe(
+        tmp_path,
+        "Path(sys.argv[2]).write_text(json.dumps(value))\n",
+        executable=alias,
+        executable_sha256=sha(executable) if valid_hash else "0" * 64,
+    )
+    if valid_hash:
+        assert result.status == "success" and result.failure is None
+        assert launches == [str(executable)]
+    else:
+        assert result.failure == "invalid_output"
+        assert launches == []
+
+
+@pytest.mark.parametrize("linked", ["source.pdf", "runner.py", "capture", "public-model.bin", "."])
+def test_untrusted_linked_paths_still_rejected(tmp_path, monkeypatch, linked):
+    path = tmp_path / linked
+    is_link = Path.is_symlink
+    monkeypatch.setattr(Path, "is_symlink", lambda p: p == path or is_link(p))
+    monkeypatch.setattr(benchmark.subprocess, "Popen", lambda *a, **kw: pytest.fail("spawned"))
+    with pytest.raises(ValueError, match="Linked input/output rejected"):
+        run_probe(tmp_path, "raise SystemExit(0)\n")
+    assert not (tmp_path / "capture").exists()
 
 
 @pytest.mark.parametrize("case", ["timeout", "oom", "invalid", "nonzero", "output", "wrong_page"])

@@ -125,7 +125,7 @@ def tree_rss(pid: int) -> int:
     return total
 
 
-def stop_tree(pid: int) -> bool:
+def stop_tree(pid: int, *, reap_root: bool = True) -> bool:
     import psutil
 
     try:
@@ -136,7 +136,8 @@ def stop_tree(pid: int) -> bool:
     for process in reversed(processes):
         with contextlib.suppress(psutil.NoSuchProcess):
             process.kill()
-    _, alive = psutil.wait_procs(processes, timeout=5)
+    # multiprocessing must reap its own child to retain the exit status on POSIX.
+    _, alive = psutil.wait_procs(processes if reap_root else processes[:-1], timeout=5)
     return not alive
 
 
@@ -371,11 +372,17 @@ def isolated(
                 time.sleep(limits.poll_seconds)
     finally:
         if child.is_alive():
-            cleanup = stop_tree(child.pid)
+            cleanup = stop_tree(child.pid, reap_root=False)
         child.join(timeout=5)
         if child.is_alive():
+            child.kill()
+            child.join(timeout=5)
+        if child.is_alive():
             cleanup = False
-        child.close()
+        else:
+            child.close()
+        if not cleanup:
+            failure = "cleanup_failed"
     result_path = output / "result.json"
     payload = {"result": None, "pages": []}
     if (

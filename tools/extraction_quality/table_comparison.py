@@ -140,6 +140,9 @@ def isolated_capture(
     license-reviewed and egress is blocked externally. This is not an OS sandbox.
     Missing process-tree monitoring fails closed before starting any child.
     """
+    # The trusted runtime may be a virtualenv/Ubuntu symlink. Pin and check its
+    # real executable; source, adapter, model and output paths remain untrusted.
+    executable = executable.resolve()
     for path in (source, executable, runner, output):
         no_links(path)
     if output.exists():

@@ -42,6 +42,9 @@ jobs:
       - name: Ruff
         run: python -m ruff check src tests tools alembic
 
+      - name: Prepare ignored test output directory
+        run: mkdir -p evaluation-output
+
       # tests/api and tests/integration are outside this service-free unit job:
       # PostgreSQL, S3, Qdrant, private corpus/Gold/captures and real model/GPU
       # environments require separate opt-in runs. Their synthetic unit tests stay in.
@@ -50,7 +53,7 @@ jobs:
       - name: Portable unit tests
         run: >-
           python -m pytest tests/unit -q --strict-config --strict-markers
-          --basetemp="$RUNNER_TEMP/doclens-ci-pytest"
+          --basetemp=evaluation-output/ci-pytest
           --deselect=tests/unit/test_pdf_review_visual.py::test_browser_rendered_mouse_selection
           --deselect=tests/unit/test_pdf_grid_proposals.py::test_grid_http_security_and_browser
           --deselect=tests/unit/test_pdf_proposal_review.py::test_browser_confirm_correct_reject_and_export
