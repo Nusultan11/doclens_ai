@@ -550,7 +550,9 @@ def _xlsx_cell_unit(
         text = f"{cell.coordinate}\tvalue={cell.value or ''}"
     return _SourceUnit(
         unit_id=f"sheet:{sheet_index}:cell:{cell.coordinate}",
-        text=_normalize_text(text),
+        # Whitespace inside stored values and quoted formula strings is literal.
+        # Prose normalization would rewrite CR/CRLF and strip factual content.
+        text=text,
         source=SourceLocation(
             sheet_index=sheet_index,
             sheet_name=sheet_name,

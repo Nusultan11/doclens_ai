@@ -9,7 +9,7 @@ from enum import StrEnum
 
 from doclens_ai.extraction.models import DocumentFormat, SourceLocation
 
-CHUNKING_SCHEMA_VERSION = "1.1"
+CHUNKING_SCHEMA_VERSION = "1.2"
 
 
 class ChunkingStrategy(StrEnum):
