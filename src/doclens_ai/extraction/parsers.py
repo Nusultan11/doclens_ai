@@ -778,9 +778,9 @@ def _extract_xlsx(
     merged_range_count = 0
 
     with zipfile.ZipFile(path) as archive:
-        shared_strings = _xlsx_shared_strings(archive, limits)
         workbook = _parse_xml(archive.read("xl/workbook.xml"))
         workbook_relationships = _read_relationships(archive, "xl/_rels/workbook.xml.rels")
+        shared_strings = _xlsx_shared_strings(archive, limits, workbook_relationships)
         styles = _xlsx_number_formats(archive, workbook_relationships)
         properties = workbook.find(f"{{{_SPREADSHEET_NS}}}workbookPr")
         if properties is not None and properties.get("date1904", "0") not in (
@@ -983,10 +983,20 @@ def _extract_xlsx(
 def _xlsx_shared_strings(
     archive: zipfile.ZipFile,
     limits: ExtractionLimits,
+    relationships: dict[str, tuple[str, str]],
 ) -> tuple[str, ...]:
-    if "xl/sharedStrings.xml" not in archive.namelist():
+    targets = [
+        target
+        for target, kind in relationships.values()
+        if kind == f"{_OFFICE_REL_NS}/sharedStrings"
+    ]
+    if not targets:
         return ()
-    root = _parse_xml(archive.read("xl/sharedStrings.xml"))
+    if len(targets) != 1:
+        raise _ExtractionFailure(ErrorCategory.CORRUPT_DOCUMENT)
+    root = _parse_xml(archive.read(_resolve_relationship_target("xl/workbook.xml", targets[0])))
+    if root.tag != f"{{{_SPREADSHEET_NS}}}sst":
+        raise _ExtractionFailure(ErrorCategory.CORRUPT_DOCUMENT)
     values: list[str] = []
     character_count = 0
     for item in root.findall(f"{{{_SPREADSHEET_NS}}}si"):
