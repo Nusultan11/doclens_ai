@@ -777,12 +777,23 @@ def _extract_xlsx(
             relationship_id = sheet_element.get(f"{{{_OFFICE_REL_NS}}}id")
             if not relationship_id or relationship_id not in workbook_relationships:
                 raise _ExtractionFailure(ErrorCategory.CORRUPT_DOCUMENT)
-            if not workbook_relationships[relationship_id][1].endswith("/worksheet"):
-                raise _ExtractionFailure(ErrorCategory.CORRUPT_DOCUMENT)
+            relationship_type = workbook_relationships[relationship_id][1]
             sheet_path = _resolve_relationship_target(
                 "xl/workbook.xml", workbook_relationships[relationship_id][0]
             )
             sheet_root = _parse_xml(archive.read(sheet_path))
+            if relationship_type in {
+                f"{_OFFICE_REL_NS}/dialogsheet",
+                f"{_OFFICE_REL_NS}/chartsheet",
+            }:
+                if sheet_root.tag != f"{{{_SPREADSHEET_NS}}}{relationship_type.rsplit('/', 1)[-1]}":
+                    raise _ExtractionFailure(ErrorCategory.CORRUPT_DOCUMENT)
+                raise _ExtractionFailure(ErrorCategory.UNSUPPORTED_FORMAT)
+            if (
+                relationship_type != f"{_OFFICE_REL_NS}/worksheet"
+                or sheet_root.tag != f"{{{_SPREADSHEET_NS}}}worksheet"
+            ):
+                raise _ExtractionFailure(ErrorCategory.CORRUPT_DOCUMENT)
             cell_elements = sheet_root.findall(f".//{{{_SPREADSHEET_NS}}}c")
             stored_cell_count += len(cell_elements)
             if stored_cell_count > limits.max_xlsx_stored_cells:
