@@ -9,7 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
-from typing import Callable, Protocol
+from typing import Protocol
 
 from doclens_ai.extraction.models import DocumentFormat, ExtractionResult
 
