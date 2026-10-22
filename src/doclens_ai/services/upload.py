@@ -13,6 +13,7 @@ from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from doclens_ai.extraction.engines import EngineRoute
 from doclens_ai.models import Document, DocumentVersion, UploadSession, UploadStatus
 from doclens_ai.services.processing import (
     DEFAULT_MAX_ATTEMPTS,
@@ -191,6 +192,7 @@ class UploadService:
         *,
         max_upload_size_bytes: int,
         processing_max_attempts: int = DEFAULT_MAX_ATTEMPTS,
+        extraction_route: EngineRoute | None = None,
     ) -> None:
         if processing_max_attempts <= 0:
             raise ValueError("processing max attempts must be positive")
@@ -198,6 +200,7 @@ class UploadService:
         self._storage = storage
         self._max_upload_size_bytes = max_upload_size_bytes
         self._processing_max_attempts = processing_max_attempts
+        self._extraction_route = extraction_route
 
     async def upload_and_confirm(
         self,
@@ -417,6 +420,7 @@ class UploadService:
                 session,
                 document_version_id=version.id,
                 max_attempts=self._processing_max_attempts,
+                extraction_route=self._extraction_route,
             )
             attempt.status = UploadStatus.COMPLETED
             attempt.committed_document_version_id = version.id

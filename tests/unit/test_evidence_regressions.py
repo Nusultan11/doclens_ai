@@ -22,6 +22,7 @@ from openpyxl import Workbook
 from openpyxl.worksheet.table import Table as XlsxTable
 
 from doclens_ai.chunking import ChunkingConfig, ChunkingStatus, ChunkingStrategy, chunk_document
+from doclens_ai.extraction.engines import default_route_payload
 from doclens_ai.extraction.models import (
     DocumentFormat,
     ErrorCategory,
@@ -518,6 +519,8 @@ def test_ingestion_rejects_pdf_success_and_partial_table_evidence(tmp_path):
         content_type,
         len(payload),
         checksum,
+        uuid4(),
+        default_route_payload(),
     )
 
     async def exercise():
@@ -601,6 +604,8 @@ def test_supported_ingestion_and_canonical_provenance_round_trip(suffix):
         content_type,
         len(payload),
         hashlib.sha256(payload).hexdigest(),
+        uuid4(),
+        default_route_payload(),
     )
 
     async def exercise():

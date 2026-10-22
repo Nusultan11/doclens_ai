@@ -10,7 +10,7 @@ import re
 import time
 import zipfile
 from collections import Counter
-from dataclasses import asdict, dataclass, replace
+from dataclasses import asdict, replace
 from pathlib import Path, PurePosixPath
 from typing import Any, BinaryIO
 from urllib.parse import unquote, urlsplit
@@ -24,6 +24,7 @@ from openpyxl.styles.numbers import BUILTIN_FORMATS
 from openpyxl.utils.cell import coordinate_to_tuple, range_boundaries
 from pypdf import PdfReader
 
+from doclens_ai.extraction.limits import ExtractionLimits
 from doclens_ai.extraction.models import (
     DocumentBlock,
     DocumentFormat,
@@ -59,27 +60,6 @@ _OFFICE_REL_NS = "http://schemas.openxmlformats.org/officeDocument/2006/relation
 _PACKAGE_REL_NS = "http://schemas.openxmlformats.org/package/2006/relationships"
 _WORD_NS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
 _CELL_REFERENCE = re.compile(r"^\$?([A-Za-z]{1,3})\$?([1-9][0-9]{0,6})$")
-
-
-@dataclass(frozen=True, slots=True)
-class ExtractionLimits:
-    """Hard resource ceilings applied before and during parsing."""
-
-    max_files: int = 10_000
-    max_file_bytes: int = 50 * 1024 * 1024
-    max_office_entries: int = 20_000
-    max_office_entry_bytes: int = 100 * 1024 * 1024
-    max_office_uncompressed_bytes: int = 500 * 1024 * 1024
-    max_office_compression_ratio: float = 200.0
-    max_pdf_pages: int = 2_000
-    min_pdf_non_whitespace_chars_per_page: int = 20
-    max_extracted_characters: int = 5_000_000
-    max_document_blocks: int = 100_000
-    max_table_cells: int = 1_000_000
-    max_xlsx_sheets: int = 256
-    max_xlsx_stored_cells: int = 1_000_000
-    max_xlsx_merged_ranges: int = 100_000
-    max_xlsx_tables: int = 10_000
 
 
 class ExtractionConfigurationError(ValueError):

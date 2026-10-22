@@ -15,10 +15,12 @@ from sqlalchemy import (
     func,
     text,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PostgreSQLUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from doclens_ai.db.base import Base
+from doclens_ai.extraction.engines import default_route_payload
 
 
 class ProcessingOperationKind(StrEnum):
@@ -69,6 +71,10 @@ class ProcessingRun(Base):
             name="ck_processing_runs_configuration_fingerprint_lower_hex",
         ),
         CheckConstraint(
+            "extraction_route IS NULL OR jsonb_typeof(extraction_route) = 'object'",
+            name="ck_processing_runs_extraction_route_object",
+        ),
+        CheckConstraint(
             "stage IN ('extraction', 'cleaning', 'chunking', 'embedding', 'indexing')",
             name="ck_processing_runs_stage",
         ),
@@ -104,6 +110,8 @@ class ProcessingRun(Base):
     operation_kind: Mapped[str] = mapped_column(String(32), nullable=False)
     configuration_version: Mapped[str] = mapped_column(String(64), nullable=False)
     configuration_fingerprint: Mapped[str] = mapped_column(String(64), nullable=False)
+    extraction_route: Mapped[dict | None] = mapped_column(JSONB, nullable=True,
+                                                       default=default_route_payload)
     stage: Mapped[str] = mapped_column(String(32), nullable=False)
     status: Mapped[str] = mapped_column(String(32), nullable=False)
     error_code: Mapped[str | None] = mapped_column(String(64), nullable=True)

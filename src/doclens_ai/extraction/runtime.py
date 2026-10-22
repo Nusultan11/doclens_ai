@@ -12,6 +12,13 @@ IMPLEMENTATION_FILES = (
     "extraction/validation.py",
     "extraction/docx_footnote_candidate.py",
     "extraction/runtime.py",
+    "extraction/limits.py",
+    "extraction/engines.py",
+    "extraction/ir.py",
+    "extraction/adapters.py",
+    "extraction/ir_validation.py",
+    "extraction/reconciliation.py",
+    "chunking/ir.py",
     "chunking/core.py",
     "chunking/models.py",
 )

@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import tempfile
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 from dataclasses import dataclass, fields
 from enum import StrEnum
 from pathlib import Path
@@ -16,6 +16,7 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from doclens_ai.chunking.core import chunk_document
+from doclens_ai.chunking.ir import IR_CHUNKER_VERSION, chunk_verified_ir
 from doclens_ai.chunking.models import (
     Chunk,
     ChunkingConfig,
@@ -23,12 +24,22 @@ from doclens_ai.chunking.models import (
     ChunkingStatus,
     ChunkingStrategy,
 )
-from doclens_ai.extraction.models import ExtractionStatus
-from doclens_ai.extraction.parsers import SCHEMA_VERSION, ExtractionLimits, extract_file
+from doclens_ai.extraction.engines import EngineRegistry, EngineRoute, default_registry
+from doclens_ai.extraction.ir import SourceIdentity
+from doclens_ai.extraction.ir_validation import (
+    DEFAULT_EVIDENCE_POLICY,
+    EvidencePolicy,
+    EvidenceReview,
+    evidence_policy_fingerprint,
+)
+from doclens_ai.extraction.limits import ExtractionLimits
+from doclens_ai.extraction.models import DocumentFormat, ExtractionStatus
+from doclens_ai.extraction.reconciliation import reconcile
 from doclens_ai.extraction.runtime import runtime_versions_match
 from doclens_ai.extraction.validation import evidence_is_indexable
 from doclens_ai.models import (
     CanonicalChunk,
+    Document,
     DocumentVersion,
     ProcessingJob,
     ProcessingRun,
@@ -123,6 +134,8 @@ class _SourceIdentity:
     content_type: str
     file_size: int
     sha256_checksum: str
+    workspace_id: UUID
+    extraction_route: dict | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -152,6 +165,9 @@ class IngestionService:
         storage: ReadableObjectStorage,
         *,
         download_chunk_size: int = 1024 * 1024,
+        registry: EngineRegistry | None = None,
+        evidence_policy: EvidencePolicy = DEFAULT_EVIDENCE_POLICY,
+        review_loader: Callable[[str], EvidenceReview | None] | None = None,
     ) -> None:
         if download_chunk_size <= 0:
             raise ValueError("download chunk size must be positive")
@@ -159,6 +175,9 @@ class IngestionService:
         self._storage = storage
         self._extraction_limits = ExtractionLimits()
         self._download_chunk_size = download_chunk_size
+        self._registry = registry or default_registry()
+        self._evidence_policy = evidence_policy
+        self._review_loader = review_loader
         self._chunking_config = ChunkingConfig(
             strategy=ChunkingStrategy.STRUCTURE_AWARE
         )
@@ -187,7 +206,7 @@ class IngestionService:
             async with self._session_factory() as session:
                 row = (
                     await session.execute(
-                        select(ProcessingRun, DocumentVersion, ProcessingJob)
+                        select(ProcessingRun, DocumentVersion, ProcessingJob, Document.workspace_id)
                         .join(
                             DocumentVersion,
                             DocumentVersion.id == ProcessingRun.document_version_id,
@@ -195,6 +214,7 @@ class IngestionService:
                         .outerjoin(
                             ProcessingJob, ProcessingJob.processing_run_id == ProcessingRun.id
                         )
+                        .join(Document, Document.id == DocumentVersion.document_id)
                         .where(ProcessingRun.id == processing_run_id)
                     )
                 ).first()
@@ -202,7 +222,7 @@ class IngestionService:
                     raise IngestionFailure(
                         IngestionFailureCategory.PROCESSING_RUN_NOT_FOUND, retryable=False
                     )
-                run, version, job = row
+                run, version, job, workspace_id = row
                 await _require_ingestion_ownership(
                     session, job, run, worker_id=worker_id, lease_token=lease_token
                 )
@@ -221,13 +241,39 @@ class IngestionService:
             content_type=version.content_type,
             file_size=version.file_size,
             sha256_checksum=version.sha256_checksum,
+            workspace_id=workspace_id,
+            extraction_route=run.extraction_route,
         )
 
     def _validate_processing_configuration(self, source: _SourceIdentity) -> None:
+        try:
+            route = EngineRoute.model_validate(source.extraction_route)
+            valid_route = route.chunker_version == (
+                self._chunking_config.version if route.mode == "native" else IR_CHUNKER_VERSION
+            )
+            if route.mode == "native":
+                valid_route = (
+                    valid_route and len(route.engines) == 1 and route.engines[0].name == "native"
+                )
+            else:
+                valid_route = (
+                    valid_route
+                    and route.policy_sha256 == evidence_policy_fingerprint(self._evidence_policy)
+                    and bool(route.review_id)
+                    and self._review_loader is not None
+                )
+            for pin in route.engines:
+                self._registry.resolve(
+                    pin, DocumentFormat(_SUFFIX_BY_CONTENT_TYPE[source.content_type][1:])
+                )
+        except (ValueError, KeyError):
+            valid_route = False
         if (
-            not runtime_versions_match()
+            not valid_route
+            or not runtime_versions_match()
             or source.configuration_version != PROCESSING_CONFIGURATION_VERSION
-            or source.configuration_fingerprint != default_processing_configuration_fingerprint()
+            or source.configuration_fingerprint
+            != default_processing_configuration_fingerprint(route)
         ):
             raise IngestionFailure(
                 IngestionFailureCategory.CONFIGURATION_MISMATCH,
@@ -269,12 +315,41 @@ class IngestionService:
         source_path = Path(temporary.name) / f"source{suffix}"
         try:
             await self._download_verified(source, source_path)
-            extraction = await asyncio.to_thread(
-                extract_file,
-                source_path,
-                limits=self._extraction_limits,
-            )
-            if extraction.schema_version != SCHEMA_VERSION:
+            route = EngineRoute.model_validate(source.extraction_route)
+            try:
+                observations = await asyncio.to_thread(
+                    self._registry.extract, source_path, route=route
+                )
+                expected = SourceIdentity(
+                    sha256=source.sha256_checksum,
+                    size_bytes=source.file_size,
+                    document_format=DocumentFormat(suffix[1:]),
+                    workspace_id=str(source.workspace_id),
+                    document_version_id=str(source.document_version_id),
+                )
+                ir = reconcile(observations, expected=expected)
+            except ValueError as exc:
+                raise IngestionFailure(
+                    IngestionFailureCategory.EXTRACTION_FAILED, retryable=False
+                ) from exc
+            if route.mode == "verified_ir":
+                reviewed = self._review_loader(route.review_id)
+                result = chunk_verified_ir(
+                    ir, expected=expected, review=reviewed, policy=self._evidence_policy
+                )
+                if not result.chunks:
+                    raise IngestionFailure(
+                        IngestionFailureCategory.EXTRACTION_NEEDS_REVIEW, retryable=False
+                    )
+                self._validate_chunks(
+                    source,
+                    result.chunks,
+                    expected_fingerprint=result.chunks[0].config_fingerprint,
+                    expected_version=IR_CHUNKER_VERSION,
+                )
+                return result.chunks
+            extraction = ir.native
+            if extraction is None or extraction.schema_version != route.engines[0].revision:
                 raise IngestionFailure(
                     IngestionFailureCategory.CONFIGURATION_MISMATCH,
                     retryable=False,
@@ -399,9 +474,13 @@ class IngestionService:
         self,
         source: _SourceIdentity,
         chunks: tuple[Chunk, ...],
+        *,
+        expected_fingerprint: str | None = None,
+        expected_version: str | None = None,
     ) -> None:
         expected_document_id = str(source.document_version_id)
-        expected_fingerprint = self._chunking_config.fingerprint()
+        expected_fingerprint = expected_fingerprint or self._chunking_config.fingerprint()
+        expected_version = expected_version or self._chunking_config.version
         if not chunks:
             raise IngestionFailure(
                 IngestionFailureCategory.EMPTY_CONTENT,
@@ -416,7 +495,7 @@ class IngestionService:
                 != _SUFFIX_BY_CONTENT_TYPE.get(source.content_type)
                 or chunk.strategy is not ChunkingStrategy.STRUCTURE_AWARE
                 or chunk.config_fingerprint != expected_fingerprint
-                or chunk.config_version != self._chunking_config.version
+                or chunk.config_version != expected_version
                 or not chunk.text
                 or not chunk.provenance
                 or any(
@@ -464,6 +543,7 @@ class IngestionService:
                     run.document_version_id != source.document_version_id
                     or run.configuration_version != source.configuration_version
                     or run.configuration_fingerprint != source.configuration_fingerprint
+                    or run.extraction_route != source.extraction_route
                 ):
                     raise IngestionFailure(
                         IngestionFailureCategory.CONFIGURATION_MISMATCH,

@@ -81,6 +81,15 @@ class EvidencePolicy:
 DEFAULT_EVIDENCE_POLICY = EvidencePolicy()
 
 
+def evidence_policy_fingerprint(policy: EvidencePolicy) -> str:
+    return canonical_digest(
+        {
+            key: sorted(value) if isinstance(value, frozenset) else value
+            for key, value in asdict(policy).items()
+        }
+    )
+
+
 @dataclass(frozen=True)
 class EvidenceValidation:
     allowed: tuple[str, ...]

@@ -15,6 +15,7 @@ from doclens_ai.chunking.models import (
     ChunkingStrategy,
     config_as_dict,
 )
+from doclens_ai.extraction.engines import EngineRoute, default_route
 from doclens_ai.extraction.runtime import extraction_runtime_manifest
 from doclens_ai.models import (
     CanonicalChunk,
@@ -30,7 +31,7 @@ from doclens_ai.models import (
 )
 from doclens_ai.models.index_revision import chunk_set_fingerprint
 
-PROCESSING_CONFIGURATION_VERSION = "1.1"
+PROCESSING_CONFIGURATION_VERSION = "1.2"
 DEFAULT_MAX_ATTEMPTS = 3
 _SAFE_CODE = re.compile(r"^[a-z0-9][a-z0-9_]{0,63}$")
 _STAGE_ORDER = tuple(ProcessingStage)
@@ -81,7 +82,7 @@ class ClaimedProcessingJob:
     max_attempts: int
 
 
-def default_processing_configuration_fingerprint() -> str:
+def default_processing_configuration_fingerprint(route: EngineRoute | None = None) -> str:
     """Fingerprint the frozen offline contracts selected for the initial pipeline."""
 
     payload = {
@@ -89,6 +90,7 @@ def default_processing_configuration_fingerprint() -> str:
         "extraction_contract_version": "1.1",
         "extraction_runtime": extraction_runtime_manifest(),
         "pipeline_version": PROCESSING_CONFIGURATION_VERSION,
+        "extraction_route": (route or default_route()).model_dump(mode="json"),
     }
     serialized = json.dumps(payload, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(serialized.encode()).hexdigest()
@@ -99,18 +101,21 @@ async def create_initial_processing_records(
     *,
     document_version_id: UUID,
     max_attempts: int = DEFAULT_MAX_ATTEMPTS,
+    extraction_route: EngineRoute | None = None,
 ) -> tuple[ProcessingRun, ProcessingJob]:
     """Add the one initial run and queued job to the caller's transaction."""
 
     if max_attempts <= 0:
         raise ValueError("max attempts must be positive")
+    route = extraction_route or default_route()
     run = ProcessingRun(
         id=uuid4(),
         document_version_id=document_version_id,
         operation_id=document_version_id,
         operation_kind=ProcessingOperationKind.INITIAL,
         configuration_version=PROCESSING_CONFIGURATION_VERSION,
-        configuration_fingerprint=default_processing_configuration_fingerprint(),
+        configuration_fingerprint=default_processing_configuration_fingerprint(route),
+        extraction_route=route.model_dump(mode="json"),
         stage=ProcessingStage.EXTRACTION,
         status=ProcessingStatus.QUEUED,
     )
