@@ -16,6 +16,7 @@ from doclens_ai.extraction.models import DocumentFormat, ExtractionResult, Sourc
 IR_VERSION = "2.0"
 ADAPTER_VERSION = "2.0"
 Digest = Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")]
+Coordinate = Annotated[float, Field(strict=True)]
 
 
 class Contract(BaseModel):
@@ -35,12 +36,12 @@ class Geometry(Contract):
     """An observed rectangle in a named page coordinate system, never inferred."""
 
     coordinate_system: Literal["top_left_points", "bottom_left_points", "top_left_pixels"]
-    x0: float
-    y0: float
-    x1: float
-    y1: float
-    page_width: float
-    page_height: float
+    x0: Coordinate
+    y0: Coordinate
+    x1: Coordinate
+    y1: Coordinate
+    page_width: Coordinate
+    page_height: Coordinate
 
     @model_validator(mode="after")
     def bounds(self) -> Geometry:

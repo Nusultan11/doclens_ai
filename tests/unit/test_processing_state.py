@@ -14,6 +14,19 @@ def test_default_processing_configuration_fingerprint_is_stable() -> None:
     assert first == default_processing_configuration_fingerprint()
 
 
+def test_contract_runtime_change_invalidates_processing_configuration(monkeypatch):
+    from doclens_ai.extraction import runtime
+
+    original = default_processing_configuration_fingerprint()
+    installed_version = runtime.version
+    monkeypatch.setattr(
+        runtime,
+        "version",
+        lambda name: "changed" if name == "pydantic" else installed_version(name),
+    )
+    assert default_processing_configuration_fingerprint() != original
+
+
 def test_processing_identity_changes_with_parser_code_and_versions(monkeypatch) -> None:
     from doclens_ai.extraction import runtime
 

@@ -235,6 +235,9 @@ def test_incompatible_fake_observations_share_one_contract(engine, adapter):
         {"y1": float("nan")},
         {"page_height": float("inf")},
         {"coordinate_system": "guessed"},
+        {"x0": False},
+        {"x1": "10"},
+        {"page_width": "100"},
     ],
 )
 def test_geometry_rejects_unbounded_or_ambiguous_coordinates(change):

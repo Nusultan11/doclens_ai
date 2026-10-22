@@ -31,6 +31,9 @@ def extraction_runtime_manifest() -> dict[str, object]:
     root = Path(__file__).resolve().parents[1]
     return {
         "parser_versions": dict(PARSER_VERSIONS),
+        "contract_runtime_versions": {
+            name: version(name) for name in ("pydantic", "pydantic-core")
+        },
         "python_version": list(sys.version_info[:3]),
         "implementation_sha256": {
             name: hashlib.sha256((root / name).read_bytes()).hexdigest()

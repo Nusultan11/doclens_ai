@@ -310,3 +310,178 @@ Ruff check and new-file format checks — PASS; `git diff --check` — PASS.
 Final slice 5 real-service command:
 `.venv/Scripts/python.exe .pytest_cache/run_engine_services.py tests/integration/test_bounded_worker.py tests/integration/test_extraction_artifacts.py tests/integration/test_engine_ingestion.py tests/integration/test_extraction_routes.py tests/integration/test_canonical_chunks.py tests/integration/test_processing_jobs.py tests/integration/test_worker.py tests/integration/test_production_indexing.py -x -q --basetemp=.pytest_cache/engine-slice5-versioned -p no:cacheprovider --tb=short`
 — **84 passed**, 313.23 seconds, after the explicit historical/current route split.
+
+## Slice 6 — authorized search and final integration acceptance
+
+Goal: exercise both incompatible adapters through the same bounded extraction,
+immutable artifact, canonical chunk, real index and authorized HTTP search path.
+READ: existing engine ingestion/artifact, production indexing, search API and
+authenticated-upload test helpers; MODIFY/CREATE: focused tests and this report,
+plus only demonstrated extraction-contract corrections if final negatives expose
+them. Constraints remain the architecture's verified ACTIVE/ACL contract and the
+extraction/ML strategies' evidence and exact-location rules. Sources:
+`Doclens_AI-architecture.md`, `DocLens_AI_Extraction_Strategy.md`,
+`DocLens_AI_ML_Quality_Strategy.md`, and the current services/tests cited above.
+Acceptance: neither canonical nor verified-candidate data is searchable before
+ACTIVE; JWT/workspace/revocation checks hold; partial real Qdrant writes preserve
+the previous ACTIVE revision; retry and artifact re-chunking preserve pins and
+immutable source provenance. Git action: one verified Conventional Commit, no push.
+
+The final synthetic PDF has two actual pages and matching fixture locators. Its
+text is synthetic engine output, not PDF fidelity evidence. PostgreSQL, S3/MinIO,
+Qdrant and HTTP application/auth decisions are real. Embeddings and extraction are
+deterministic fixtures; RSA JWT signatures are checked against fixture JWKS served
+by MockTransport. This is a real-service integration test with these explicit
+fixtures, not full production E2E or QG-09 acceptance.
+
+The first slice-6 command did not collect tests: the task containers had exited
+with code 255 after the earlier run. Inspected their exact task labels and restarted
+only the three task-owned ephemeral services; their tmpfs stores are disposable.
+
+New search test development initially failed on nonexistent checksum aliases
+(`extraction_artifact_checksum`, then `extraction_artifact_sha256`) and a nonexistent
+`UploadResult.processing_run_id`; corrected the test to the actual
+`artifact_checksum` field and persisted artifact/run identity. Assertions were
+retained. Both engine paths then **PASSED: 2 tests**, 11.07 seconds, including partial
+real upsert, old ACTIVE preservation, retry with the same route fingerprint,
+re-chunking with no engine registrations, atomic cutover, and membership revocation.
+
+Final negative contract reproduction:
+`.venv/Scripts/python.exe -m pytest tests/unit/test_document_ir.py tests/unit/test_processing_state.py -q --basetemp=.pytest_cache/engine-final-negative-red -p no:cacheprovider --tb=short`
+— **4 failed, 22 passed**. Three geometry cases silently coerced bool/numeric
+strings into coordinates; a changed Pydantic runtime did not change the processing
+fingerprint. Geometry now accepts actual numeric coordinates strictly (valid ints
+remain accepted), and runtime manifests include actual `pydantic`/`pydantic-core`
+versions. No parser/model dependency or quality threshold changed. The fingerprint
+change intentionally rejects previously queued incompatible snapshots; the drain
+and explicit reprocess rollout constraint still applies. Historical snapshot readers
+continue to preserve their exact stored route manifest and fingerprint.
+
+Targeted rerun:
+`.venv/Scripts/python.exe -m pytest tests/unit/test_document_ir.py tests/unit/test_processing_state.py tests/unit/test_artifact_contracts.py tests/unit/test_extraction_engines.py tests/unit/test_ir_evidence.py -q --basetemp=.pytest_cache/engine-final-contract-green -p no:cacheprovider --tb=short`
+— **81 passed**, 1.46 seconds.
+
+## Final ten-workstream evidence map
+
+These are the request-derived reporting IDs defined above, not a claim about an
+unavailable separate numbered audit. `IMPLEMENTED` is scoped to engineering
+contracts and the executed tests below, with the stated limitations.
+
+| # | Engineering status / boundary | Main implementation | Behavioral evidence |
+|---|---|---|---|
+| 1 | IMPLEMENTED — additive DocumentIR v2 | `extraction/ir.py` | `test_document_ir.py`: lossless native roundtrip, typed optional elements, negative geometry/state/version cases |
+| 2 | IMPLEMENTED — native plus incompatible adapters | `extraction/adapters.py` | `test_document_ir.py`, `test_extraction_engines.py`, `test_engine_search.py`: words/top-left and regions/bottom-left adapters |
+| 3 | IMPLEMENTED — independent recorded evidence admission; PDF opt-in | `extraction/ir_validation.py`, `services/ingestion.py` | `test_ir_evidence.py`, `test_engine_ingestion.py`: self-claims, unknown/stale/wrong-tenant review and default PDF denied |
+| 4 | IMPLEMENTED — exact, atomic evidence chunks | `chunking/ir.py` | `test_ir_evidence.py`: signs/units/formulas/header-row links, oversized groups, global budget without partial prefix |
+| 5 | IMPLEMENTED — registry through production ingestion | `extraction/engines.py`, `services/ingestion.py` | `test_engine_ingestion.py`, `test_worker.py`, `test_engine_search.py`: native default and both fake routes |
+| 6 | IMPLEMENTED — immutable exact run pins | `services/processing.py`, `extraction/runtime.py`, `0008_extraction_route.py` | `test_extraction_routes.py`, `test_processing_state.py`, `test_artifact_contracts.py`: DB immutability, runtime drift, historical route compatibility |
+| 7 | IMPLEMENTED — source-aware observation reconciliation | `extraction/reconciliation.py` | `test_extraction_engines.py`, `test_ir_evidence.py`: conflicts/duplicates/confidences retained, contradictory numeric groups denied |
+| 8 | IMPLEMENTED — scoped immutable S3/PG artifacts | `services/extraction_artifacts.py`, `models/extraction_artifact.py`, `0009_extraction_artifacts.py` | `test_extraction_artifacts.py`: checksum corruption, partial/failed pages, crash/retry, stale leases, cleanup, no-extraction re-chunk, repeated upgrade/check/downgrade |
+| 9 | IMPLEMENTED — bounded CPU engines on Windows/unprivileged Linux; GPU unsupported | `extraction/bounded.py`, `services/worker.py` | `test_bounded_engines.py`, `test_bounded_worker.py`: actual hang/crash/OOM/CPU/output kills, cancellation, backpressure, retry and healthy unrelated job progression |
+| 10 | IMPLEMENTED — real-service integration with explicit synthetic fixtures | `test_engine_search.py` (existing search/index/ACL services unchanged) | Two RAW PDFs through bounded extraction/artifacts/chunks/DB/Qdrant/HTTP; auth/cross-tenant/revocation, partial writes, ACTIVE isolation/cutover; broader existing search API/index tests |
+
+Paths in this table are relative to `src/doclens_ai`, `tests/unit`,
+`tests/integration`, or `alembic/versions` as appropriate. All ten statuses exclude
+model fidelity, automatic semantic verification, GPU/VRAM qualification, QG-00..09
+acceptance and production release authorization: **NOT_EVALUATED**.
+
+The trusted review loader is an internal integration interface. This task does not
+ship a review administration/store service or authorize arbitrary reviewers/engines.
+No public upload API can request PDF trust. Actual model onboarding still requires
+independent reviewed evidence, exact approved pins and the relevant quality gates.
+Bounds cover engine execution; parent artifact decoding/storage is size-bounded but
+is not claimed to share the child's RAM/CPU enforcement or provide an egress sandbox.
+
+## Final verification commands and observations
+
+Windows environment: Python **3.12.3**, Pydantic **2.14.0**, pydantic-core **2.50.0**,
+pypdf **6.20.0**, python-docx **1.2.0**, openpyxl **3.1.5**, lxml **6.1.3**,
+pytest **9.1.1**, Ruff **0.17.0**, SQLAlchemy **2.1.4**, boto3 **1.43.111**,
+httpx **0.28.1**. No dependency, image, model or weight was installed/downloaded.
+
+1. Real services:
+   `.venv/Scripts/python.exe .pytest_cache/run_engine_services.py tests/integration/test_engine_search.py tests/integration/test_search_api.py tests/integration/test_bounded_worker.py tests/integration/test_extraction_artifacts.py tests/integration/test_engine_ingestion.py tests/integration/test_extraction_routes.py tests/integration/test_canonical_chunks.py tests/integration/test_processing_jobs.py tests/integration/test_worker.py tests/integration/test_production_indexing.py -x -q --basetemp=.pytest_cache/engine-final-services -p no:cacheprovider --tb=short`
+   — **91 passed**, 389.09 seconds, no skipped integration tests.
+   After formatting the new fixture file (and thus changing its computed exact
+   descriptor digest), reran `tests/integration/test_engine_search.py` with the same
+   wrapper, flags and `--basetemp=.pytest_cache/engine-search-formatted-final`:
+   **2 passed**, 15.66 seconds.
+2. Complete unit suite, initially without inherited repository import paths:
+   `.venv/Scripts/python.exe -m pytest tests/unit -q --basetemp=.pytest_cache/engine-final-all-unit -p no:cacheprovider --tb=short`
+   — **2 failed, 1995 passed, 5 skipped**, 250.93 seconds. Both failures were
+   preexisting tool CLI subprocesses unable to import `tools` (filled ruling
+   normalization and PDF table review packet). No related tool code changed.
+   Explicitly set `$env:PYTHONPATH = 'C:\Users\nurs\doclens_ai;C:\Users\nurs\doclens_ai\src'`
+   in a fresh shell and reran those two exact tests with the same flags and
+   `--basetemp=.pytest_cache/engine-cli-path-diagnostic`: **2 passed**, 6.39 seconds.
+3. Linux resource suite on current final production code:
+
+   ```powershell
+   docker run --pull never --rm --network none --user 1000:1000 --mount 'type=bind,source=C:\Users\nurs\doclens_ai\src,target=/workspace/src,readonly' --mount 'type=bind,source=C:\Users\nurs\doclens_ai\tests,target=/workspace/tests,readonly' --mount 'type=bind,source=C:\Users\nurs\doclens_ai\.venv\Lib\site-packages,target=/host-deps,readonly' --workdir /workspace --env PYTHONPATH=/workspace/src:/workspace --env PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 --entrypoint python doclens-search-1791968383266-smoke-api:latest -c "import sys; sys.path.append('/host-deps'); import pytest; raise SystemExit(pytest.main(['tests/unit/test_bounded_engines.py','-q','--basetemp=/tmp/bounded-linux-complete-final','-p','no:cacheprovider']))"
+   ```
+
+   — **9 passed**, 20.39 seconds. Earlier final-code run was **1 failed, 8 passed**:
+   the one-second CPU budget terminated before the fixture's engine-entry marker.
+   The budget includes Python/adapter initialization. Exact unchanged fault subset
+   rerun (`-k cpu`, five hang/crash/OOM/CPU/output cases): **5 passed, 4 deselected**,
+   15.82 seconds, then the full nine above passed. No budget or assertion was relaxed.
+   These deliberately small-budget startup probes are sensitive to machine load;
+   the failed observation remains recorded and is not factual/model-quality evidence.
+4. `.venv/Scripts/python.exe -m ruff check src tests tools` — **PASS**.
+   `.venv/Scripts/python.exe -m ruff format --check src/doclens_ai/extraction/ir.py src/doclens_ai/extraction/runtime.py tests/unit/test_document_ir.py tests/unit/test_processing_state.py tests/integration/test_engine_search.py`
+   — **5 files already formatted**, PASS. `git diff --check` — PASS.
+
+Cleanup executed after service and Linux acceptance: verified `codex.task=01a163d8`
+on each exact name, then `docker rm -f doclens-engine-pg-01a163d8 doclens-engine-s3b-01a163d8 doclens-engine-s3-01a163d8 doclens-engine-qdrant-01a163d8`.
+The filtered task-container inventory is empty. No shared containers, images,
+volumes, source corpus, Docker Desktop runtime or user-owned audit were removed.
+
+The complete unit rerun with inherited `PYTHONPATH` but overlapping the separate
+Linux OS fault suite had **1 failed, 1996 passed, 5 skipped**, 220.43 seconds:
+the Windows CPU fixture reached its 8-second wall deadline before observing the
+one-second CPU termination (`timeout` rather than `engine_crash`), although its
+engine-entry marker existed. After competing workloads ended, the exact unchanged
+Windows executor suite reran with inherited paths:
+`.venv/Scripts/python.exe -m pytest tests/unit/test_bounded_engines.py -x -q --basetemp=.pytest_cache/engine-cpu-isolated-diagnostic -p no:cacheprovider --tb=short`
+— **9 passed**, 8.77 seconds. Resource-sensitive fault suites must run serially;
+wall/CPU ordering under competing CPU/OOM probes is not deterministic. Neither
+production limits, fault budgets, expected classifications nor assertions changed.
+
+Final serial unit acceptance (no competing resource-fault/service workload):
+
+```powershell
+$env:PYTHONPATH = 'C:\Users\nurs\doclens_ai;C:\Users\nurs\doclens_ai\src'
+.venv/Scripts/python.exe -m pytest tests/unit -q --basetemp=.pytest_cache/engine-final-unit-serial -p no:cacheprovider --tb=short
+```
+
+— **1997 passed, 5 skipped**, 210.82 seconds, exit 0. Skips are unchanged,
+out-of-scope optional checks: Windows symlink privilege (`test_data_quality_gate`)
+and four actual browser paths (`test_pdf_assisted_review`, `test_pdf_grid_proposals`,
+`test_pdf_proposal_review`, `test_pdf_review_visual`) requiring local
+Node/Playwright/Edge inputs or ML30_NODE/ML30_NODE_MODULES. They are not reported as
+passed. All scoped engine/resource tests executed successfully in this serial run.
+
+## Completion and Git boundary
+
+Engineering execution: **PASS** for the six requested dependency slices. All ten
+request-mapped integration workstreams are IMPLEMENTED within the evidence map's
+boundaries. Quality/fidelity/QG-00..09/production release: **NOT_EVALUATED**. No real
+ML engine, weights, training, candidate promotion, public PDF trust switch or GPU
+enforcement was introduced. Engine admission still requires an explicitly trusted
+internal review provider and exact pins; legacy/default PDF remains fail-closed.
+Old/unpinned queued runs require an explicit compatible reprocess, not mutation.
+
+Verified commits before this final slice:
+
+- `0386ad9` — `feat(extraction): add additive DocumentIR v2 contracts`
+- `8d01d98` — `feat(extraction): validate and chunk reviewed IR evidence`
+- `d609e87` — `feat(ingestion): pin extraction routes and reconcile observations`
+- `73eb0a2` — `feat(ingestion): persist fenced immutable extraction artifacts`
+- `a70f5a2` — `feat(ingestion): isolate engines with enforced process budgets`
+- Final slice: this commit — `fix(extraction): verify contracts through authorized search`
+
+Only scoped code/tests and this execution record belong to these commits. The
+user-owned `docs/eda/independent_engineering_audit_20261020.md` remains untracked and
+unchanged. No push, PR merge, history rewrite, instruction change, shared-resource
+deletion or production authorization was performed. Temporary test outputs remain
+ignored. The final response reports the actual sixth SHA and exact final status.
