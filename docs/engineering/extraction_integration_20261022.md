@@ -55,3 +55,42 @@ Environment preflight: no TEST_* settings are present; `docker info --format
 absent. Real PostgreSQL/S3/Qdrant checks cannot currently run. This does not
 prevent standalone contract work, but it is essential for later persistence
 and production-path acceptance. No service or shared resource was modified.
+
+## Slice 2: independent validation and atomic evidence chunks
+
+Added `extraction/ir_validation.py`, `chunking/ir.py` and
+`tests/unit/test_ir_evidence.py`; hardened malformed native wire decoding in
+`extraction/ir.py`. This standalone boundary requires a caller-owned review
+record bound to the complete IR, exact element/relation digests, source/version/
+workspace, and engine/reviewer allowlists. Engine verification claims alone do
+not authorize evidence. No public API accepts those review/policy inputs.
+Production ingestion is not connected yet; its legacy PDF rejection is unchanged.
+
+Validation checks actual supported element/relation kinds, native locators,
+geometry, table ownership/overlap/bounded grid expansion, formula/cache availability,
+negative states, review coverage and unresolved/conflicting relations. Linked
+evidence is held as a group if any member is unsafe. Exact text/sign/precision,
+formula/cache strings and full observed geometry remain in searchable units;
+existing Chunk spans retain genuine source locations and element digest references.
+Oversized groups are held intact. Document budget failure returns no partial prefix.
+Durable resolution of those references is a later artifact-integration requirement.
+
+Executed:
+
+- Red test before implementation: `python -m pytest tests/unit/test_ir_evidence.py
+  -q -p no:cacheprovider` — collection FAIL, missing `chunking.ir`.
+- First implementation run: **1 failed, 23 passed**. A synthetic fixture reused
+  the same page-only address for three text observations, correctly triggering
+  ambiguous ownership. Assigned distinct genuine synthetic block addresses.
+- IR/evidence targeted checks: **62 passed** (16 IR + 46 evidence cases).
+- Broader final command (outside the Windows sandbox):
+  `.venv/Scripts/python.exe -m pytest tests/unit/test_document_ir.py tests/unit/test_ir_evidence.py tests/unit/test_extraction.py tests/unit/test_evidence_regressions.py tests/unit/test_ingestion.py tests/unit/test_processing_state.py tests/unit/test_chunking.py tests/unit/test_safe_cleaning.py tests/unit/test_textblock_offsets.py tests/unit/test_worker.py tests/unit/test_indexing.py tests/unit/test_retrieval.py --basetemp=.pytest_cache/engine-slice2-final -q -p no:cacheprovider`
+  — **385 passed**.
+- Ruff check and format check on the four changed/new Python files — PASS.
+
+Service preflight follow-up: Docker was stopped even outside the sandbox. Starting
+the installed Docker Desktop runtime succeeded; `docker info --format
+'{{.ServerVersion}}'` now reports **29.8.2**. Existing PostgreSQL, MinIO and Qdrant
+images are available locally. No previously running containers were found. The
+initial service limitation is resolved far enough to attempt isolated fixtures;
+real-service verification is still pending, not passed.

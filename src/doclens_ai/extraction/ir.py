@@ -175,8 +175,12 @@ class DocumentIR(Contract):
         # accept. Validate and remove just those derived fields on wire import.
         if not isinstance(value, dict) or "blocks" not in value:
             return value
+        if not isinstance(value["blocks"], list | tuple):
+            raise ValueError("native blocks must be a sequence")
         blocks = []
         for block in value["blocks"]:
+            if not isinstance(block, dict):
+                raise ValueError("native block must be an object")
             expected = "table" if "rows" in block else "text"
             if block.get("kind", expected) != expected:
                 raise ValueError("native block discriminator mismatch")
