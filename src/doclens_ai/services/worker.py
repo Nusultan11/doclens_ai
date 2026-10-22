@@ -128,12 +128,10 @@ class IngestionWorker:
                 await asyncio.shield(ingestion)
             except asyncio.CancelledError:
                 self.request_stop()
-                # A parser may still be running in a thread. Drain instead of deleting its
-                # temporary source or leaving an orphaned task; no handoff on cancellation.
-                try:
-                    await asyncio.shield(ingestion)
-                except Exception:
-                    logger.warning("worker_cancelled_ingestion_failed")
+                # Cancellation closes the engine process/job before temporary RAW
+                # cleanup. External artifact writes remain recoverable reservations.
+                ingestion.cancel()
+                await asyncio.gather(ingestion, return_exceptions=True)
                 raise
             except Exception as error:
                 failure = error

@@ -14,6 +14,7 @@ IMPLEMENTATION_FILES = (
     "extraction/runtime.py",
     "extraction/limits.py",
     "extraction/engines.py",
+    "extraction/bounded.py",
     "extraction/ir.py",
     "extraction/adapters.py",
     "extraction/ir_validation.py",

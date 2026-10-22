@@ -273,14 +273,17 @@ def test_idle_polling_and_claim_failure_continue_and_stop():
     asyncio.run(exercise())
 
 
-def test_cancellation_drains_ingestion_and_stops_heartbeat_without_handoff():
+def test_cancellation_stops_ingestion_and_heartbeat_without_handoff():
     async def exercise():
         worker, _ = _worker()
-        entered, release = asyncio.Event(), asyncio.Event()
+        entered, release, cancelled = asyncio.Event(), asyncio.Event(), asyncio.Event()
 
         async def ingest(*args, **kwargs):
             entered.set()
-            await release.wait()
+            try:
+                await release.wait()
+            finally:
+                cancelled.set()
 
         worker.ingestion.ingest.side_effect = ingest
         task = asyncio.create_task(worker.run_once())
@@ -288,10 +291,9 @@ def test_cancellation_drains_ingestion_and_stops_heartbeat_without_handoff():
             await asyncio.wait_for(entered.wait(), 1)
             task.cancel()
             await asyncio.sleep(0)
-            assert not task.done()
-            release.set()
             with pytest.raises(asyncio.CancelledError):
-                await task
+                await asyncio.wait_for(task, 2)
+            assert cancelled.is_set()
             worker.coordinator.handoff_extraction.assert_not_awaited()
             worker.coordinator.fail_attempt.assert_not_awaited()
             assert len(asyncio.all_tasks()) == 1

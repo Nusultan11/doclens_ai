@@ -223,3 +223,90 @@ Executed:
 Heavy-engine process isolation and complete fake-engine authorized search/fault
 coverage remain subsequent slices. Artifact availability is not evidence eligibility,
 factual correctness, QG acceptance or production authorization.
+
+## Slice 5: bounded engine processes and cancellation
+
+`extraction/bounded.py` runs registered adapters in fresh spawn processes. Trusted
+adapter deserialization/invocation waits for an OS-limit gate. Inputs contain only
+trusted application objects, path and pinned route; engine output is bounded JSON,
+never pickle. Adapters must stay lightweight at registration and load their heavy
+dependencies/models inside `extract`, after the gate. This task loads no real model.
+The trusted Python/application spawn bootstrap precedes the gate and is not presented
+as an untrusted-code sandbox. Parent decoding and artifact work are separate from
+the engine-process memory budget. No egress/OS security sandbox is claimed.
+
+Route snapshots now pin executor version and budgets: wall 60 seconds, CPU 30 seconds,
+committed/address-space memory 1 GiB, output 64 MiB, trusted request 1 MiB, one engine
+in flight per executor by default. These configurable engineering defaults require
+workload qualification before release; they are not approved QG/SLO thresholds.
+Windows Job Objects enforce process/job memory, job **user-mode** CPU time, one
+process, and kill-on-close; installed limits are read back. Linux unprivileged
+workers use read-back-verified prlimit AS/CPU/FSIZE/CORE/NPROC limits and process-group
+termination. Unsupported/root Linux execution fails closed. Cleanup joins up to two
+seconds after termination, separately from the engine wall budget. Thread environment
+defaults are pinned by executor implementation identity; CPU workers hide CUDA devices.
+GPU requests are explicitly rejected: no VRAM hard limit, GPU queue, or GPU qualification
+is claimed. Capacities are per executor/worker, not a cluster-wide quota.
+
+All ingestion engine calls use this boundary, including the unchanged default native
+adapter. Worker cancellation now cancels ingestion and waits for process cleanup;
+it cannot hand off or fail an uncertain lease. Engine faults produce sanitized
+classifications and use existing bounded retry policy. One duplicate same-lease call
+may wait for an artifact replay; further duplicates get retryable backpressure.
+Independent source/lease validation is not blocked by that duplicate-call guard.
+
+References used to verify OS/API contracts:
+[Windows extended job limits](https://learn.microsoft.com/en-us/windows/win32/api/winnt/ns-winnt-jobobject_extended_limit_information),
+[Windows basic job limits](https://learn.microsoft.com/en-us/windows/win32/api/winnt/ns-winnt-jobobject_basic_limit_information),
+[job assignment](https://learn.microsoft.com/en-us/windows/win32/api/jobapi2/nf-jobapi2-assignprocesstojobobject),
+[Python 3.12 resource](https://docs.python.org/3.12/library/resource.html),
+[Python 3.12 multiprocessing](https://docs.python.org/3.12/library/multiprocessing.html).
+
+Executed so far:
+
+- Windows `.venv/Scripts/python.exe -m pytest tests/unit/test_bounded_engines.py tests/unit/test_worker.py -x -q --basetemp=.pytest_cache/bounded-final -p no:cacheprovider --tb=short`
+  — **31 passed**, actual OS hang/crash/OOM/CPU/output limits and cancellation,
+  including observed crash exit 73 and proof hang/CPU fixtures entered engine code.
+- Linux same nine executor tests: **9 passed**, unprivileged UID 1000 in the existing
+  offline image, network disabled and only src/tests plus existing test dependencies
+  mounted read-only. The image lacked pytest initially; reused the existing host's
+  pure-Python test packages by appending them after Linux site-packages. No install,
+  image/model download or private corpus mount was performed. Repeated final run:
+  **9 passed** in 16.17 seconds.
+- Real native/fake/artifact process smoke: **7 passed**.
+- Initial real-worker hang test **FAILED** because its 1 ms test backoff made the
+  same failed job immediately eligible before unrelated work. Used the existing
+  production 30-second backoff and explicitly advanced retry timestamps; no coordinator
+  policy or acceptance assertion was weakened. Final real-worker faults: **2 passed**,
+  proving three same-pin attempts, healthy-job progression, cancellation and no publication.
+- Broad unit run and rerun after replay-guard changes: **417 passed** each.
+- First full services run: **1 failed, 83 passed** (311.49 seconds): concurrent calls
+  for one lease hit new process backpressure instead of idempotent replay. Added a
+  one-waiter per-lease lock; original concurrent assertions passed.
+- Second full run: **1 failed, 83 passed** (309.01 seconds): an early global caller
+  gate blocked independent lease validation. Removed that gate; the executor remains
+  the authoritative heavy-process cap. Both original regressions plus actual worker
+  faults reran together: **4 passed**. The previous targeted replay/fake/worker set:
+  **8 passed**. Final full service acceptance is pending below.
+
+Rollout constraint: drain/stop old workers before producing new configuration
+snapshots. Old/unavailable pins fail closed; no queued run is silently rewritten or
+backfilled, and no rolling mixed-version queue compatibility is promised.
+
+Final slice 5 compatibility check found a separate defect: reading an old route
+through the newly extended v1.0 model injected executor defaults and changed the
+stored route fingerprint. `test_artifact_contracts.py` first **FAILED** and demonstrated
+that mismatch. New executable routes now have explicit version **1.1**; the exact
+`StoredEngineRouteV1` reader preserves original v1.0 snapshots, without inventing
+historical execution budgets. Artifact decoding uses an explicit version discriminator.
+New workers reject old executable run configurations; old artifacts remain readable
+for explicit re-chunking. Targeted compatibility/routing/process checks: **18 passed**.
+
+Current-code final unit command:
+`.venv/Scripts/python.exe -m pytest tests/unit/test_artifact_contracts.py tests/unit/test_bounded_engines.py tests/unit/test_document_ir.py tests/unit/test_ir_evidence.py tests/unit/test_extraction_engines.py tests/unit/test_extraction.py tests/unit/test_evidence_regressions.py tests/unit/test_ingestion.py tests/unit/test_processing_state.py tests/unit/test_chunking.py tests/unit/test_safe_cleaning.py tests/unit/test_textblock_offsets.py tests/unit/test_worker.py tests/unit/test_indexing.py tests/unit/test_retrieval.py tests/unit/test_upload_service.py tests/unit/test_storage_config.py --basetemp=.pytest_cache/engine-slice5-versioned-unit -q -p no:cacheprovider --tb=short`
+— **418 passed**. Final explicit-v1.1 Linux OS fault tests — **9 passed** in 21.46 seconds.
+Ruff check and new-file format checks — PASS; `git diff --check` — PASS.
+
+Final slice 5 real-service command:
+`.venv/Scripts/python.exe .pytest_cache/run_engine_services.py tests/integration/test_bounded_worker.py tests/integration/test_extraction_artifacts.py tests/integration/test_engine_ingestion.py tests/integration/test_extraction_routes.py tests/integration/test_canonical_chunks.py tests/integration/test_processing_jobs.py tests/integration/test_worker.py tests/integration/test_production_indexing.py -x -q --basetemp=.pytest_cache/engine-slice5-versioned -p no:cacheprovider --tb=short`
+— **84 passed**, 313.23 seconds, after the explicit historical/current route split.

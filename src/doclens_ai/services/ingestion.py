@@ -5,7 +5,7 @@ import hashlib
 import json
 import tempfile
 from collections.abc import AsyncIterator, Awaitable, Callable
-from dataclasses import dataclass, fields
+from dataclasses import dataclass, field, fields
 from enum import StrEnum
 from pathlib import Path
 from typing import Protocol
@@ -25,6 +25,7 @@ from doclens_ai.chunking.models import (
     ChunkingStatus,
     ChunkingStrategy,
 )
+from doclens_ai.extraction.bounded import BoundedEngineExecutor, EngineExecutionError
 from doclens_ai.extraction.engines import EngineRegistry, EngineRoute, default_registry
 from doclens_ai.extraction.ir import DocumentIR, SourceIdentity
 from doclens_ai.extraction.ir_validation import (
@@ -163,6 +164,12 @@ class CanonicalChunkPayload:
     split_oversized_element: bool
 
 
+@dataclass(slots=True)
+class _IngestionFlight:
+    lock: asyncio.Lock = field(default_factory=asyncio.Lock)
+    callers: int = 0
+
+
 class IngestionService:
     """Extract and atomically publish canonical chunks for a trusted processing run."""
 
@@ -175,6 +182,7 @@ class IngestionService:
         registry: EngineRegistry | None = None,
         evidence_policy: EvidencePolicy = DEFAULT_EVIDENCE_POLICY,
         review_loader: Callable[[str], EvidenceReview | None] | None = None,
+        executor: BoundedEngineExecutor | None = None,
     ) -> None:
         if download_chunk_size <= 0:
             raise ValueError("download chunk size must be positive")
@@ -185,10 +193,38 @@ class IngestionService:
         self._registry = registry or default_registry()
         self._evidence_policy = evidence_policy
         self._review_loader = review_loader
+        self.executor = executor or BoundedEngineExecutor()
         self.artifacts = ExtractionArtifacts(session_factory, storage)
+        self._flights: dict[tuple[UUID, str, UUID], _IngestionFlight] = {}
         self._chunking_config = ChunkingConfig(strategy=ChunkingStrategy.STRUCTURE_AWARE)
 
     async def ingest(
+        self, processing_run_id: UUID, *, worker_id: str, lease_token: UUID
+    ) -> IngestionResult:
+        # One duplicate may wait for the same owned operation's artifact. This
+        # preserves idempotent concurrent replay without an unbounded work queue.
+        key = (processing_run_id, worker_id, lease_token)
+        flight = self._flights.get(key)
+        if flight is not None and flight.callers >= 2:
+            raise IngestionFailure(
+                IngestionFailureCategory.EXTRACTION_FAILED,
+                retryable=True,
+                document_error_category="backpressure",
+            )
+        if flight is None:
+            flight = self._flights[key] = _IngestionFlight()
+        flight.callers += 1
+        try:
+            async with flight.lock:
+                return await self._ingest_once(
+                    processing_run_id, worker_id=worker_id, lease_token=lease_token
+                )
+        finally:
+            flight.callers -= 1
+            if flight.callers == 0:
+                self._flights.pop(key)
+
+    async def _ingest_once(
         self, processing_run_id: UUID, *, worker_id: str, lease_token: UUID
     ) -> IngestionResult:
         source = await self._resolve_source(
@@ -425,9 +461,7 @@ class IngestionService:
             await self._download_verified(source, source_path)
             route = EngineRoute.model_validate(source.extraction_route)
             try:
-                observations = await asyncio.to_thread(
-                    self._registry.extract, source_path, route=route
-                )
+                observations = await self.executor.extract(self._registry, source_path, route=route)
                 expected = SourceIdentity(
                     sha256=source.sha256_checksum,
                     size_bytes=source.file_size,
@@ -436,6 +470,9 @@ class IngestionService:
                     document_version_id=str(source.document_version_id),
                 )
                 ir = reconcile(observations, expected=expected)
+            except EngineExecutionError as exc:
+                raise IngestionFailure(IngestionFailureCategory.EXTRACTION_FAILED,
+                    retryable=exc.retryable, document_error_category=exc.code) from exc
             except ValueError as exc:
                 raise IngestionFailure(
                     IngestionFailureCategory.EXTRACTION_FAILED, retryable=False

@@ -15,6 +15,7 @@ from pydantic import Field, model_validator
 
 from doclens_ai.chunking.models import CHUNKING_SCHEMA_VERSION
 from doclens_ai.extraction.adapters import adapt_native
+from doclens_ai.extraction.bounded import EXECUTOR_VERSION, ExecutionBudget
 from doclens_ai.extraction.ir import (
     ADAPTER_VERSION,
     IR_VERSION,
@@ -49,7 +50,8 @@ class EnginePin(Contract):
         return self
 
 
-class EngineRoute(Contract):
+class StoredEngineRouteV1(Contract):
+    """Exact historical snapshot contract; never infer new execution controls."""
     version: Literal["1.0"] = "1.0"
     engines: tuple[EnginePin, ...] = Field(min_length=1)
     runtime_manifest_json: str
@@ -68,7 +70,7 @@ class EngineRoute(Contract):
     )
 
     @model_validator(mode="after")
-    def chunk_options(self) -> EngineRoute:
+    def chunk_options(self) -> StoredEngineRouteV1:
         value = json.loads(self.ir_chunk_options_json)
         if not isinstance(value, dict) or set(value) != {
             "max_characters",
@@ -86,6 +88,12 @@ class EngineRoute(Contract):
         return canonical_digest(self.model_dump(mode="json"))
 
 
+class EngineRoute(StoredEngineRouteV1):
+    version: Literal["1.1"] = "1.1"
+    executor_version: Literal["1.0"] = EXECUTOR_VERSION
+    execution_budget: ExecutionBudget = Field(default_factory=ExecutionBudget)
+
+
 @dataclass(frozen=True)
 class EngineDescriptor:
     name: str
@@ -95,6 +103,8 @@ class EngineDescriptor:
 
 
 class ExtractionEngine(Protocol):
+    """Register lightweight adapters; load heavy state only inside extract."""
+
     @property
     def descriptor(self) -> EngineDescriptor: ...
 

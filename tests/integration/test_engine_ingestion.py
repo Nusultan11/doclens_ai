@@ -22,7 +22,7 @@ from tests.unit.test_ir_evidence import review
 pytestmark = [pytest.mark.integration, pytest.mark.storage]
 
 
-async def prepare_engine_run(factory, storage, keys, engine, path):
+async def prepare_engine_run(factory, storage, keys, engine, path, *, route_overrides=None):
     policy = EvidencePolicy(
         allow_verified_pdf=True,
         trusted_reviewers=frozenset({("fixture-reviewer", "r1")}),
@@ -44,6 +44,8 @@ async def prepare_engine_run(factory, storage, keys, engine, path):
         policy_sha256=evidence_policy_fingerprint(policy),
         review_id="fixture-review-1",
     )
+    if route_overrides:
+        route = route.model_copy(update=route_overrides)
     async with factory() as session, session.begin():
         doc = Document(workspace=Workspace(name="Synthetic engine fixture"))
         session.add(doc)
@@ -70,7 +72,7 @@ async def prepare_engine_run(factory, storage, keys, engine, path):
         document_version_id=str(version.id),
     )
     ir = reconcile((engine.extract(path, options_json="{}"),), expected=expected)
-    reviews = {"fixture-review-1": review(ir)}  # Explicit synthetic review, not real adjudication.
+    reviews = {route.review_id: review(ir)}  # Explicit synthetic review, not real adjudication.
     service = IngestionService(
         factory,
         storage,

@@ -9,13 +9,14 @@ from __future__ import annotations
 
 import hashlib
 from collections.abc import AsyncIterator
-from typing import Literal, Protocol
+from typing import Annotated, Literal, Protocol
 from uuid import UUID, uuid5
 
+from pydantic import Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from doclens_ai.extraction.engines import EngineRoute
+from doclens_ai.extraction.engines import EngineRoute, StoredEngineRouteV1
 from doclens_ai.extraction.ir import Contract, DocumentIR, SourceIdentity
 from doclens_ai.models import CanonicalChunk, ExtractionArtifact, ProcessingJob, ProcessingRun
 from doclens_ai.services.processing import (
@@ -42,7 +43,7 @@ class ArtifactStorage(Protocol):
 class ExtractionSnapshot(Contract):
     artifact_version: Literal["1.0"] = "1.0"
     source: SourceIdentity
-    route: EngineRoute
+    route: Annotated[StoredEngineRouteV1 | EngineRoute, Field(discriminator="version")]
     observations: tuple[DocumentIR, ...]
     reconciled: DocumentIR
 
