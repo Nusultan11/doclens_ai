@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import json
 import tempfile
-from collections.abc import AsyncIterator, Callable
+from collections.abc import AsyncIterator, Awaitable, Callable
 from dataclasses import dataclass, fields
 from enum import StrEnum
 from pathlib import Path
@@ -25,7 +26,7 @@ from doclens_ai.chunking.models import (
     ChunkingStrategy,
 )
 from doclens_ai.extraction.engines import EngineRegistry, EngineRoute, default_registry
-from doclens_ai.extraction.ir import SourceIdentity
+from doclens_ai.extraction.ir import DocumentIR, SourceIdentity
 from doclens_ai.extraction.ir_validation import (
     DEFAULT_EVIDENCE_POLICY,
     EvidencePolicy,
@@ -41,10 +42,16 @@ from doclens_ai.models import (
     CanonicalChunk,
     Document,
     DocumentVersion,
+    ExtractionArtifact,
     ProcessingJob,
     ProcessingRun,
     ProcessingStage,
     ProcessingStatus,
+)
+from doclens_ai.services.extraction_artifacts import (
+    ArtifactError,
+    ExtractionArtifacts,
+    ExtractionSnapshot,
 )
 from doclens_ai.services.processing import (
     PROCESSING_CONFIGURATION_VERSION,
@@ -178,9 +185,8 @@ class IngestionService:
         self._registry = registry or default_registry()
         self._evidence_policy = evidence_policy
         self._review_loader = review_loader
-        self._chunking_config = ChunkingConfig(
-            strategy=ChunkingStrategy.STRUCTURE_AWARE
-        )
+        self.artifacts = ExtractionArtifacts(session_factory, storage)
+        self._chunking_config = ChunkingConfig(strategy=ChunkingStrategy.STRUCTURE_AWARE)
 
     async def ingest(
         self, processing_run_id: UUID, *, worker_id: str, lease_token: UUID
@@ -195,9 +201,108 @@ class IngestionService:
                 IngestionFailureCategory.SOURCE_IDENTITY_MISMATCH,
                 retryable=False,
             )
-        chunks = await self._extract_and_chunk(source, suffix=suffix)
-        canonical = tuple(canonicalize_chunk(source.processing_run_id, chunk) for chunk in chunks)
+        route = EngineRoute.model_validate(source.extraction_route)
+        expected = _expected_source(source)
+        try:
+            cached = await self.artifacts.for_run(
+                run_id=source.processing_run_id,
+                job_id=source.processing_job_id,
+                expected=expected,
+                route=route,
+                worker_id=worker_id,
+                lease_token=lease_token,
+            )
+            if cached is not None:
+                artifact_id, checksum, snapshot = cached
+                chunks = await self._chunk_ir(source, snapshot.reconciled)
+            else:
+                artifact_id, checksum = None, None
+
+                async def retain(observations, ir):
+                    nonlocal artifact_id, checksum
+                    artifact_id, checksum = await self.artifacts.store(
+                        ExtractionSnapshot(
+                            source=expected, route=route, observations=observations, reconciled=ir
+                        ),
+                        run_id=source.processing_run_id,
+                        job_id=source.processing_job_id,
+                        worker_id=worker_id,
+                        lease_token=lease_token,
+                    )
+
+                chunks = await self._extract_and_chunk(source, suffix=suffix, retain=retain)
+        except LeaseOwnershipError as exc:
+            raise IngestionFailure(
+                IngestionFailureCategory.LEASE_OWNERSHIP_LOST, retryable=False
+            ) from exc
+        except ArtifactError as exc:
+            raise IngestionFailure(
+                IngestionFailureCategory.EXTRACTION_FAILED, retryable=False
+            ) from exc
+        except ObjectStorageError as exc:
+            raise IngestionFailure(
+                IngestionFailureCategory.STORAGE_UNAVAILABLE, retryable=True
+            ) from exc
+        except SQLAlchemyError as exc:
+            raise IngestionFailure(
+                IngestionFailureCategory.PERSISTENCE_UNAVAILABLE, retryable=True
+            ) from exc
+        canonical = tuple(
+            canonicalize_chunk(
+                source.processing_run_id,
+                chunk,
+                extraction_artifact_id=artifact_id,
+                artifact_checksum=checksum,
+            )
+            for chunk in chunks
+        )
         return await self._persist(source, canonical, worker_id=worker_id, lease_token=lease_token)
+
+    async def ingest_from_artifact(
+        self, processing_run_id: UUID, artifact_id: UUID, *, worker_id: str, lease_token: UUID
+    ) -> IngestionResult:
+        """Re-chunk an existing source snapshot; no parser/model or RAW download."""
+        source = await self._resolve_source(
+            processing_run_id, worker_id=worker_id, lease_token=lease_token
+        )
+        self._validate_processing_configuration(source, require_engines=False)
+        route = EngineRoute.model_validate(source.extraction_route)
+        try:
+            record, snapshot = await self.artifacts.load(
+                artifact_id, expected=_expected_source(source)
+            )
+            if (
+                route.engines != snapshot.route.engines
+                or route.preprocessing != snapshot.route.preprocessing
+                or route.ir_version != snapshot.route.ir_version
+                or route.adapter_version != snapshot.route.adapter_version
+            ):
+                raise ArtifactError("artifact_extraction_configuration_mismatch")
+            chunks = await self._chunk_ir(source, snapshot.reconciled)
+            canonical = tuple(
+                canonicalize_chunk(
+                    source.processing_run_id,
+                    chunk,
+                    extraction_artifact_id=artifact_id,
+                    artifact_checksum=record.checksum,
+                )
+                for chunk in chunks
+            )
+            return await self._persist(
+                source, canonical, worker_id=worker_id, lease_token=lease_token
+            )
+        except ArtifactError as exc:
+            raise IngestionFailure(
+                IngestionFailureCategory.EXTRACTION_FAILED, retryable=False
+            ) from exc
+        except ObjectStorageError as exc:
+            raise IngestionFailure(
+                IngestionFailureCategory.STORAGE_UNAVAILABLE, retryable=True
+            ) from exc
+        except SQLAlchemyError as exc:
+            raise IngestionFailure(
+                IngestionFailureCategory.PERSISTENCE_UNAVAILABLE, retryable=True
+            ) from exc
 
     async def _resolve_source(
         self, processing_run_id: UUID, *, worker_id: str, lease_token: UUID
@@ -245,7 +350,9 @@ class IngestionService:
             extraction_route=run.extraction_route,
         )
 
-    def _validate_processing_configuration(self, source: _SourceIdentity) -> None:
+    def _validate_processing_configuration(
+        self, source: _SourceIdentity, *, require_engines: bool = True
+    ) -> None:
         try:
             route = EngineRoute.model_validate(source.extraction_route)
             valid_route = route.chunker_version == (
@@ -262,7 +369,7 @@ class IngestionService:
                     and bool(route.review_id)
                     and self._review_loader is not None
                 )
-            for pin in route.engines:
+            for pin in route.engines if require_engines else ():
                 self._registry.resolve(
                     pin, DocumentFormat(_SUFFIX_BY_CONTENT_TYPE[source.content_type][1:])
                 )
@@ -285,6 +392,7 @@ class IngestionService:
         source: _SourceIdentity,
         *,
         suffix: str,
+        retain: Callable[[tuple[DocumentIR, ...], DocumentIR], Awaitable[None]] | None = None,
     ) -> tuple[Chunk, ...]:
         if source.file_size <= 0:
             raise IngestionFailure(
@@ -332,75 +440,9 @@ class IngestionService:
                 raise IngestionFailure(
                     IngestionFailureCategory.EXTRACTION_FAILED, retryable=False
                 ) from exc
-            if route.mode == "verified_ir":
-                reviewed = self._review_loader(route.review_id)
-                result = chunk_verified_ir(
-                    ir, expected=expected, review=reviewed, policy=self._evidence_policy
-                )
-                if not result.chunks:
-                    raise IngestionFailure(
-                        IngestionFailureCategory.EXTRACTION_NEEDS_REVIEW, retryable=False
-                    )
-                self._validate_chunks(
-                    source,
-                    result.chunks,
-                    expected_fingerprint=result.chunks[0].config_fingerprint,
-                    expected_version=IR_CHUNKER_VERSION,
-                )
-                return result.chunks
-            extraction = ir.native
-            if extraction is None or extraction.schema_version != route.engines[0].revision:
-                raise IngestionFailure(
-                    IngestionFailureCategory.CONFIGURATION_MISMATCH,
-                    retryable=False,
-                )
-            if (
-                extraction.source_sha256 != source.sha256_checksum
-                or extraction.source_size_bytes != source.file_size
-                or extraction.document_format is None
-                or f".{extraction.document_format.value}" != suffix
-            ):
-                raise IngestionFailure(
-                    IngestionFailureCategory.SOURCE_IDENTITY_MISMATCH,
-                    retryable=False,
-                )
-            if extraction.status is ExtractionStatus.NEEDS_REVIEW:
-                raise IngestionFailure(
-                    IngestionFailureCategory.EXTRACTION_NEEDS_REVIEW,
-                    retryable=False,
-                )
-            if extraction.status is ExtractionStatus.FAILED:
-                raise IngestionFailure(
-                    IngestionFailureCategory.EXTRACTION_FAILED,
-                    retryable=False,
-                    document_error_category=(
-                        extraction.error_category.value
-                        if extraction.error_category is not None
-                        else None
-                    ),
-                )
-
-            if not evidence_is_indexable(extraction):
-                raise IngestionFailure(
-                    IngestionFailureCategory.EXTRACTION_NEEDS_REVIEW,
-                    retryable=False,
-                )
-
-            outcome = await asyncio.to_thread(
-                chunk_document,
-                extraction,
-                document_id=str(source.document_version_id),
-                config=self._chunking_config,
-            )
-            if outcome.status is not ChunkingStatus.CHUNKED:
-                category = (
-                    IngestionFailureCategory.EMPTY_CONTENT
-                    if outcome.reason is ChunkingReason.EMPTY_CONTENT
-                    else IngestionFailureCategory.CHUNKING_FAILED
-                )
-                raise IngestionFailure(category, retryable=False)
-            self._validate_chunks(source, outcome.chunks)
-            return outcome.chunks
+            if retain is not None:
+                await retain(observations, ir)
+            return await self._chunk_ir(source, ir)
         except IngestionFailure:
             raise
         except OSError as exc:
@@ -416,6 +458,82 @@ class IngestionService:
                     IngestionFailureCategory.TEMPORARY_STORAGE_UNAVAILABLE,
                     retryable=True,
                 ) from exc
+
+
+    async def _chunk_ir(self, source: _SourceIdentity, ir: DocumentIR) -> tuple[Chunk, ...]:
+        route = EngineRoute.model_validate(source.extraction_route)
+        expected = _expected_source(source)
+        suffix = _SUFFIX_BY_CONTENT_TYPE[source.content_type]
+        if route.mode == "verified_ir":
+            reviewed = self._review_loader(route.review_id)
+            result = chunk_verified_ir(
+                ir, expected=expected, review=reviewed, policy=self._evidence_policy,
+                **json.loads(route.ir_chunk_options_json),
+            )
+            if not result.chunks:
+                raise IngestionFailure(
+                    IngestionFailureCategory.EXTRACTION_NEEDS_REVIEW, retryable=False
+                )
+            self._validate_chunks(
+                source,
+                result.chunks,
+                expected_fingerprint=result.chunks[0].config_fingerprint,
+                expected_version=IR_CHUNKER_VERSION,
+            )
+            return result.chunks
+        extraction = ir.native
+        if extraction is None or extraction.schema_version != route.engines[0].revision:
+            raise IngestionFailure(
+                IngestionFailureCategory.CONFIGURATION_MISMATCH,
+                retryable=False,
+            )
+        if (
+            extraction.source_sha256 != source.sha256_checksum
+            or extraction.source_size_bytes != source.file_size
+            or extraction.document_format is None
+            or f".{extraction.document_format.value}" != suffix
+        ):
+            raise IngestionFailure(
+                IngestionFailureCategory.SOURCE_IDENTITY_MISMATCH,
+                retryable=False,
+            )
+        if extraction.status is ExtractionStatus.NEEDS_REVIEW:
+            raise IngestionFailure(
+                IngestionFailureCategory.EXTRACTION_NEEDS_REVIEW,
+                retryable=False,
+            )
+        if extraction.status is ExtractionStatus.FAILED:
+            raise IngestionFailure(
+                IngestionFailureCategory.EXTRACTION_FAILED,
+                retryable=False,
+                document_error_category=(
+                    extraction.error_category.value
+                    if extraction.error_category is not None
+                    else None
+                ),
+            )
+
+        if not evidence_is_indexable(extraction):
+            raise IngestionFailure(
+                IngestionFailureCategory.EXTRACTION_NEEDS_REVIEW,
+                retryable=False,
+            )
+
+        outcome = await asyncio.to_thread(
+            chunk_document,
+            extraction,
+            document_id=str(source.document_version_id),
+            config=self._chunking_config,
+        )
+        if outcome.status is not ChunkingStatus.CHUNKED:
+            category = (
+                IngestionFailureCategory.EMPTY_CONTENT
+                if outcome.reason is ChunkingReason.EMPTY_CONTENT
+                else IngestionFailureCategory.CHUNKING_FAILED
+            )
+            raise IngestionFailure(category, retryable=False)
+        self._validate_chunks(source, outcome.chunks)
+        return outcome.chunks
 
     def _validate_metadata(
         self,
@@ -549,6 +667,27 @@ class IngestionService:
                         IngestionFailureCategory.CONFIGURATION_MISMATCH,
                         retryable=False,
                     )
+                links = {
+                    (span.get("extraction_artifact_id"), span.get("artifact_checksum"))
+                    for chunk in chunks
+                    for span in chunk.source_provenance
+                    if span.get("extraction_artifact_id") is not None
+                }
+                for artifact_id, checksum in links:
+                    try:
+                        artifact = await session.get(ExtractionArtifact, UUID(artifact_id))
+                    except (ValueError, TypeError):
+                        artifact = None
+                    if (
+                        artifact is None
+                        or artifact.state != "available"
+                        or artifact.document_version_id != source.document_version_id
+                        or artifact.workspace_id != source.workspace_id
+                        or artifact.checksum != checksum
+                    ):
+                        raise IngestionFailure(
+                            IngestionFailureCategory.PERSISTENCE_CONFLICT, retryable=False
+                        )
                 existing = tuple(
                     (
                         await session.scalars(
@@ -625,7 +764,13 @@ def canonical_chunk_uuid(processing_run_id: UUID, chunk_identity: str) -> UUID:
     return uuid5(processing_run_id, chunk_identity)
 
 
-def canonicalize_chunk(processing_run_id: UUID, chunk: Chunk) -> CanonicalChunkPayload:
+def canonicalize_chunk(
+    processing_run_id: UUID,
+    chunk: Chunk,
+    *,
+    extraction_artifact_id: UUID | None = None,
+    artifact_checksum: str | None = None,
+) -> CanonicalChunkPayload:
     provenance = [
         {
             "unit_id": span.unit_id,
@@ -642,6 +787,14 @@ def canonicalize_chunk(processing_run_id: UUID, chunk: Chunk) -> CanonicalChunkP
             "source_end": span.source_end,
             "source_length": span.source_length,
             "offset_basis": "rendered_source_unit",
+            **(
+                {
+                    "extraction_artifact_id": str(extraction_artifact_id),
+                    "artifact_checksum": artifact_checksum,
+                }
+                if extraction_artifact_id is not None
+                else {}
+            ),
         }
         for span in chunk.provenance
     ]
@@ -701,3 +854,9 @@ def _classified_storage_failure(error: ObjectStorageError) -> IngestionFailure:
         IngestionFailureCategory.STORAGE_UNAVAILABLE,
         retryable=True,
     )
+
+
+def _expected_source(source: _SourceIdentity) -> SourceIdentity:
+    return SourceIdentity(sha256=source.sha256_checksum, size_bytes=source.file_size,
+        document_format=DocumentFormat(_SUFFIX_BY_CONTENT_TYPE[source.content_type][1:]),
+        workspace_id=str(source.workspace_id), document_version_id=str(source.document_version_id))

@@ -167,3 +167,59 @@ Final slice 3 checks:
   — **8 passed** after that final hardening.
 - Ruff check on extraction and affected service/model/migration/test files — PASS;
   format checks on the new modules/tests — PASS; `git diff --check` — PASS.
+
+## Slice 4: durable extraction snapshots and re-chunking
+
+Added `models/extraction_artifact.py`, `services/extraction_artifacts.py`, migration
+`0009_extraction_artifacts` and real artifact fault tests. S3 keys are server-created
+under workspace/version scope and contain the immutable payload checksum. Conditional
+PutObject IfNoneMatch is supported by the installed boto3 service model and was
+exercised against real MinIO, including rejection of replacement content.
+Snapshots retain the entire original per-engine IR (including native metadata),
+reconciled IR, source, route and all issues/states. No model weights or private
+corpus/Gold is included. The route pins artifact version/byte limit and exact IR
+chunk options. Those byte/chunk ceilings are operational safeguards, not QG thresholds.
+
+PG reserves staging identity before S3 work, then checksum readback precedes fenced
+available publication. DB triggers enforce source/workspace, current lease and
+allowed state transitions and reject identity edits/deletes. Interrupted staging
+snapshots are recovered under a fresh lease. Divergent output for the same reserved
+run/configuration raises a conflict instead of replacing observations. Available
+artifacts are retained. Cleanup considers only staging/discarded snapshots belonging
+to terminal failed jobs, checks canonical references, and retains a retryable PG
+reservation. A late stale upload can be removed by repeating discarded-row cleanup;
+no unknown/shared prefix is deleted.
+
+Canonical span provenance now carries artifact ID/checksum, checked against the
+available artifact's version/workspace at publication. `ingest_from_artifact`
+supports a new pinned run/chunk budget without an engine or RAW download. It checks
+source/scope and original extraction pins; it does not substitute a parser. Native
+extraction/chunking semantics remain the default. Published index cutover is unchanged.
+
+Executed:
+
+- First targeted artifact-backed ingestion: **5 passed**, real PG/S3.
+- First artifact fault suite: **7 passed**, including no-extraction replay, immutable
+  PUT, stale lease, interruption/recovery, corrupted bytes, scoped cleanup, re-chunking
+  with changed pinned chunk identity, and two clean schema upgrade/check/downgrade cycles.
+- Added a partial-page fixture: failed page/reasons remain in the snapshot while
+  only the independently approved page becomes a canonical chunk.
+- Existing canonical suite first stopped at **1 failed, 24 passed**: its fault-injection
+  wrapper did not forward the new optional artifact provenance arguments. Updated
+  the wrapper to forward kwargs; retained the rollback assertion unchanged.
+- A new all-failed reconciliation regression first **FAILED** (`partial` instead of
+  `failed`). Fixed top-level state while retaining original observations. Targeted
+  rerun: **69 passed** across engine/evidence/ingestion units.
+- `.venv/Scripts/python.exe .pytest_cache/run_engine_services.py tests/integration/test_extraction_artifacts.py tests/integration/test_engine_ingestion.py tests/integration/test_extraction_routes.py tests/integration/test_canonical_chunks.py tests/integration/test_processing_jobs.py tests/integration/test_worker.py tests/integration/test_production_indexing.py -q --basetemp=.pytest_cache/engine-slice4-services -p no:cacheprovider --tb=short`
+  — **82 passed**, real PG/S3/Qdrant, 219.57 seconds.
+- The slice 3 broad unit command plus `tests/unit/test_storage_config.py`, using
+  `--basetemp=.pytest_cache/engine-slice4-unit`: **408 passed**.
+- Ruff checks on all affected modules/migration/tests — PASS; new-file format checks
+  and `git diff --check` — PASS. Existing unrelated formatting was preserved.
+- Final typed repository/native smoke:
+  `.venv/Scripts/python.exe .pytest_cache/run_engine_services.py tests/integration/test_extraction_artifacts.py::test_available_artifact_is_immutable_scoped_and_retry_does_not_extract tests/integration/test_worker.py::test_upload_ingestion_handoff_and_embedding_filter -q --basetemp=.pytest_cache/artifact-typed-final -p no:cacheprovider --tb=short`
+  — **2 passed** after final type annotations/formatting cleanup.
+
+Heavy-engine process isolation and complete fake-engine authorized search/fault
+coverage remain subsequent slices. Artifact availability is not evidence eligibility,
+factual correctness, QG acceptance or production authorization.

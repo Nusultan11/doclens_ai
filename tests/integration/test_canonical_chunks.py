@@ -105,6 +105,13 @@ class MemoryStorage:
             metadata={"sha256": stored.checksum},
         )
 
+    async def put_immutable(self, key: str, payload: bytes, *, sha256_checksum: str) -> None:
+        if not self.available:
+            raise ObjectStorageError("storage unavailable")
+        if key not in self.objects:
+            self.objects[key] = _StoredObject(content=payload, content_type="application/json",
+                                               checksum=sha256_checksum)
+
     async def sha256(self, key: str, *, chunk_size: int = 1024 * 1024) -> str:
         return hashlib.sha256(self._require(key).content).hexdigest()
 
@@ -476,8 +483,8 @@ def test_stale_worker_cannot_publish_after_lease_reclaimed_during_extraction(
         original = service._extract_and_chunk
         captured = []
 
-        async def paused(source, *, suffix):
-            chunks = await original(source, suffix=suffix)
+        async def paused(source, *, suffix, **kwargs):
+            chunks = await original(source, suffix=suffix, **kwargs)
             captured.append(
                 (
                     source,
@@ -735,8 +742,8 @@ def test_revocation_or_transition_during_extraction_rolls_back(
             service = IngestionService(factory, storage)
             original = service._extract_and_chunk
 
-            async def paused(source, *, suffix):
-                chunks = await original(source, suffix=suffix)
+            async def paused(source, *, suffix, **kwargs):
+                chunks = await original(source, suffix=suffix, **kwargs)
                 extracted.set()
                 await release.wait()
                 return chunks
@@ -1185,8 +1192,8 @@ def test_canonical_chunk_set_rolls_back_on_persistence_failure(
         )
         original = ingestion_module.canonicalize_chunk
 
-        def invalid_second(processing_run_id: UUID, chunk: object):
-            payload = original(processing_run_id, chunk)  # type: ignore[arg-type]
+        def invalid_second(processing_run_id: UUID, chunk: object, **kwargs):
+            payload = original(processing_run_id, chunk, **kwargs)  # type: ignore[arg-type]
             return replace(payload, character_count=0) if payload.ordinal == 1 else payload
 
         monkeypatch.setattr(ingestion_module, "canonicalize_chunk", invalid_second)

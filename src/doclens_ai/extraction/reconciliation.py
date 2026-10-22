@@ -88,9 +88,17 @@ def reconcile(observations: tuple[DocumentIR, ...], *, expected: SourceIdentity)
                         reason=kind,
                     )
                 )
+    states = {observation.state for observation in observations}
+    state = (
+        next(iter(states))
+        if len(states) == 1 and states <= {"failed", "unsupported", "unresolved"}
+        else "partial"
+        if issues
+        else "complete"
+    )
     return DocumentIR(
         source=expected,
-        state="partial" if issues else "complete",
+        state=state,
         elements=tuple(elements),
         relations=tuple(relations),
         issues=tuple(issues),

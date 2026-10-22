@@ -61,6 +61,26 @@ class EngineRoute(Contract):
     chunker_version: str = CHUNKING_SCHEMA_VERSION
     policy_sha256: Digest | None = None
     review_id: str | None = None
+    artifact_version: Literal["1.0"] = "1.0"
+    artifact_max_bytes: int = Field(default=64 * 1024 * 1024, gt=0, le=64 * 1024 * 1024)
+    ir_chunk_options_json: str = (
+        '{"max_characters":1200,"max_chunks":100000,"max_source_characters":5000000}'
+    )
+
+    @model_validator(mode="after")
+    def chunk_options(self) -> EngineRoute:
+        value = json.loads(self.ir_chunk_options_json)
+        if not isinstance(value, dict) or set(value) != {
+            "max_characters",
+            "max_chunks",
+            "max_source_characters",
+        }:
+            raise ValueError("IR chunk options must be explicit")
+        if any(type(v) is not int or v <= 0 for v in value.values()):
+            raise ValueError("IR chunk limits must be positive integers")
+        if self.ir_chunk_options_json != json.dumps(value, sort_keys=True, separators=(",", ":")):
+            raise ValueError("IR chunk options must be canonical")
+        return self
 
     def fingerprint(self) -> str:
         return canonical_digest(self.model_dump(mode="json"))

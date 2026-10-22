@@ -19,6 +19,8 @@ IMPLEMENTATION_FILES = (
     "extraction/ir_validation.py",
     "extraction/reconciliation.py",
     "chunking/ir.py",
+    "services/extraction_artifacts.py",
+    "storage/s3.py",
     "chunking/core.py",
     "chunking/models.py",
 )

@@ -165,3 +165,14 @@ def test_reconcile_keeps_conflicting_values_confidences_and_exact_source_locatio
         bad = first.model_copy(update={"source": first.source.model_copy(update={field: value})})
         with pytest.raises(ValueError, match="mismatch"):
             reconcile((first, bad), expected=expected)
+
+
+def test_all_failed_observations_preserve_failed_document_state(tmp_path):
+    path = tmp_path / "failed.pdf"
+    path.write_bytes(b"%PDF-1.7\nfailed fixture\n%%EOF")
+    ir = (
+        FakeWordsIR()
+        .extract(path, options_json="{}")
+        .model_copy(update={"state": "failed", "elements": ()})
+    )
+    assert reconcile((ir,), expected=ir.source).state == "failed"

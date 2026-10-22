@@ -86,6 +86,25 @@ class S3ObjectStorage:
             metadata=response.get("Metadata", {}),
         )
 
+    async def put_immutable(self, key: str, payload: bytes, *, sha256_checksum: str) -> None:
+        """Create once. The caller must verify readback even after a 412 replay."""
+        try:
+            await self._call(
+                self._client.put_object,
+                Bucket=self.settings.bucket_name,
+                Key=key,
+                Body=payload,
+                ContentType="application/json",
+                Metadata={"sha256": sha256_checksum},
+                IfNoneMatch="*",
+            )
+        except ObjectStorageError as error:
+            cause = error.__cause__
+            if not isinstance(cause, ClientError) or str(
+                cause.response.get("Error", {}).get("Code")
+            ) not in {"PreconditionFailed", "412"}:
+                raise
+
     async def sha256(self, key: str, *, chunk_size: int = 1024 * 1024) -> str:
         digest = hashlib.sha256()
         async for chunk in self.stream_read(key, chunk_size=chunk_size):

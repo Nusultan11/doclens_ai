@@ -2,6 +2,7 @@
 
 from doclens_ai.models.chunk import CanonicalChunk
 from doclens_ai.models.document import Document, DocumentVersion
+from doclens_ai.models.extraction_artifact import ExtractionArtifact
 from doclens_ai.models.index_revision import IndexRevision, IndexRevisionStatus
 from doclens_ai.models.membership import WorkspaceMembership, WorkspaceRole
 from doclens_ai.models.processing import (
@@ -20,6 +21,7 @@ __all__ = [
     "CanonicalChunk",
     "Document",
     "DocumentVersion",
+    "ExtractionArtifact",
     "IndexRevision",
     "IndexRevisionStatus",
     "ProcessingJob",
