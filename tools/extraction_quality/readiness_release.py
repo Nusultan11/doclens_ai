@@ -333,16 +333,45 @@ def freeze(output: Path) -> dict:
             raise ValueError("input drift")
     protected = dict(value["binding"]["inputs"])
     protected.update({r["path"]: r["sha256"] for r in value["sources"].values()})
+    effective_path = output / "effective-matrix.json"
+    effective = corpus.read_json(effective_path, max_bytes=256 * 1024**2)
+    ids = [r["id"] for r in effective["population"]]
+    if len(ids) != len(set(ids)) or not set(value["sources"]).issubset(ids):
+        raise ValueError("release denominator mismatch")
+    for row in effective["population"]:
+        ref = row["source_reference"]
+        if ref["sha256"] != row["sha256"]:
+            raise ValueError("effective matrix source mismatch")
+        protected[ref["path"]] = ref["sha256"]
+    for relative, digest in read(ISOLATION)["inputs_sha256"].items():
+        protected[relative.replace("\\", "/")] = digest
     for relative, digest in read(REFERENCE + "/artifact-manifest.json").items():
         protected[REFERENCE + "/" + relative] = digest
+    protected[REFERENCE + "/COMPLETE.json"] = corpus.sha256(ROOT / REFERENCE / "COMPLETE.json")
     for relative, digest in protected.items():
         if corpus.sha256(confined(ROOT, relative)) != digest:
             raise ValueError("frozen source/Gold/reference drift")
     files = {}
-    for candidate in output.rglob("*.json"):
-        if candidate.name != "RELEASE.json" and not candidate.name.endswith(".tmp"):
+    for candidate in output.rglob("*"):
+        corpus.no_links(candidate)
+        if (
+            candidate.is_file()
+            and candidate.name != "RELEASE.json"
+            and not candidate.name.endswith(".tmp")
+        ):
             corpus.no_links(candidate)
             files[candidate.relative_to(output).as_posix()] = corpus.sha256(candidate)
+    final_code = {
+        p.relative_to(ROOT).as_posix(): corpus.sha256(p)
+        for p in (
+            Path(__file__),
+            Path(oracle.__file__),
+            ROOT / "tools/extraction_quality/readiness_io.py",
+            ROOT / "tools/extraction_quality/readiness_evaluator.py",
+            ROOT / "docs/eda/readiness_predictions_v1_schema.json",
+        )
+    }
+    protected.update(final_code)
     release = {
         "version": VERSION,
         "artifact_sha256": files,
@@ -356,6 +385,8 @@ def freeze(output: Path) -> dict:
             "AUTOMATIC_SOURCE_OBSERVATION",
         ],
         "independent_gold": False,
+        "attempted_population": len(ids),
+        "final_code_sha256": final_code,
     }
     release["fingerprint"] = fingerprint(release)
     destination = output / "RELEASE.json"
@@ -378,6 +409,17 @@ def verify(output: Path) -> dict:
     without = {k: v for k, v in release.items() if k != "fingerprint"}
     if fingerprint(without) != release["fingerprint"]:
         raise ValueError("release fingerprint mismatch")
+    actual = set()
+    for candidate in output.rglob("*"):
+        corpus.no_links(candidate)
+        if (
+            candidate.is_file()
+            and candidate.name != "RELEASE.json"
+            and not candidate.name.endswith(".tmp")
+        ):
+            actual.add(candidate.relative_to(output).as_posix())
+    if actual != set(release["artifact_sha256"]):
+        raise ValueError("release artifact inventory drift")
     for relative, digest in release["protected_sha256"].items():
         if corpus.sha256(confined(ROOT, relative)) != digest:
             raise ValueError("protected input drift")

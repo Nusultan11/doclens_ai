@@ -1,0 +1,126 @@
+{
+  "$defs": {
+    "JsonValue": {},
+    "Observation": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": [
+            "pdf_text",
+            "pdf_reading_order",
+            "pdf_ocr_transcript",
+            "pdf_table",
+            "pdf_cell",
+            "pdf_relation",
+            "pdf_provenance",
+            "docx_element",
+            "xlsx_cell",
+            "xlsx_sheet",
+            "xlsx_display"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "locator": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "title": "Locator",
+          "type": "object"
+        },
+        "fields": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "title": "Fields",
+          "type": "object"
+        }
+      },
+      "required": [
+        "kind",
+        "locator",
+        "fields"
+      ],
+      "title": "Observation",
+      "type": "object"
+    },
+    "Prediction": {
+      "additionalProperties": false,
+      "properties": {
+        "source_id": {
+          "title": "Source Id",
+          "type": "string"
+        },
+        "source_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Source Sha256",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "success",
+            "needs_review",
+            "failed"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "failure": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Failure"
+        },
+        "observations": {
+          "items": {
+            "$ref": "#/$defs/Observation"
+          },
+          "maxItems": 200000,
+          "title": "Observations",
+          "type": "array"
+        }
+      },
+      "required": [
+        "source_id",
+        "source_sha256",
+        "status",
+        "failure",
+        "observations"
+      ],
+      "title": "Prediction",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "const": "readiness-predictions-1.0",
+      "title": "Version",
+      "type": "string"
+    },
+    "model_identity": {
+      "title": "Model Identity",
+      "type": "string"
+    },
+    "predictions": {
+      "items": {
+        "$ref": "#/$defs/Prediction"
+      },
+      "maxItems": 2000,
+      "title": "Predictions",
+      "type": "array"
+    }
+  },
+  "required": [
+    "version",
+    "model_identity",
+    "predictions"
+  ],
+  "title": "Predictions",
+  "type": "object"
+}

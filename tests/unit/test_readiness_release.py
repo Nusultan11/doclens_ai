@@ -5,6 +5,7 @@ import zipfile
 import pytest
 
 from doclens_ai.eda import corpus_v2 as corpus
+from doclens_ai.extraction.fidelity_gold import fingerprint
 from tools.extraction_quality import office_readiness_oracle as oracle
 from tools.extraction_quality import readiness_release as release
 from tools.extraction_quality.readiness_io import atomic, cached, confined
@@ -233,3 +234,29 @@ def test_family_and_source_join_fail_closed():
     guard["source_sha256"] = "b"
     with pytest.raises(ValueError):
         release.join_population({"population": [source]}, {"rows": [guard]}, {"candidates": []})
+
+
+def test_immutable_release_detects_added_files_and_byte_drift(tmp_path, monkeypatch):
+    monkeypatch.setattr(release, "private_root", lambda path: None)
+    monkeypatch.setattr(release, "ROOT", tmp_path)
+    original = tmp_path / "original"
+    original.write_bytes(b"frozen")
+    output = tmp_path / "release"
+    output.mkdir()
+    artifact = output / "labels.json"
+    atomic(artifact, {"independent_gold": False})
+    value = {
+        "artifact_sha256": {"labels.json": corpus.sha256(artifact)},
+        "protected_sha256": {"original": corpus.sha256(original)},
+        "gates": {},
+    }
+    value["fingerprint"] = fingerprint(value)
+    atomic(output / "RELEASE.json", value)
+    assert release.verify(output)["integrity"] == "PASS"
+    atomic(output / "unlisted.json", {"fake_label": True})
+    with pytest.raises(ValueError, match="inventory"):
+        release.verify(output)
+    (output / "unlisted.json").unlink()
+    original.write_bytes(b"changed")
+    with pytest.raises(ValueError, match="protected"):
+        release.verify(output)
