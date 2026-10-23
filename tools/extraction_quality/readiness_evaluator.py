@@ -7,9 +7,11 @@ Missing predictions/references remain in the attempted document denominator.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import time
 from collections import Counter, defaultdict
+from contextlib import closing
 from pathlib import Path
 from typing import Literal
 
@@ -172,6 +174,42 @@ def oracle_observations(value: dict) -> list[dict]:
     return result
 
 
+def validate_pdf_pages(source: dict, observations: list[Observation]) -> None:
+    """Read bounds from the exact original bytes, never optional matrix hints."""
+    if not observations:
+        return
+    import pypdfium2 as pdfium
+
+    asset = corpus.Asset.model_validate(source.get("source_reference", {}))
+    if asset.format != "pdf" or asset.sha256 != source["sha256"]:
+        raise ValueError("SHA-bound PDF original required for page validation")
+    path = confined(ROOT, asset.path)
+    try:
+        with path.open("rb") as stream:
+            raw = stream.read(asset.size_bytes + 1)
+    except OSError as error:
+        raise ValueError("SHA-bound PDF original unavailable") from error
+    if len(raw) != asset.size_bytes or hashlib.sha256(raw).hexdigest() != asset.sha256:
+        raise ValueError("PDF original bytes do not match source identity")
+    try:
+        with pdfium.PdfDocument(raw) as document:
+            for observation in observations:
+                number = observation.locator["page"]
+                if not 1 <= number <= len(document):
+                    raise ValueError("prediction page outside original")
+                box = observation.locator.get("bbox")
+                if box is not None:
+                    with closing(document[number - 1]) as page:
+                        if not (
+                            page.get_rotation() == 0
+                            and 0 <= box[0] < box[2] <= page.get_width()
+                            and 0 <= box[1] < box[3] <= page.get_height()
+                        ):
+                            raise ValueError("prediction region outside original page geometry")
+    except pdfium.PdfiumError as error:
+        raise ValueError("PDF original cannot provide trustworthy page bounds") from error
+
+
 def compare(population: list[dict], predictions: Predictions, references: dict[str, dict]) -> dict:
     sources = {r["id"]: r for r in population}
     if len(sources) != len(population):
@@ -193,22 +231,7 @@ def compare(population: list[dict], predictions: Predictions, references: dict[s
         ):
             raise ValueError("prediction observation format mismatch")
         if sources[key]["format"] == "pdf":
-            for observation in prediction.observations:
-                page = observation.locator["page"]
-                if page > sources[key].get("pdf_page_count", float("inf")):
-                    raise ValueError("prediction page outside original")
-                geometry = sources[key].get("pdf_page_geometry", {}).get(str(page))
-                box = observation.locator.get("bbox")
-                if (
-                    geometry
-                    and box
-                    and not (
-                        0 <= box[0] < box[2] <= geometry["width"]
-                        and 0 <= box[1] < box[3] <= geometry["height"]
-                        and geometry["rotation"] == 0
-                    )
-                ):
-                    raise ValueError("prediction region outside original page geometry")
+            validate_pdf_pages(sources[key], prediction.observations)
     counts = defaultdict(Counter)
     rows = []
     for source in population:
@@ -359,6 +382,58 @@ def run_office(output: Path) -> dict:
     }
 
 
+def manifest_oracles(output: Path, population: list[dict]) -> dict[str, dict]:
+    """Select only canonical, source-bound oracles covered by the manifest."""
+    manifest = corpus.read_json(output / "RELEASE.json")
+    listed = {
+        p: digest
+        for p, digest in manifest["artifact_sha256"].items()
+        if p.startswith("office-oracles/")
+    }
+    directory = confined(output, "office-oracles")
+    actual = {}
+    for path in directory.rglob("*"):
+        corpus.no_links(path)
+        if path.is_file():
+            actual[path.relative_to(output).as_posix()] = path
+    if set(actual) != set(listed):
+        raise ValueError("Office oracle inventory differs from frozen manifest")
+    sources = {r["id"]: r for r in population}
+    references = {}
+    for relative, path in sorted(actual.items()):
+        if (
+            path.parent != directory
+            or path.suffix != ".json"
+            or path.name.casefold() == "release.json"
+            or corpus.sha256(path) != listed[relative]
+        ):
+            raise ValueError("unexpected, misnamed or unhashed Office oracle")
+        if path.name.endswith(".checkpoint.json"):
+            sibling = relative.removesuffix(".checkpoint.json") + ".json"
+            if sibling not in actual:
+                raise ValueError("orphan Office oracle checkpoint")
+            continue
+        value = corpus.read_json(path, max_bytes=256 * 1024**2)
+        if not isinstance(value, dict):
+            raise ValueError("Office oracle object required")
+        key = value.get("source_id")
+        if (
+            not isinstance(key, str)
+            or key not in sources
+            or key in references
+            or path.name != key + ".json"
+            or sources[key]["format"] not in {"docx", "xlsx"}
+            or sources[key]["rights"].get("local_evaluation") is not True
+            or sources[key].get("reserved_qa_family")
+            or sources[key].get("split", "dev") != "dev"
+            or corpus.sha256(path) != listed[relative]
+        ):
+            raise ValueError("duplicate, misnamed or source-unbound Office oracle")
+        validate_oracle(value, sources[key])
+        references[key] = value
+    return references
+
+
 def score(output: Path, prediction_path: Path) -> dict:
     private_root(output)
     from tools.extraction_quality.readiness_release import verify_runtime
@@ -368,12 +443,7 @@ def score(output: Path, prediction_path: Path) -> dict:
     predictions = Predictions.model_validate(
         corpus.read_json(prediction_path, max_bytes=64 * 1024**2)
     )
-    references = {}
-    for path in sorted((output / "office-oracles").glob("*.json")):
-        if not path.name.endswith(".checkpoint.json"):
-            corpus.no_links(path)
-            value = corpus.read_json(path, max_bytes=256 * 1024**2)
-            references[value["source_id"]] = value
+    references = manifest_oracles(output, matrix["population"])
     result = compare(matrix["population"], predictions, references)
     pdf_path = output / "pdf-references.json"
     if pdf_path.exists():

@@ -526,7 +526,7 @@ def freeze(output: Path) -> dict:
         corpus.no_links(candidate)
         if (
             candidate.is_file()
-            and candidate.name != "RELEASE.json"
+            and candidate != output / "RELEASE.json"
             and not candidate.name.endswith(".tmp")
         ):
             corpus.no_links(candidate)
@@ -583,7 +583,7 @@ def verify(output: Path, *, code_snapshot: Path | None = None) -> dict:
         corpus.no_links(candidate)
         if (
             candidate.is_file()
-            and candidate.name != "RELEASE.json"
+            and candidate != output / "RELEASE.json"
             and not candidate.name.endswith(".tmp")
         ):
             actual.add(candidate.relative_to(output).as_posix())

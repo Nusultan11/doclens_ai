@@ -4,10 +4,12 @@ from xml.etree import ElementTree as ET
 
 import pytest
 from PIL import Image
+from pypdf import PdfWriter
 
 from doclens_ai.eda import corpus_v2 as corpus
 from tests.unit.test_readiness_release import workbook
 from tools.extraction_quality import office_readiness_oracle as oracle
+from tools.extraction_quality import readiness_evaluator as evaluator
 from tools.extraction_quality import readiness_pdf_metrics as metrics
 from tools.extraction_quality import readiness_source_checks as checks
 from tools.extraction_quality.readiness_evaluator import Prediction, Predictions, compare
@@ -212,28 +214,43 @@ def test_prediction_rejects_invalid_spans(span):
         prediction(span=span)
 
 
-def test_five_future_candidate_identities_use_identical_semantics():
+def test_five_future_candidate_identities_use_identical_semantics(tmp_path, monkeypatch):
+    writer = PdfWriter()
+    writer.add_blank_page(100, 100)
+    original = tmp_path / "original.pdf"
+    writer.write(original)
+    digest = corpus.sha256(original)
+    monkeypatch.setattr(evaluator, "ROOT", tmp_path)
     outputs = []
     source = {
         "id": "source",
-        "sha256": "a" * 64,
+        "sha256": digest,
         "format": "pdf",
         "split": "dev",
         "rights": {"local_evaluation": True},
+        "source_reference": {
+            "path": "original.pdf",
+            "sha256": digest,
+            "size_bytes": original.stat().st_size,
+            "format": "pdf",
+        },
         "pdf_page_count": 1,
         "pdf_page_geometry": {"1": {"width": 100, "height": 100, "rotation": 0}},
     }
     for index in range(5):
+        item = prediction()
+        item.source_sha256 = digest
         supplied = Predictions(
             version="readiness-predictions-1.0",
             model_identity=f"synthetic-candidate-{index}",
-            predictions=[prediction()],
+            predictions=[item],
         )
         result = compare([source], supplied, {})
         result.pop("model_identity")
         outputs.append(result)
     assert all(r == outputs[0] for r in outputs)
     invalid = prediction().model_dump()
+    invalid["source_sha256"] = digest
     invalid["observations"][0]["locator"]["page"] = 2
     with pytest.raises(ValueError, match="outside original"):
         compare(
