@@ -25,6 +25,7 @@ from tools.extraction_quality.readiness_io import (
     ROOT,
     VERSION,
     atomic,
+    atomic_bytes,
     cached,
     confined,
     private_root,
@@ -324,8 +325,130 @@ def summarize(value: dict) -> dict:
     }
 
 
+def validate_continuation(output: Path, effective: dict) -> None:
+    """Bind rights changes and partitions to the frozen parent; no legal attestation."""
+    proof_path = output / "parent-proof.json"
+    if not proof_path.exists():
+        return  # Historical v1 layout remains readable.
+    proof = corpus.read_json(proof_path)
+    parent = confined(ROOT, proof["parent_root"])
+    if corpus.sha256(parent / "RELEASE.json") != proof["manifest_sha256"]:
+        raise ValueError("parent release identity mismatch")
+    verify(parent, code_snapshot=output / "parent-code")
+    previous = {
+        r["id"]: r
+        for r in corpus.read_json(parent / "effective-matrix.json", max_bytes=256 * 1024**2)[
+            "population"
+        ]
+    }
+    decisions = corpus.read_json(output / "rights-decisions-v2.json")["decisions"]
+    indexed = {}
+    for decision in decisions:
+        key = decision["source_id"]
+        if (
+            key in indexed
+            or decision["reviewer"] is not None
+            or decision["human_reviewed"] is not False
+        ):
+            raise ValueError("duplicate rights identity or spoofed review")
+        indexed[key] = decision
+    rows = effective["population"]
+    if not set(previous).issubset({r["id"] for r in rows}):
+        raise ValueError("parent source omitted")
+    hashes = set()
+    samples = []
+    for row in rows:
+        key = row["id"]
+        if row["sha256"] in hashes:
+            raise ValueError("duplicate original bytes counted twice")
+        hashes.add(row["sha256"])
+        ref = row["source_reference"]
+        corpus.asset_path(ROOT, corpus.Asset.model_validate(ref))
+        if ref["sha256"] != row["sha256"]:
+            raise ValueError("original source drift")
+        old = previous.get(key)
+        if old and (row["sha256"], ref) != (old["sha256"], old["source_reference"]):
+            raise ValueError("frozen parent source rewritten")
+        if row.get("independent_gold") is not False:
+            raise ValueError("unreviewed release cannot promote independent Gold")
+        if row["split"] not in {"dev", "sealed_candidate"}:
+            raise ValueError("approved test requires authentic independent review")
+        if row["split"] == "sealed_candidate" and old:
+            raise ValueError("development source cannot become new sealed candidate")
+        samples.append(
+            corpus.Sample(
+                sample_id=key if key.startswith("e2-") else "e2-" + key,
+                dataset="readiness-release",
+                release="20261023-v2",
+                revision="v2",
+                source_record_id=key,
+                cohort="pilot",
+                disposition="admitted",
+                reasons=(),
+                original=corpus.Asset.model_validate(ref),
+                rights=corpus.Rights(
+                    dataset_license=None,
+                    original_license=None,
+                    local_evaluation=row["rights"].get("local_evaluation"),
+                    annotation_use=row["rights"].get("new_annotation"),
+                    redistribution=row["rights"].get("redistribution"),
+                    references=("source-specific-rights-ledger",),
+                    sensitivity="public",
+                ),
+                languages=("unknown",),
+                document_type=row["format"],
+                difficulty=("unreviewed",),
+                family_id=row["family"],
+                related_families=tuple(row.get("related_families", [])),
+                near_duplicate_group=row.get("near_duplicate_group"),
+                normalized_text_sha256=row.get("normalized_text_sha256"),
+                family_review="unknown",
+                split="dev",
+                publicly_exposed=False,
+            )
+        )
+        for scope in ("local_evaluation", "new_annotation", "training", "redistribution", "cloud"):
+            if row["rights"].get(scope) is not True or (old and old["rights"].get(scope) is True):
+                continue
+            decision = indexed.get(key)
+            if (
+                decision is None
+                or decision["source_sha256"] != row["sha256"]
+                or decision["disposition"] != "ADMIT"
+                or decision["scopes"].get(scope) is not True
+                or decision["grants"].get(scope) is not True
+                or decision["basis_kind"]
+                not in {
+                    "source_document_OGL_grant",
+                    "publisher_page_OGL_grant",
+                    "official_statistics_reuse",
+                    "publisher_CC_license",
+                }
+                or not decision["evidence"]
+            ):
+                raise ValueError("illegal rights promotion")
+            for evidence in decision["evidence"]:
+                if corpus.sha256(confined(ROOT, evidence["path"])) != evidence["sha256"]:
+                    raise ValueError("rights evidence drift")
+    components = corpus.family_components(tuple(samples))
+    families = {}
+    reserved_sha = set(read(ISOLATION)["reserved_source_sha256"])
+    reserved_components = {
+        components[s.sample_id] for s in samples if s.original.sha256 in reserved_sha
+    }
+    for row, sample in zip(rows, samples, strict=True):
+        component = components[sample.sample_id]
+        families.setdefault(component, set()).add(row["split"])
+        if bool(row.get("reserved_qa_family")) != (component in reserved_components):
+            raise ValueError("QA family admission mismatch")
+    if any(len(splits) > 1 for splits in families.values()):
+        raise ValueError("family crosses development/candidate partition")
+
+
 def freeze(output: Path) -> dict:
     private_root(output)
+    if (output / "RELEASE.json").exists():
+        raise ValueError("immutable release already exists; verify or create a new revision")
     path = output / "incremental-ledger.json"
     value = corpus.read_json(path, max_bytes=256 * 1024**2)
     for relative, digest in value["binding"]["inputs"].items():
@@ -335,6 +458,7 @@ def freeze(output: Path) -> dict:
     protected.update({r["path"]: r["sha256"] for r in value["sources"].values()})
     effective_path = output / "effective-matrix.json"
     effective = corpus.read_json(effective_path, max_bytes=256 * 1024**2)
+    validate_continuation(output, effective)
     ids = [r["id"] for r in effective["population"]]
     if len(ids) != len(set(ids)) or not set(value["sources"]).issubset(ids):
         raise ValueError("release denominator mismatch")
@@ -351,6 +475,35 @@ def freeze(output: Path) -> dict:
     for relative, digest in protected.items():
         if corpus.sha256(confined(ROOT, relative)) != digest:
             raise ValueError("frozen source/Gold/reference drift")
+    code_paths = [
+        Path(__file__),
+        Path(oracle.__file__),
+        ROOT / "tools/extraction_quality/readiness_io.py",
+        ROOT / "tools/extraction_quality/readiness_evaluator.py",
+        ROOT / "docs/eda/readiness_predictions_v1_schema.json",
+    ]
+    code_paths += [
+        ROOT / p
+        for p in (
+            "tools/extraction_quality/readiness_source_checks.py",
+            "tools/extraction_quality/readiness_pdf_metrics.py",
+            "tools/extraction_quality/comparison_v2.py",
+            "tools/extraction_quality/extraction_v2.py",
+            "tools/extraction_quality/pdf_cell_recovery.py",
+            "src/doclens_ai/eda/corpus_v2.py",
+            "src/doclens_ai/eda/dataset_adapters_v2.py",
+            "src/doclens_ai/extraction/evidence_v2.py",
+            "src/doclens_ai/extraction/fidelity_gold.py",
+        )
+        if (ROOT / p).is_file()
+    ]
+    final_code = {p.relative_to(ROOT).as_posix(): corpus.sha256(p) for p in code_paths}
+    for relative, digest in final_code.items():
+        destination = confined(output, "validation-code/" + relative)
+        if destination.exists() and corpus.sha256(destination) != digest:
+            raise ValueError("code archive changed; use a new release revision")
+        if not destination.exists():
+            atomic_bytes(destination, confined(ROOT, relative).read_bytes())
     files = {}
     for candidate in output.rglob("*"):
         corpus.no_links(candidate)
@@ -361,23 +514,13 @@ def freeze(output: Path) -> dict:
         ):
             corpus.no_links(candidate)
             files[candidate.relative_to(output).as_posix()] = corpus.sha256(candidate)
-    final_code = {
-        p.relative_to(ROOT).as_posix(): corpus.sha256(p)
-        for p in (
-            Path(__file__),
-            Path(oracle.__file__),
-            ROOT / "tools/extraction_quality/readiness_io.py",
-            ROOT / "tools/extraction_quality/readiness_evaluator.py",
-            ROOT / "docs/eda/readiness_predictions_v1_schema.json",
-        )
-    }
     protected.update(final_code)
     release = {
         "version": VERSION,
         "artifact_sha256": files,
         "protected_sha256": protected,
         "gates": value["gates"],
-        "datasheet": "docs/eda/extraction_data_readiness_20261023.md",
+        "datasheet": effective.get("datasheet", "docs/eda/extraction_data_readiness_20261023.md"),
         "tiers": [
             "HISTORICAL_ATTESTATION",
             "SOURCE_NATIVE_ORACLE",
@@ -387,7 +530,16 @@ def freeze(output: Path) -> dict:
         "independent_gold": False,
         "attempted_population": len(ids),
         "final_code_sha256": final_code,
+        "code_archive": "validation-code",
     }
+    if (output / "parent-proof.json").exists():
+        parent_proof = corpus.read_json(output / "parent-proof.json")
+        release["parent_release"] = {
+            "root": parent_proof["parent_root"],
+            "manifest_sha256": parent_proof["manifest_sha256"],
+            "code_archive": "parent-code",
+        }
+        release["version"] = "extraction-readiness-20261023-v2"
     release["fingerprint"] = fingerprint(release)
     destination = output / "RELEASE.json"
     if destination.exists():
@@ -403,7 +555,7 @@ def freeze(output: Path) -> dict:
     }
 
 
-def verify(output: Path) -> dict:
+def verify(output: Path, *, code_snapshot: Path | None = None) -> dict:
     private_root(output)
     release = corpus.read_json(output / "RELEASE.json")
     without = {k: v for k, v in release.items() if k != "fingerprint"}
@@ -420,23 +572,52 @@ def verify(output: Path) -> dict:
             actual.add(candidate.relative_to(output).as_posix())
     if actual != set(release["artifact_sha256"]):
         raise ValueError("release artifact inventory drift")
+    archive = code_snapshot
+    if archive is None and release.get("code_archive"):
+        archive = confined(output, release["code_archive"])
     for relative, digest in release["protected_sha256"].items():
-        if corpus.sha256(confined(ROOT, relative)) != digest:
+        root = (
+            archive
+            if archive is not None and relative in release.get("final_code_sha256", {})
+            else ROOT
+        )
+        if corpus.sha256(confined(root, relative)) != digest:
             raise ValueError("protected input drift")
     for relative, digest in release["artifact_sha256"].items():
         if corpus.sha256(confined(output, relative)) != digest:
             raise ValueError("release artifact drift")
+    if release.get("parent_release"):
+        parent = release["parent_release"]
+        path = confined(ROOT, parent["root"])
+        if corpus.sha256(path / "RELEASE.json") != parent["manifest_sha256"]:
+            raise ValueError("parent manifest drift")
+        verify(path, code_snapshot=confined(output, parent["code_archive"]))
     return {"integrity": "PASS", "gates": release["gates"], "fingerprint": release["fingerprint"]}
+
+
+def verify_runtime(output: Path) -> dict:
+    """Integrity may use historical archives; scoring must execute the pinned code."""
+    result = verify(output)
+    manifest = corpus.read_json(output / "RELEASE.json")
+    for relative, digest in manifest.get("final_code_sha256", {}).items():
+        if corpus.sha256(confined(ROOT, relative)) != digest:
+            raise ValueError("active scoring code differs from frozen release")
+    return result
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("mode", choices=("prepare", "freeze", "verify"))
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--code-snapshot", type=Path)
     args = parser.parse_args()
     started = time.perf_counter()
     try:
-        result = {"prepare": prepare, "freeze": freeze, "verify": verify}[args.mode](args.output)
+        result = (
+            verify(args.output, code_snapshot=args.code_snapshot)
+            if args.mode == "verify"
+            else {"prepare": prepare, "freeze": freeze}[args.mode](args.output)
+        )
         print(json.dumps({**result, "seconds": time.perf_counter() - started}, sort_keys=True))
         return 0
     except (OSError, ValueError, KeyError, zipfile.BadZipFile) as error:

@@ -253,7 +253,9 @@ def test_immutable_release_detects_added_files_and_byte_drift(tmp_path, monkeypa
     value["fingerprint"] = fingerprint(value)
     atomic(output / "RELEASE.json", value)
     assert release.verify(output)["integrity"] == "PASS"
-    atomic(output / "unlisted.json", {"fake_label": True})
+    with pytest.raises(ValueError, match="immutable"):
+        atomic(output / "unlisted.json", {"fake_label": True})
+    (output / "unlisted.json").write_text('{"fake_label":true}')
     with pytest.raises(ValueError, match="inventory"):
         release.verify(output)
     (output / "unlisted.json").unlink()

@@ -34,13 +34,19 @@ def private_root(path: Path) -> None:
 
 
 def atomic(path: Path, value: Any) -> None:
+    data = json.dumps(value, ensure_ascii=False, sort_keys=True, indent=2, allow_nan=False) + "\n"
+    atomic_bytes(path, data.encode("utf-8"))
+
+
+def atomic_bytes(path: Path, data: bytes) -> None:
     corpus.no_links(path)
+    if any((parent / "RELEASE.json").is_file() for parent in path.parents):
+        raise ValueError("immutable release cannot be modified")
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_name(path.name + ".tmp")
     corpus.no_links(temporary)
-    with temporary.open("w", encoding="utf-8", newline="\n") as stream:
-        json.dump(value, stream, ensure_ascii=False, sort_keys=True, indent=2, allow_nan=False)
-        stream.write("\n")
+    with temporary.open("wb") as stream:
+        stream.write(data)
         stream.flush()
         os.fsync(stream.fileno())
     os.replace(temporary, path)
