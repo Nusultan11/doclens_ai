@@ -217,7 +217,7 @@ def docx(pkg: Package) -> dict:
     }
 
 
-def xlsx(pkg: Package) -> dict:
+def xlsx(pkg: Package, selected_cells: dict[str, list[str]] | None = None) -> dict:
     part = "xl/workbook.xml"
     root = pkg.xml(part)
     if root.tag != f"{{{S}}}workbook":
@@ -257,6 +257,8 @@ def xlsx(pkg: Package) -> dict:
         cells, seen = [], set()
         for node in worksheet.findall(f"{{{S}}}sheetData/{{{S}}}row/{{{S}}}c"):
             address = node.attrib["r"]
+            if selected_cells is not None and address not in selected_cells.get(rel["part"], []):
+                continue
             if not re.fullmatch(r"[A-Z]{1,3}[1-9][0-9]{0,6}", address) or address in seen:
                 raise ValueError("duplicate or malformed stored cell address")
             seen.add(address)
@@ -334,12 +336,40 @@ def xlsx(pkg: Package) -> dict:
     }
 
 
-def observe(path: Path, source_id: str, sha256: str, fmt: str) -> dict:
+def observe(
+    path: Path,
+    source_id: str,
+    sha256: str,
+    fmt: str,
+    *,
+    selected_cells: dict[str, list[str]] | None = None,
+) -> dict:
     corpus.no_links(path)
     if fmt not in {"docx", "xlsx"} or corpus.sha256(path) != sha256:
         raise ValueError("oracle source identity rejected")
+    if selected_cells is not None and (
+        fmt != "xlsx"
+        or not selected_cells
+        or sum(map(len, selected_cells.values())) > 500
+        or any(len(v) != len(set(v)) for v in selected_cells.values())
+    ):
+        raise ValueError("targeted-cell selection rejected")
     with Package(path) as package:
-        observations = docx(package) if fmt == "docx" else xlsx(package)
+        observations = docx(package) if fmt == "docx" else xlsx(package, selected_cells)
+    if selected_cells is not None:
+        actual = {
+            (s["relationship"]["part"], c["locator"]["cell"])
+            for s in observations["sheets"]
+            for c in s.get("cells", [])
+        }
+        expected = {(part, cell) for part, cells in selected_cells.items() for cell in cells}
+        if actual != expected:
+            raise ValueError("selected physical cells missing from original")
+        observations["selection"] = {
+            "kind": "targeted_physical_cells",
+            "cells": selected_cells,
+            "whole_workbook_coverage": False,
+        }
     if corpus.sha256(path) != sha256:
         raise ValueError("source changed during observation")
     return {

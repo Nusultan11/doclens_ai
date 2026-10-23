@@ -16,6 +16,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, JsonValue, model_validator
 
 from doclens_ai.eda import corpus_v2 as corpus
+from doclens_ai.extraction.evidence_v2 import valid_bbox
 from doclens_ai.extraction.fidelity_gold import fingerprint
 from tools.extraction_quality import office_readiness_oracle as oracle
 from tools.extraction_quality.readiness_io import ROOT, atomic, cached, confined, private_root
@@ -48,6 +49,26 @@ class Observation(Strict):
             page = self.locator.get("page")
             if type(page) is not int or page < 1:
                 raise ValueError("genuine PDF page required")
+            if "bbox" in self.locator:
+                box = self.locator["bbox"]
+                if (
+                    not isinstance(box, list)
+                    or len(box) != 4
+                    or any(type(v) not in (int, float) for v in box)
+                    or not valid_bbox(tuple(box))
+                ):
+                    raise ValueError("invalid PDF region")
+            if (
+                self.locator.get("coordinate_basis", "pdf_user_space_unrotated")
+                != "pdf_user_space_unrotated"
+            ):
+                raise ValueError("PDF coordinates must be normalized with source geometry")
+            for key in ("row_span", "column_span", "row", "column"):
+                if key in self.fields and (
+                    type(self.fields[key]) is not int
+                    or self.fields[key] < (1 if "span" in key else 0)
+                ):
+                    raise ValueError("invalid PDF topology")
         if self.kind == "docx_element" and (
             not isinstance(self.locator.get("part"), str)
             or not isinstance(self.locator.get("xml_path"), str)
@@ -110,6 +131,8 @@ def validate_oracle(value: dict, source: dict) -> None:
         or value["reviewer"] is not None
     ):
         raise ValueError("oracle source/tier/review binding rejected")
+    if source["rights"].get("new_annotation") is not True:
+        raise ValueError("source-native oracle requires established annotation rights")
 
 
 def oracle_observations(value: dict) -> list[dict]:
@@ -163,12 +186,29 @@ def compare(population: list[dict], predictions: Predictions, references: dict[s
             raise ValueError("unknown evaluation rights")
         if sources[key].get("reserved_qa_family"):
             raise ValueError("reserved QA family is excluded from development comparison")
-        if sources[key].get("split") == "test":
+        if sources[key].get("split", "dev") != "dev":
             raise ValueError("sealed test cannot enter development scorer")
         if any(
             not o.kind.startswith(sources[key]["format"] + "_") for o in prediction.observations
         ):
             raise ValueError("prediction observation format mismatch")
+        if sources[key]["format"] == "pdf":
+            for observation in prediction.observations:
+                page = observation.locator["page"]
+                if page > sources[key].get("pdf_page_count", float("inf")):
+                    raise ValueError("prediction page outside original")
+                geometry = sources[key].get("pdf_page_geometry", {}).get(str(page))
+                box = observation.locator.get("bbox")
+                if (
+                    geometry
+                    and box
+                    and not (
+                        0 <= box[0] < box[2] <= geometry["width"]
+                        and 0 <= box[1] < box[3] <= geometry["height"]
+                        and geometry["rotation"] == 0
+                    )
+                ):
+                    raise ValueError("prediction region outside original page geometry")
     counts = defaultdict(Counter)
     rows = []
     for source in population:
@@ -207,6 +247,15 @@ def compare(population: list[dict], predictions: Predictions, references: dict[s
         "model_identity": predictions.model_identity,
         "attempted_population": len(rows),
         "prediction_documents": len(supplied),
+        "eligible_development_documents": sum(
+            r["rights"].get("local_evaluation") is True
+            and not r.get("reserved_qa_family")
+            and r.get("split", "dev") == "dev"
+            for r in population
+        ),
+        "source_processing_statuses": dict(
+            Counter(r.get("status", "NOT_ATTEMPTED") for r in population)
+        ),
         "prediction_statuses": dict(Counter(r["status"] for r in rows)),
         "reference_documents": len(references),
         "metrics": dict(counts),
@@ -230,12 +279,23 @@ def run_office(output: Path) -> dict:
     private_root(output)
     sealed = (output / "RELEASE.json").exists()
     if sealed:
-        from tools.extraction_quality.readiness_release import verify
+        from tools.extraction_quality.readiness_release import verify_runtime
 
-        verify(output)
-    ledger = corpus.read_json(output / "incremental-ledger.json", max_bytes=256 * 1024**2)
+        verify_runtime(output)
+    matrix = output / "effective-matrix.json"
+    ledger = corpus.read_json(
+        matrix if matrix.exists() else output / "incremental-ledger.json", max_bytes=256 * 1024**2
+    )
     rows = {r["id"]: r for r in ledger["population"]}
-    decisions_path = output / "office-rights-v1.json"
+    if not sealed and (output / "parent-proof.json").exists():
+        from tools.extraction_quality.readiness_release import validate_continuation
+
+        validate_continuation(output, ledger)
+    decisions_path = output / (
+        "office-rights-v2.json"
+        if (output / "office-rights-v2.json").exists()
+        else "office-rights-v1.json"
+    )
     decisions = corpus.read_json(decisions_path)["decisions"]
     seen, timings = set(), []
     for decision in decisions:
@@ -248,7 +308,12 @@ def run_office(output: Path) -> dict:
             raise ValueError("rights source or fabricated reviewer")
         if decision["disposition"] != "ADMIT":
             continue
-        if decision["new_annotation"] is not True or source["reserved_qa_family"]:
+        if (
+            decision["new_annotation"] is not True
+            or source.get("reserved_qa_family")
+            or source["rights"].get("new_annotation") is not True
+            or source.get("split", "dev") != "dev"
+        ):
             raise ValueError("annotation rights/family exclusion")
         for evidence in [*decision["evidence"], decision["license_capture"]]:
             if corpus.sha256(confined(ROOT, evidence["path"])) != evidence["sha256"]:
@@ -260,6 +325,14 @@ def run_office(output: Path) -> dict:
             "rights_sha256": corpus.sha256(decisions_path),
             "oracle_code": corpus.sha256(Path(oracle.__file__)),
         }
+        reuse = decision.get("reuse_oracle")
+        if reuse:
+            target = confined(ROOT, reuse["path"])
+            if corpus.sha256(target) != reuse["sha256"]:
+                raise ValueError("inherited oracle drift")
+            binding["inherited_oracle_sha256"] = reuse["sha256"]
+        if decision.get("selected_cells") is not None:
+            binding["selected_cells"] = decision["selected_cells"]
         if sealed and not confined(output, "office-oracles/" + key + ".checkpoint.json").exists():
             raise ValueError("cannot create oracle inside immutable release")
         started = time.perf_counter()
@@ -267,7 +340,13 @@ def run_office(output: Path) -> dict:
             output,
             "office-oracles/" + key,
             binding,
-            lambda p=path, s=source: oracle.observe(p, s["id"], s["sha256"], s["format"]),
+            lambda p=path, s=source, r=reuse, d=decision: (
+                corpus.read_json(confined(ROOT, r["path"]), max_bytes=256 * 1024**2)
+                if r
+                else oracle.observe(
+                    p, s["id"], s["sha256"], s["format"], selected_cells=d.get("selected_cells")
+                )
+            ),
         )
         validate_oracle(value, source)
         timings.append(
@@ -282,9 +361,9 @@ def run_office(output: Path) -> dict:
 
 def score(output: Path, prediction_path: Path) -> dict:
     private_root(output)
-    from tools.extraction_quality.readiness_release import verify
+    from tools.extraction_quality.readiness_release import verify_runtime
 
-    verify(output)
+    verify_runtime(output)
     matrix = corpus.read_json(output / "effective-matrix.json", max_bytes=256 * 1024**2)
     predictions = Predictions.model_validate(
         corpus.read_json(prediction_path, max_bytes=64 * 1024**2)
@@ -295,7 +374,26 @@ def score(output: Path, prediction_path: Path) -> dict:
             corpus.no_links(path)
             value = corpus.read_json(path, max_bytes=256 * 1024**2)
             references[value["source_id"]] = value
-    return compare(matrix["population"], predictions, references)
+    result = compare(matrix["population"], predictions, references)
+    pdf_path = output / "pdf-references.json"
+    if pdf_path.exists():
+        from tools.extraction_quality.readiness_pdf_metrics import compare as compare_pdf
+
+        source_rows = {r["id"]: r for r in matrix["population"]}
+        supplied = {p.source_id: p for p in predictions.predictions}
+        result["pdf_dimensions"] = {}
+        for reference in corpus.read_json(pdf_path, max_bytes=64 * 1024**2)["sources"]:
+            key = reference["source_id"]
+            if (
+                key not in source_rows
+                or reference["source_sha256"] != source_rows[key]["sha256"]
+                or source_rows[key]["rights"].get("new_annotation") is not True
+                or source_rows[key].get("split", "dev") != "dev"
+            ):
+                raise ValueError("PDF reference binding or rights rejected")
+            result["pdf_dimensions"][key] = compare_pdf(supplied.get(key), reference)
+        result["pdf_reference_documents"] = len(result["pdf_dimensions"])
+    return result
 
 
 def main() -> int:
@@ -315,7 +413,15 @@ def main() -> int:
             raise ValueError("fresh metrics outside immutable release required")
         result = score(args.release, args.predictions)
         atomic(args.metrics, result)
-    print(json.dumps({k: v for k, v in result.items() if k not in {"rows", "metrics", "timings"}}))
+    print(
+        json.dumps(
+            {
+                k: v
+                for k, v in result.items()
+                if k not in {"rows", "metrics", "timings", "pdf_dimensions"}
+            }
+        )
+    )
     return 0
 
 

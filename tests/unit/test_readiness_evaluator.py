@@ -17,7 +17,7 @@ def source(key="e2-office-demo", **changes):
         "format": "xlsx",
         "split": "dev",
         "reserved_qa_family": False,
-        "rights": {"local_evaluation": True},
+        "rights": {"local_evaluation": True, "new_annotation": True},
         **changes,
     }
 
