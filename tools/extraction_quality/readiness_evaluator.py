@@ -100,7 +100,7 @@ class Predictions(Strict):
 
 def validate_oracle(value: dict, source: dict) -> None:
     if (
-        value["version"] != oracle.VERSION
+        value["version"] not in {"office-source-oracle-1.0", oracle.VERSION}
         or value["tier"] != "SOURCE_NATIVE_ORACLE"
         or value["source_id"] != source["id"]
         or value["source_sha256"] != source["sha256"]
@@ -165,6 +165,10 @@ def compare(population: list[dict], predictions: Predictions, references: dict[s
             raise ValueError("reserved QA family is excluded from development comparison")
         if sources[key].get("split") == "test":
             raise ValueError("sealed test cannot enter development scorer")
+        if any(
+            not o.kind.startswith(sources[key]["format"] + "_") for o in prediction.observations
+        ):
+            raise ValueError("prediction observation format mismatch")
     counts = defaultdict(Counter)
     rows = []
     for source in population:
@@ -192,6 +196,7 @@ def compare(population: list[dict], predictions: Predictions, references: dict[s
                 "source_id": key,
                 "format": source["format"],
                 "status": prediction.status if prediction else "NOT_ATTEMPTED",
+                "failure": prediction.failure if prediction else None,
                 "reference": "SOURCE_NATIVE_ORACLE" if reference else "NOT_EVALUATED",
                 "oracle_observations": len(expected),
                 "independent_gold": False,

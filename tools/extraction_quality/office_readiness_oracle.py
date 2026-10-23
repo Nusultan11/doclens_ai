@@ -18,7 +18,7 @@ from openpyxl.styles.numbers import BUILTIN_FORMATS
 
 from doclens_ai.eda import corpus_v2 as corpus
 
-VERSION = "office-source-oracle-1.0"
+VERSION = "office-source-oracle-1.1"
 W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
 S = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
 R = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
@@ -105,23 +105,48 @@ def docx(pkg: Package) -> dict:
     main = "word/document.xml"
     if pkg.xml(main).tag != f"{{{W}}}document":
         raise ValueError("DOCX main root mismatch")
-    parts, visited, queue = {}, set(), [main]
-    supported = {"header", "footer", "footnotes", "endnotes", "comments"}
+    parts, visited, queue = {}, set(), [(main, "document")]
+    supported = {
+        "header": "hdr",
+        "footer": "ftr",
+        "footnotes": "footnotes",
+        "endnotes": "endnotes",
+        "comments": "comments",
+    }
     while queue:
-        part = queue.pop(0)
+        part, expected_root = queue.pop(0)
+        root = pkg.xml(part)
+        if root.tag != f"{{{W}}}{expected_root}":
+            raise ValueError("DOCX relationship/root mismatch")
         if part in visited:
             continue
         visited.add(part)
-        root = pkg.xml(part)
         relationships = pkg.relationships(part)
         queue.extend(
-            r["part"]
+            (r["part"], supported[r["type"].rsplit("/", 1)[-1]])
             for r in relationships.values()
             if not r["external"] and r["type"].rsplit("/", 1)[-1] in supported
         )
         records = []
+        uris = sorted(
+            {
+                n.tag[1:].split("}", 1)[0]
+                for n in root.iter()
+                if n.tag.startswith("{") and not n.tag.startswith("{" + W + "}")
+            }
+        )
+        namespaces = {"w": W, **{f"n{i}": uri for i, uri in enumerate(uris)}}
+        prefixes = {uri: prefix for prefix, uri in namespaces.items()}
 
-        def walk(node, address, part=part, records=records):
+        def qualified(tag, prefixes=prefixes):
+            if tag.startswith("{"):
+                uri, name = tag[1:].split("}", 1)
+                return prefixes[uri] + ":" + name
+            return tag
+
+        def walk(
+            node, address, part=part, records=records, namespaces=namespaces, qualified=qualified
+        ):
             if address.count("/") > 128:
                 raise ValueError("XML nesting bound")
             name = local(node.tag)
@@ -147,7 +172,7 @@ def docx(pkg: Package) -> dict:
                 "gridCol",
             }:
                 record = {
-                    "locator": {"part": part, "xml_path": address},
+                    "locator": {"part": part, "xml_path": address, "namespaces": namespaces.copy()},
                     "kind": name,
                     "attributes": dict(node.attrib),
                 }
@@ -174,9 +199,9 @@ def docx(pkg: Package) -> dict:
             counts = Counter()
             for child in node:
                 counts[child.tag] += 1
-                walk(child, address + "/" + local(child.tag) + f"[{counts[child.tag]}]")
+                walk(child, address + "/" + qualified(child.tag) + f"[{counts[child.tag]}]")
 
-        walk(root, "/" + local(root.tag) + "[1]")
+        walk(root, "/" + qualified(root.tag) + "[1]")
         parts[part] = {"relationships": relationships, "elements": records}
     return {
         "parts": parts,
@@ -255,7 +280,7 @@ def xlsx(pkg: Package) -> dict:
             elif inline is not None:
                 resolved = "".join(n.text or "" for n in inline.iter(f"{{{S}}}t"))
             style_index = int(node.get("s", "0"))
-            if style_index < 0 or (styles and style_index >= len(styles)):
+            if style_index < 0 or (style_index >= len(styles) if styles else style_index != 0):
                 raise ValueError("style index rejected")
             style = styles[style_index] if styles else {}
             fmt_id = int(style.get("numFmtId", "0"))
