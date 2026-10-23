@@ -141,3 +141,36 @@ private full records also retain environment/hardware. New worker captures inclu
 complete native pages/predictions, conversion status/confidence/errors/timings and
 model-native document JSON. Only explicit latency/timing fields are excluded from
 repeat comparison; raw captures are never overwritten.
+
+### Admission and bootstrap failures retained before model inference
+
+The original native comparator registration (`native-r1`) recorded 22
+`resource_blocked_before_start` outcomes: available RAM had fallen to
+3,155,021,824 bytes, below its 4 GiB admission requirement. These are 22 scheduled
+admissions on 11 distinct sources, **zero executed extractions**, not measured
+accuracy or model reproducibility. No user process was stopped.
+
+A pre-inference resource revision reduces the native comparator's RSS ceiling to
+512 MiB, OS committed memory to 1 GiB and admission floor to 1.5 GiB. Docling's
+RSS ceiling is reduced to 1.5 GiB, with a 2.5 GiB admission floor and unchanged
+4 GiB OS committed-memory ceiling. This preserves approximately 1 GiB host
+headroom at the observed RAM level, rather than admitting the original 3 GiB
+RSS workload. Data/scoring/quality criteria remain identical. The exact two
+configuration records are retained as `native-low-memory.json` and
+`docling-low-memory.json`; this is not model-accuracy tuning or a raised limit.
+
+The first reduced-resource native run retained **22 failed bootstrap attempts**,
+each WinError 10106 while importing the Windows asyncio provider, before parsing.
+Cause reproduced by a new actual subprocess test: the minimal-environment filter
+used case-sensitive `SystemRoot`, while Windows `os.environ` supplies `SYSTEMROOT`.
+This omitted the provider's required system path. The regression test first
+**FAILED: 1 failed, 29 deselected**. Fixed only case-normalization of the OS
+environment allowlist; credentials and repository `.env` remain excluded.
+
+Affected suite rerun with `--basetemp=.pytest_cache/research-bootstrap-fixed`:
+**225 passed**, 13.52 s. New immutable protocol `foundation-v4` fingerprint
+`39e0b5f1b48f4349b5f1d6886b50896885929f599093a84ffe0b311b0251f1e5`
+preserves the same 11 source/Gold identities and scoring rules, with corrected
+bootstrap code pins. Native R0 on c1-0033 then **completed**, 2.05 s, under the
+lower resource ceiling. No Docling/model inference ran during the failed native
+bootstrap attempts. The failed outputs remain separate and unmodified.

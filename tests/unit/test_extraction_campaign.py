@@ -175,7 +175,13 @@ def test_failed_observation_denominators_and_page_error_are_separate():
 
 @pytest.mark.parametrize(
     "mode,expected",
-    [("hang", "timeout"), ("crash", "failed"), ("oom", "failed"), ("output", "output_limit")],
+    [
+        ("hang", "timeout"),
+        ("crash", "failed"),
+        ("oom", "failed"),
+        ("output", "output_limit"),
+        ("asyncio", "completed"),
+    ],
 )
 def test_actual_research_worker_bounds_and_cleanup(mode, expected):
     from uuid import uuid4

@@ -120,6 +120,10 @@ def main():
         deny_external_network()
         if job["candidate"] == "probe":
             mode = job["configuration"]["mode"]
+            if mode == "asyncio":
+                import asyncio
+
+                assert asyncio.get_event_loop_policy() is not None
             if mode == "hang":
                 while True:
                     time.sleep(0.1)

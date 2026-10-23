@@ -61,7 +61,7 @@ def run_one(python: Path, job: dict, output: Path) -> dict:
     temp = output / "temp"
     temp.mkdir()
     keys = (
-        "SystemRoot",
+        "SYSTEMROOT",
         "WINDIR",
         "PATH",
         "COMSPEC",
@@ -71,7 +71,7 @@ def run_one(python: Path, job: dict, output: Path) -> dict:
         "SYSTEMDRIVE",
         "PROGRAMDATA",
     )
-    env = {k: v for k, v in os.environ.items() if k in keys}
+    env = {k.upper(): v for k, v in os.environ.items() if k.upper() in keys}
     env.update(
         {
             "USERPROFILE": str(profile),
