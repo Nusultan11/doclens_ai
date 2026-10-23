@@ -462,6 +462,23 @@ def freeze(output: Path) -> dict:
     ids = [r["id"] for r in effective["population"]]
     if len(ids) != len(set(ids)) or not set(value["sources"]).issubset(ids):
         raise ValueError("release denominator mismatch")
+    if (output / "parent-proof.json").exists():
+        from tools.extraction_quality.readiness_evaluator import validate_oracle
+        from tools.extraction_quality.readiness_pdf_metrics import validate_reference
+
+        rows = {r["id"]: r for r in effective["population"]}
+        for oracle_path in (output / "office-oracles").glob("*.json"):
+            if oracle_path.name.endswith(".checkpoint.json"):
+                continue
+            reference = corpus.read_json(oracle_path, max_bytes=256 * 1024**2)
+            validate_oracle(reference, rows[reference["source_id"]])
+        references = corpus.read_json(output / "pdf-references.json", max_bytes=64 * 1024**2)[
+            "sources"
+        ]
+        if len({r["source_id"] for r in references}) != len(references):
+            raise ValueError("duplicate PDF source reference")
+        for reference in references:
+            validate_reference(reference, rows[reference["source_id"]])
     for row in effective["population"]:
         ref = row["source_reference"]
         if ref["sha256"] != row["sha256"]:

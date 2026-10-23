@@ -184,6 +184,28 @@ def test_reference_cannot_spoof_human_gold():
         metrics.compare(None, {**reference(), "human_reviewed": True})
 
 
+def test_reference_rejects_wrong_source_page_and_geometry():
+    source = {
+        "id": "source",
+        "sha256": "a" * 64,
+        "format": "pdf",
+        "split": "dev",
+        "rights": {"new_annotation": True},
+        "pdf_page_count": 1,
+        "pdf_page_geometry": {"1": {"width": 100, "height": 100, "rotation": 0}},
+    }
+    ref = {**reference(), "source_id": "source", "source_sha256": "a" * 64}
+    metrics.validate_reference(ref, source)
+    for modified in (
+        {**ref, "source_sha256": "b" * 64},
+        {**ref, "cells": [ref["cells"][0], ref["cells"][0]]},
+        {**ref, "cells": [{**ref["cells"][0], "page": 2}]},
+        {**ref, "cells": [{**ref["cells"][0], "bbox": [0, 0, 101, 10]}]},
+    ):
+        with pytest.raises(ValueError):
+            metrics.validate_reference(modified, source)
+
+
 @pytest.mark.parametrize("span", [0, True, 1.0])
 def test_prediction_rejects_invalid_spans(span):
     with pytest.raises(ValueError):

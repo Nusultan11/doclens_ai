@@ -9,10 +9,41 @@ from __future__ import annotations
 
 from collections import Counter
 
+from doclens_ai.extraction.evidence_v2 import valid_bbox
 from tools.extraction_quality.comparison_v2 import iou, layout
 from tools.extraction_quality.extraction_v2 import exact_positions
 
 VERSION = "readiness-pdf-diagnostics-1.0"
+
+
+def validate_reference(reference: dict, source: dict) -> None:
+    if (
+        source["format"] != "pdf"
+        or reference["source_id"] != source["id"]
+        or reference["source_sha256"] != source["sha256"]
+        or source["rights"].get("new_annotation") is not True
+        or source.get("split", "dev") != "dev"
+        or source.get("reserved_qa_family")
+        or reference["independent_gold"] is not False
+        or reference["human_reviewed"] is not False
+    ):
+        raise ValueError("PDF reference source/rights/tier rejected")
+    items = reference.get("cells", []) + reference.get("anchors", [])
+    if len({r["reference_id"] for r in items}) != len(items):
+        raise ValueError("duplicate PDF reference identity")
+    for item in items:
+        page = item["page"]
+        if type(page) is not int or not 1 <= page <= source["pdf_page_count"]:
+            raise ValueError("PDF reference page outside original")
+        if "bbox" in item:
+            box = item["bbox"]
+            geometry = source["pdf_page_geometry"][str(page)]
+            if not valid_bbox(tuple(box)) or not (
+                geometry["rotation"] == 0
+                and 0 <= box[0] < box[2] <= geometry["width"]
+                and 0 <= box[1] < box[3] <= geometry["height"]
+            ):
+                raise ValueError("PDF annotation/source geometry mismatch")
 
 
 def compare(prediction, reference: dict) -> dict:

@@ -378,19 +378,16 @@ def score(output: Path, prediction_path: Path) -> dict:
     pdf_path = output / "pdf-references.json"
     if pdf_path.exists():
         from tools.extraction_quality.readiness_pdf_metrics import compare as compare_pdf
+        from tools.extraction_quality.readiness_pdf_metrics import validate_reference
 
         source_rows = {r["id"]: r for r in matrix["population"]}
         supplied = {p.source_id: p for p in predictions.predictions}
         result["pdf_dimensions"] = {}
         for reference in corpus.read_json(pdf_path, max_bytes=64 * 1024**2)["sources"]:
             key = reference["source_id"]
-            if (
-                key not in source_rows
-                or reference["source_sha256"] != source_rows[key]["sha256"]
-                or source_rows[key]["rights"].get("new_annotation") is not True
-                or source_rows[key].get("split", "dev") != "dev"
-            ):
-                raise ValueError("PDF reference binding or rights rejected")
+            if key in result["pdf_dimensions"]:
+                raise ValueError("duplicate PDF source reference")
+            validate_reference(reference, source_rows[key])
             result["pdf_dimensions"][key] = compare_pdf(supplied.get(key), reference)
         result["pdf_reference_documents"] = len(result["pdf_dimensions"])
     return result
