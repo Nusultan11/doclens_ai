@@ -1,0 +1,454 @@
+{
+  "docling": {
+    "candidate": "docling",
+    "packages": [
+      "docling==2.55.1",
+      "docling-core==2.48.2",
+      "docling-ibm-models==3.15.0",
+      "torch==2.8.0+cpu",
+      "torchvision==0.23.0+cpu",
+      "transformers==4.57.6",
+      "--extra-index-url",
+      "https://download.pytorch.org/whl/cpu"
+    ],
+    "round": "R0",
+    "quality": "NOT_EVALUATED",
+    "device": "cpu",
+    "seed": 0
+  },
+  "marker": {
+    "candidate": "marker",
+    "round": "R0",
+    "device": "cuda:0",
+    "seed": 0,
+    "mode": "balanced",
+    "assets": [
+      {
+        "name": "surya_layout2",
+        "repo": "datalab-to/surya_layout2",
+        "revision": "0aee81d5fd9275c0582e545bf3a56944b1e75679",
+        "patterns": [
+          "*.json",
+          "*.pth",
+          "*.gguf",
+          "*.md",
+          "LICENSE*",
+          "*.pt"
+        ],
+        "sha256": {
+          "rfdetr_layout.pth": "e01b79f858778cdad8a1384e644ac2b35f9c095fbfd102a34942e23f2f179fe7"
+        }
+      },
+      {
+        "name": "surya-ocr-2-gguf",
+        "repo": "datalab-to/surya-ocr-2-gguf",
+        "revision": "6a3a4c30e5e74446d4f8b6afd05b2f2da970f470",
+        "patterns": [
+          "*.json",
+          "*.pth",
+          "*.gguf",
+          "*.md",
+          "LICENSE*"
+        ],
+        "sha256": {
+          "surya-2-mmproj.gguf": "98c0563673b1657ff6d021d1e5f04af06cbf61bb40c63ac613e8bb71b42fb2c0",
+          "surya-2.gguf": "1f18abe17b1ed8b4e47ee9b1ad0e274c93daf5efbb6b29a04ff1712e37051e05"
+        }
+      }
+    ],
+    "packages": [
+      "marker-pdf==2.0.0",
+      "surya-ocr==0.22.1",
+      "torch==2.8.0+cpu",
+      "torchvision==0.23.0+cpu",
+      "transformers==5.12.1",
+      "--extra-index-url",
+      "https://download.pytorch.org/whl/cpu"
+    ],
+    "configuration_reason": "Reproduced urllib HTTP 403 on the dated public OCR-error manifest while the vendor requests client returned 200; acquisition client repair only, balanced pipeline unchanged.",
+    "font_sha256": "882afbab965608c2d2bc627fd8016b962aa5a6be2d358f9de24a7b5967c5632e",
+    "ocr_error_sha256": {
+      "vocab.txt": "fe0fda7c425b48c516fc8f160d594c8022a0808447475c1a7c6d6479763f310c",
+      "special_tokens_map.json": "5d5b662e421ea9fac075174bb0688ee0d9431699900b90662acd44b2a350503a",
+      "config.json": "e11e04c98a43e1ed1eff099b4d6cb6dffbeb24fd226f709365defcb0f9e9ef83",
+      "tokenizer.json": "bf1b59b7b11c95f194f51708d918eea378e09d05f84c0e1656dc5180e8117088",
+      "tokenizer_config.json": "228e2c7cc6d20d298f7a3d69b89103f6dcb0b533c0b1146a6e6b6e7bb511ae35",
+      "README.md": "a9d7ccd967379ca368a6495f523a63d1d582513406d2da37899f8bf51815db6b",
+      "model.safetensors": "42cd5698d62dcdd408628fe6d67c3e1981fc90523ca286f358f1dea8e212de3e",
+      ".gitattributes": "11ad7efa24975ee4b0c3c3a38ed18737f0658a5f75a0a96787b576a78a023361"
+    }
+  },
+  "ppstructure": {
+    "candidate": "ppstructure",
+    "round": "R0",
+    "device": "cpu",
+    "seed": 0,
+    "assets": [
+      {
+        "name": "PP-DocLayout_plus-L",
+        "repo": "PaddlePaddle/PP-DocLayout_plus-L",
+        "revision": "aa52b8528c84f9b1a34ac3a88fe0e576edb9d11d",
+        "patterns": [
+          "*.json",
+          "*.yml",
+          "*.yaml",
+          "*.pdparams",
+          "*.pdiparams",
+          "*.pdmodel",
+          "*.safetensors",
+          "*.txt",
+          "*.model",
+          "*.md",
+          "LICENSE*"
+        ],
+        "sha256": {
+          "inference.pdiparams": "24ca3e2e442164505e250deef59f7ee9a54ea12dd32875c9cd6155d959dc97da"
+        }
+      },
+      {
+        "name": "PP-DocBlockLayout",
+        "repo": "PaddlePaddle/PP-DocBlockLayout",
+        "revision": "f270657da59d956ab69ffc2c4722fe1f557bf17b",
+        "patterns": [
+          "*.json",
+          "*.yml",
+          "*.yaml",
+          "*.pdparams",
+          "*.pdiparams",
+          "*.pdmodel",
+          "*.safetensors",
+          "*.txt",
+          "*.model",
+          "*.md",
+          "LICENSE*"
+        ],
+        "sha256": {
+          "inference.pdiparams": "0ab733dcabfee41517b68b37fde4c696129b88096a93f8b9d8feaa43c27c8942"
+        }
+      },
+      {
+        "name": "PP-OCRv5_server_det",
+        "repo": "PaddlePaddle/PP-OCRv5_server_det",
+        "revision": "ca867c897ecbca8873081573a802ad70d499cb94",
+        "patterns": [
+          "*.json",
+          "*.yml",
+          "*.yaml",
+          "*.pdparams",
+          "*.pdiparams",
+          "*.pdmodel",
+          "*.safetensors",
+          "*.txt",
+          "*.model",
+          "*.md",
+          "LICENSE*"
+        ],
+        "sha256": {
+          "inference.pdiparams": "183146fe9d9910352f68482f623bcbbb9fa7b9e8fa1463b9ad288cef00524d2d"
+        }
+      },
+      {
+        "name": "PP-OCRv5_server_rec",
+        "repo": "PaddlePaddle/PP-OCRv5_server_rec",
+        "revision": "b26c3587fda8da3c8ec0ce357214b4d661ff1558",
+        "patterns": [
+          "*.json",
+          "*.yml",
+          "*.yaml",
+          "*.pdparams",
+          "*.pdiparams",
+          "*.pdmodel",
+          "*.safetensors",
+          "*.txt",
+          "*.model",
+          "*.md",
+          "LICENSE*"
+        ],
+        "sha256": {
+          "inference.pdiparams": "63853f062a5f4089befc16f565a68277618e0da5cb45468b49d11079de0ada77"
+        }
+      },
+      {
+        "name": "PP-LCNet_x1_0_textline_ori",
+        "repo": "PaddlePaddle/PP-LCNet_x1_0_textline_ori",
+        "revision": "cd237a44b0e359d4fe38310a416203cf7403faa5",
+        "patterns": [
+          "*.json",
+          "*.yml",
+          "*.yaml",
+          "*.pdparams",
+          "*.pdiparams",
+          "*.pdmodel",
+          "*.safetensors",
+          "*.txt",
+          "*.model",
+          "*.md",
+          "LICENSE*"
+        ],
+        "sha256": {
+          "inference.pdiparams": "0de2bcf996cf553e2b848dd7b1769dafffc6917b1ccdf55c1d8efe7909fbf743"
+        }
+      },
+      {
+        "name": "PP-LCNet_x1_0_table_cls",
+        "repo": "PaddlePaddle/PP-LCNet_x1_0_table_cls",
+        "revision": "2fa6323e7dab88fa883081db1460995f46af2922",
+        "patterns": [
+          "*.json",
+          "*.yml",
+          "*.yaml",
+          "*.pdparams",
+          "*.pdiparams",
+          "*.pdmodel",
+          "*.safetensors",
+          "*.txt",
+          "*.model",
+          "*.md",
+          "LICENSE*"
+        ],
+        "sha256": {
+          "inference.pdiparams": "d0224afd9cfddf22da17407c6c78491baaa1f25922fbb312c9b0d2037c802db0"
+        }
+      },
+      {
+        "name": "SLANeXt_wired",
+        "repo": "PaddlePaddle/SLANeXt_wired",
+        "revision": "763069fcda6a065f2171753205a32bf899a88d15",
+        "patterns": [
+          "*.json",
+          "*.yml",
+          "*.yaml",
+          "*.pdparams",
+          "*.pdiparams",
+          "*.pdmodel",
+          "*.safetensors",
+          "*.txt",
+          "*.model",
+          "*.md",
+          "LICENSE*"
+        ],
+        "sha256": {
+          "inference.pdiparams": "ff0362a30f707fa7d27d8453c4396b992fca287377a42d01515bca6eeb3908f5"
+        }
+      },
+      {
+        "name": "SLANet_plus",
+        "repo": "PaddlePaddle/SLANet_plus",
+        "revision": "bae6e5f8c3c4e7da0c0b7639fdf3228fe76184e2",
+        "patterns": [
+          "*.json",
+          "*.yml",
+          "*.yaml",
+          "*.pdparams",
+          "*.pdiparams",
+          "*.pdmodel",
+          "*.safetensors",
+          "*.txt",
+          "*.model",
+          "*.md",
+          "LICENSE*"
+        ],
+        "sha256": {
+          "inference.pdiparams": "012986b0e2bfe90410618bfb4b7cf4fcb6c978caefd84c63c2934f8387b09ab8"
+        }
+      },
+      {
+        "name": "RT-DETR-L_wired_table_cell_det",
+        "repo": "PaddlePaddle/RT-DETR-L_wired_table_cell_det",
+        "revision": "e2bd53c06b3a815d86acbf5c6779dada58819cfe",
+        "patterns": [
+          "*.json",
+          "*.yml",
+          "*.yaml",
+          "*.pdparams",
+          "*.pdiparams",
+          "*.pdmodel",
+          "*.safetensors",
+          "*.txt",
+          "*.model",
+          "*.md",
+          "LICENSE*"
+        ],
+        "sha256": {
+          "inference.pdiparams": "357321c2845f0a035e8d118622649685a3cdb89d28b09a64e45a5a3df7a9fedc"
+        }
+      },
+      {
+        "name": "RT-DETR-L_wireless_table_cell_det",
+        "repo": "PaddlePaddle/RT-DETR-L_wireless_table_cell_det",
+        "revision": "25ca86356a601c877476bb0dcc5fd09153d9d64d",
+        "patterns": [
+          "*.json",
+          "*.yml",
+          "*.yaml",
+          "*.pdparams",
+          "*.pdiparams",
+          "*.pdmodel",
+          "*.safetensors",
+          "*.txt",
+          "*.model",
+          "*.md",
+          "LICENSE*"
+        ],
+        "sha256": {
+          "inference.pdiparams": "c0f8c9ea07be8916ece73a8acf807bd21aed3ef11969b319c2dccb2406774c34"
+        }
+      },
+      {
+        "name": "PP-LCNet_x1_0_doc_ori",
+        "repo": "PaddlePaddle/PP-LCNet_x1_0_doc_ori",
+        "revision": "d3b95a6dff5fe8a94f2748e12b61cb26818a0df8",
+        "patterns": [
+          "*.json",
+          "*.yml",
+          "*.yaml",
+          "*.pdparams",
+          "*.pdiparams",
+          "*.pdmodel",
+          "*.safetensors",
+          "*.txt",
+          "*.model",
+          "*.md",
+          "LICENSE*"
+        ],
+        "sha256": {
+          "inference.pdiparams": "e8d6e7c5d264507e40e58a655779059d616b20d7441ea22047d829eb3931989c"
+        }
+      },
+      {
+        "name": "PP-FormulaNet_plus-L",
+        "repo": "PaddlePaddle/PP-FormulaNet_plus-L",
+        "revision": "0809597a77f735bfb35354edb632f2e6dff606f3",
+        "patterns": [
+          "*.json",
+          "*.yml",
+          "*.yaml",
+          "*.pdparams",
+          "*.pdiparams",
+          "*.pdmodel",
+          "*.safetensors",
+          "*.txt",
+          "*.model",
+          "*.md",
+          "LICENSE*"
+        ],
+        "sha256": {
+          "inference.pdiparams": "4245c39c181d1d21e472bc85c7434df9b23f177be46552c0542bf153addbc355"
+        }
+      }
+    ],
+    "packages": [
+      "paddlepaddle==3.3.1",
+      "paddleocr[doc-parser]==3.7.0",
+      "paddlex==3.7.2"
+    ],
+    "enable_mkldnn": false,
+    "configuration_reason": "R0 v1 failed on all three cases: oneDNN ConvertPirAttribute2RuntimeAttribute; disable optional CPU acceleration without changing weights or pipeline."
+  },
+  "paddlevl": {
+    "candidate": "paddlevl",
+    "round": "R0",
+    "device": "cpu",
+    "seed": 0,
+    "packages": [
+      "paddlepaddle==3.3.1",
+      "paddleocr[doc-parser]==3.7.0",
+      "paddlex==3.7.2"
+    ],
+    "assets": [
+      {
+        "name": "PP-DocLayoutV3",
+        "repo": "PaddlePaddle/PP-DocLayoutV3",
+        "revision": "241f8bdfc77a7c7bee915a5057aaee58c235a8d3",
+        "patterns": [
+          "*.json",
+          "*.yml",
+          "*.yaml",
+          "*.pdparams",
+          "*.pdiparams",
+          "*.pdmodel",
+          "*.safetensors",
+          "*.txt",
+          "*.model",
+          "*.md",
+          "*.py",
+          "*.jinja",
+          "LICENSE*"
+        ],
+        "sha256": {
+          "inference.pdiparams": "70bd316b0582769ec968829fd1feb1a6a58b7c941b938327e551b6b12b45c137"
+        }
+      },
+      {
+        "name": "PaddleOCR-VL-1.6",
+        "repo": "PaddlePaddle/PaddleOCR-VL-1.6",
+        "revision": "c5630abae1d940eafe0697512a0325494b02ab42",
+        "patterns": [
+          "*.json",
+          "*.yml",
+          "*.yaml",
+          "*.pdparams",
+          "*.pdiparams",
+          "*.pdmodel",
+          "*.safetensors",
+          "*.txt",
+          "*.model",
+          "*.md",
+          "*.py",
+          "*.jinja",
+          "LICENSE*"
+        ],
+        "sha256": {
+          "model.safetensors": "85a479d506a11e724e7285d395c551be69f41dbc16b6342d3cacfb189aed71db",
+          "tokenizer.json": "c8a215a59183d0d0781adc33bacd3ce6162716f7fd568fb30234a74d69803a7d",
+          "tokenizer.model": "34ef7db83df785924fb83d7b887b6e822a031c56e15cff40aaf9b982988180df"
+        }
+      }
+    ],
+    "enable_mkldnn": false,
+    "configuration_reason": "Disable the oneDNN engine that failed in the same PaddlePaddle 3.3.1 layout runtime during PP-StructureV3 R0; keep official full pipeline and exact VLM checkpoint."
+  },
+  "mineru": {
+    "candidate": "mineru",
+    "round": "R0",
+    "device": "cuda:0",
+    "seed": 0,
+    "packages": [
+      "mineru[vlm]==2.7.6",
+      "mineru-vl-utils==0.1.19.1",
+      "torch==2.8.0+cu128",
+      "torchvision==0.23.0+cu128",
+      "transformers==4.57.6",
+      "--extra-index-url",
+      "https://download.pytorch.org/whl/cu128"
+    ],
+    "assets": [
+      {
+        "name": "MinerU2.5-Pro-2604-1.2B",
+        "repo": "opendatalab/MinerU2.5-Pro-2604-1.2B",
+        "revision": "d3f5e08d073c21466bbabe21c71bb1e9c2e595da",
+        "patterns": [
+          "*.json",
+          "*.yml",
+          "*.yaml",
+          "*.pdparams",
+          "*.pdiparams",
+          "*.pdmodel",
+          "*.safetensors",
+          "*.txt",
+          "*.model",
+          "*.md",
+          "*.py",
+          "*.jinja",
+          "LICENSE*"
+        ],
+        "sha256": {
+          "model.safetensors": "f2650d91aaa619534980445034f62cde27fc3fa0430aaf5c3302b91179cad0c5",
+          "tokenizer.json": "dceac5fc54a795ee7570d17902b47bd05412dc2afa62bdf325c3f97fcb5b87fe"
+        }
+      }
+    ],
+    "dtype": "float16",
+    "configuration_reason": "T4 compute capability 7.5 lacks native BF16; use stock Transformers float16 with the exact checkpoint through the official full-PDF predictor injection point, not a standalone image demo."
+  }
+}

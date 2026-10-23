@@ -1,0 +1,1067 @@
+{
+  "initial_submission_git_sha": "3d9a7878bdc9fb3cb79049281d13684b78bfe6ce",
+  "adapter_source_sha256": "ec421be710c3fc43afb17e3ebf20770f26f9abbc7082845d78c2dc7a6bb3d709",
+  "scope": "Synthetic-only R0 technical diagnostics; no approved Gold or quality promotion",
+  "input_sha256": {
+    "synthetic-prose.pdf": "0962d4a7a6fd525dc304c30448cec9e9b37fec6f1fbf3a0cd2a6091e2296a2b2",
+    "synthetic-rows.pdf": "b657f552aeb38830cbc789df29f2f5c6e40ebfc6cd5d2299b647b457814e384f",
+    "synthetic-numbers.pdf": "4245950505b74091619a17c8cc3f7fa9c34992109e01e0de311cca5d3aacd728"
+  },
+  "runs": [
+    {
+      "submission_git_sha": "3d9a7878bdc9fb3cb79049281d13684b78bfe6ce",
+      "run_id": "docling-synthetic-r0-v1",
+      "candidate": "docling",
+      "status": "blocked",
+      "source_sha256": "2debd97c9b4f145d4e653c600b6234e6b1b1a854ed8fc728f9cbdcee917a6479",
+      "registered_stage_manifest": "docling-r0-stage.manifest.json",
+      "started_utc": "2026-10-23T02:46:39.032910+00:00",
+      "finished_utc": "2026-10-23T02:46:39.204610+00:00",
+      "setup": null,
+      "prepare": null,
+      "environment_fingerprint": null,
+      "model_inventory_fingerprint": null,
+      "gpu_inventory_csv": null,
+      "error": "CalledProcessError: Command '['/usr/bin/python3', '-m', 'venv', '/tmp/extraction-env']' returned non-zero exit status 1.",
+      "quality_gate": "NOT_EVALUATED",
+      "rows": [
+        {
+          "case": "synthetic-prose",
+          "status": "not_started",
+          "reason": "CalledProcessError: Command '['/usr/bin/python3', '-m', 'venv', '/tmp/extraction-env']' returned non-zero exit status 1.",
+          "synthetic_line_denominator": 3,
+          "synthetic_line_presence": null
+        },
+        {
+          "case": "synthetic-numbers",
+          "status": "not_started",
+          "reason": "CalledProcessError: Command '['/usr/bin/python3', '-m', 'venv', '/tmp/extraction-env']' returned non-zero exit status 1.",
+          "synthetic_line_denominator": 4,
+          "synthetic_line_presence": null
+        },
+        {
+          "case": "synthetic-rows",
+          "status": "not_started",
+          "reason": "CalledProcessError: Command '['/usr/bin/python3', '-m', 'venv', '/tmp/extraction-env']' returned non-zero exit status 1.",
+          "synthetic_line_denominator": 4,
+          "synthetic_line_presence": null
+        }
+      ]
+    },
+    {
+      "submission_git_sha": "3d9a7878bdc9fb3cb79049281d13684b78bfe6ce",
+      "run_id": "docling-synthetic-r0-v2",
+      "candidate": "docling",
+      "status": "completed",
+      "source_sha256": "c3da4c94dd13b7c1642b5915ce9a8efa2778b693e0bdc04ba72ebb289f88ffbf",
+      "registered_stage_manifest": "docling-r0-v2-stage.manifest.json",
+      "started_utc": "2026-10-23T02:48:20.720469+00:00",
+      "finished_utc": "2026-10-23T02:50:16.366439+00:00",
+      "setup": {
+        "status": "completed",
+        "exit_code": 0,
+        "wall_seconds": 87.51474217499998,
+        "peak_tree_rss_bytes": 362463232,
+        "rss_sample_count": 436,
+        "rss_sample_interval_seconds": 0.2
+      },
+      "prepare": {
+        "status": "completed",
+        "exit_code": 0,
+        "wall_seconds": 4.816903106000012,
+        "peak_tree_rss_bytes": 207884288,
+        "rss_sample_count": 24,
+        "rss_sample_interval_seconds": 0.2
+      },
+      "environment_fingerprint": "25026c07e40abbe47cb12387c524a8b7e66e3514522be130d05f988878b450b1",
+      "model_inventory_fingerprint": "47a34326bb7a4be2a7ed0bedb8c4592e995bb4d161b1065cbe61f4a065b78352",
+      "gpu_inventory_csv": null,
+      "error": null,
+      "quality_gate": "NOT_EVALUATED",
+      "rows": [
+        {
+          "case": "synthetic-prose",
+          "status": "completed",
+          "exit_code": 0,
+          "wall_seconds": 8.026859333999994,
+          "peak_tree_rss_bytes": 1013731328,
+          "rss_sample_count": 40,
+          "rss_sample_interval_seconds": 0.2,
+          "synthetic_line_denominator": 3,
+          "synthetic_line_presence": [
+            true,
+            true,
+            true
+          ],
+          "synthetic_line_present_count": 3,
+          "observations": 1,
+          "native_sha256": "eb07fa8d83701ef64d309c6e28ef61dc7d9c4f59e5e6e2fa73cf005e641b56e7",
+          "native_metrics": {
+            "native_status": "success",
+            "constructor_seconds": 1.7925000008744973e-05,
+            "conversion_seconds_including_lazy_load": 2.154518718999981,
+            "device": "cpu"
+          }
+        },
+        {
+          "case": "synthetic-numbers",
+          "status": "completed",
+          "exit_code": 0,
+          "wall_seconds": 7.424488886999995,
+          "peak_tree_rss_bytes": 1029832704,
+          "rss_sample_count": 37,
+          "rss_sample_interval_seconds": 0.2,
+          "synthetic_line_denominator": 4,
+          "synthetic_line_presence": [
+            true,
+            true,
+            true,
+            true
+          ],
+          "synthetic_line_present_count": 4,
+          "observations": 1,
+          "native_sha256": "69e7240fb53755de09feb178ebebbeb245181253dbf09d8852d934f3c3719cc6",
+          "native_metrics": {
+            "native_status": "success",
+            "constructor_seconds": 2.5913999991189485e-05,
+            "conversion_seconds_including_lazy_load": 2.1575029869999867,
+            "device": "cpu"
+          }
+        },
+        {
+          "case": "synthetic-rows",
+          "status": "completed",
+          "exit_code": 0,
+          "wall_seconds": 7.626427090999982,
+          "peak_tree_rss_bytes": 999710720,
+          "rss_sample_count": 38,
+          "rss_sample_interval_seconds": 0.2,
+          "synthetic_line_denominator": 4,
+          "synthetic_line_presence": [
+            true,
+            true,
+            true,
+            true
+          ],
+          "synthetic_line_present_count": 4,
+          "observations": 4,
+          "native_sha256": "7475c9e7f57f4692ef4470af6a670e5d6e3e9d81af44f65dbcdfd4e20c028fee",
+          "native_metrics": {
+            "native_status": "success",
+            "constructor_seconds": 1.6486999982134876e-05,
+            "conversion_seconds_including_lazy_load": 2.1066888039999867,
+            "device": "cpu"
+          }
+        }
+      ]
+    },
+    {
+      "submission_git_sha": "3d9a7878bdc9fb3cb79049281d13684b78bfe6ce",
+      "run_id": "marker-synthetic-r0-v1",
+      "candidate": "marker",
+      "status": "blocked",
+      "source_sha256": "538ee672962bb5af6b1c65f7314f73fe9b936620423ebff11d163081d36b8a13",
+      "registered_stage_manifest": "marker-r0-stage.manifest.json",
+      "started_utc": "2026-10-23T02:52:59.180619+00:00",
+      "finished_utc": "2026-10-23T02:54:49.851806+00:00",
+      "setup": {
+        "status": "completed",
+        "exit_code": 0,
+        "wall_seconds": 96.344794132,
+        "peak_tree_rss_bytes": 361766912,
+        "rss_sample_count": 480,
+        "rss_sample_interval_seconds": 0.2
+      },
+      "prepare": {
+        "status": "failed",
+        "exit_code": 1,
+        "wall_seconds": 14.050650935000021,
+        "peak_tree_rss_bytes": 812929024,
+        "rss_sample_count": 70,
+        "rss_sample_interval_seconds": 0.2
+      },
+      "environment_fingerprint": "4ffa896c15879bbe627d214b2cdd5b663c20081d51bd9abbdc5ba9935615bdc0",
+      "model_inventory_fingerprint": null,
+      "gpu_inventory_csv": null,
+      "error": "RuntimeError: model_preparation_failed",
+      "quality_gate": "NOT_EVALUATED",
+      "rows": [
+        {
+          "case": "synthetic-prose",
+          "status": "not_started",
+          "reason": "RuntimeError: model_preparation_failed",
+          "synthetic_line_denominator": 3,
+          "synthetic_line_presence": null
+        },
+        {
+          "case": "synthetic-numbers",
+          "status": "not_started",
+          "reason": "RuntimeError: model_preparation_failed",
+          "synthetic_line_denominator": 4,
+          "synthetic_line_presence": null
+        },
+        {
+          "case": "synthetic-rows",
+          "status": "not_started",
+          "reason": "RuntimeError: model_preparation_failed",
+          "synthetic_line_denominator": 4,
+          "synthetic_line_presence": null
+        }
+      ]
+    },
+    {
+      "submission_git_sha": "17cd03a8098570e5c0ad417f90a55cd44130fcd3",
+      "run_id": "marker-synthetic-r0-v3-proof-repeat",
+      "candidate": "marker",
+      "status": "completed",
+      "source_sha256": "a262ea3248e815c48737d767da1ab28ccd3048152efb4e3ba62ee57c5c24608a",
+      "registered_stage_manifest": "marker-r0-proof-stage.manifest.json",
+      "started_utc": "2026-10-23T07:37:00.839323+00:00",
+      "finished_utc": "2026-10-23T07:45:04.816405+00:00",
+      "setup": {
+        "status": "completed",
+        "exit_code": 0,
+        "wall_seconds": 87.46854073399999,
+        "peak_tree_rss_bytes": 361889792,
+        "rss_sample_count": 420,
+        "rss_sample_interval_seconds": 0.2,
+        "gpu_device_0_used_peak_bytes": 0,
+        "gpu_samples": 84,
+        "gpu_scope": "Device total including baseline; approximately 1 second samples."
+      },
+      "prepare": {
+        "status": "completed",
+        "exit_code": 0,
+        "wall_seconds": 29.810133769999993,
+        "peak_tree_rss_bytes": 711806976,
+        "rss_sample_count": 143,
+        "rss_sample_interval_seconds": 0.2,
+        "gpu_device_0_used_peak_bytes": 0,
+        "gpu_samples": 28,
+        "gpu_scope": "Device total including baseline; approximately 1 second samples."
+      },
+      "environment_fingerprint": "4ffa896c15879bbe627d214b2cdd5b663c20081d51bd9abbdc5ba9935615bdc0",
+      "model_inventory_fingerprint": "2c5da950edf12f75ca3ec18b53d07feafa03146cdc71bc091851d9ea66c9820f",
+      "gpu_inventory_csv": [
+        "0, Tesla T4, 580.178.04, 15360, 14912",
+        "1, Tesla T4, 580.178.04, 15360, 14912"
+      ],
+      "error": null,
+      "quality_gate": "NOT_EVALUATED",
+      "rows": [
+        {
+          "case": "synthetic-prose",
+          "status": "completed",
+          "exit_code": 0,
+          "wall_seconds": 123.395638674,
+          "peak_tree_rss_bytes": 2793435136,
+          "rss_sample_count": 593,
+          "rss_sample_interval_seconds": 0.2,
+          "gpu_device_0_used_peak_bytes": 1972371456,
+          "gpu_samples": 118,
+          "gpu_scope": "Device total including baseline; approximately 1 second samples.",
+          "synthetic_line_denominator": 3,
+          "synthetic_line_presence": [
+            false,
+            true,
+            true
+          ],
+          "synthetic_line_present_count": 2,
+          "observations": 4,
+          "native_sha256": "8798522102ef234d9081858ab502a1795fbc3d962efa9f9ac2fac98ff29a493c",
+          "native_metrics": {
+            "native_status": "completed",
+            "conversion_seconds": 100.30547035199999,
+            "device": "llama.cpp CUDA0",
+            "offloaded_layers": 25
+          }
+        },
+        {
+          "case": "synthetic-numbers",
+          "status": "completed",
+          "exit_code": 0,
+          "wall_seconds": 120.98557417099994,
+          "peak_tree_rss_bytes": 2805968896,
+          "rss_sample_count": 581,
+          "rss_sample_interval_seconds": 0.2,
+          "gpu_device_0_used_peak_bytes": 1972371456,
+          "gpu_samples": 116,
+          "gpu_scope": "Device total including baseline; approximately 1 second samples.",
+          "synthetic_line_denominator": 4,
+          "synthetic_line_presence": [
+            false,
+            true,
+            true,
+            true
+          ],
+          "synthetic_line_present_count": 3,
+          "observations": 5,
+          "native_sha256": "1f9072a9b4c52b5e1ed1f22b76ce4b200a52a9ea1fd26428c665f7fa06e8a0e8",
+          "native_metrics": {
+            "native_status": "completed",
+            "conversion_seconds": 98.19744547299996,
+            "device": "llama.cpp CUDA0",
+            "offloaded_layers": 25
+          }
+        },
+        {
+          "case": "synthetic-rows",
+          "status": "completed",
+          "exit_code": 0,
+          "wall_seconds": 122.16227693600001,
+          "peak_tree_rss_bytes": 2825887744,
+          "rss_sample_count": 587,
+          "rss_sample_interval_seconds": 0.2,
+          "gpu_device_0_used_peak_bytes": 1972371456,
+          "gpu_samples": 117,
+          "gpu_scope": "Device total including baseline; approximately 1 second samples.",
+          "synthetic_line_denominator": 4,
+          "synthetic_line_presence": [
+            true,
+            true,
+            true,
+            true
+          ],
+          "synthetic_line_present_count": 4,
+          "observations": 3,
+          "native_sha256": "a2b1445798cee14e5d9182e49c2148b02a955af76bf0b6778b188702d73afd3b",
+          "native_metrics": {
+            "native_status": "completed",
+            "conversion_seconds": 99.19343716000003,
+            "device": "llama.cpp CUDA0",
+            "offloaded_layers": 25
+          }
+        }
+      ]
+    },
+    {
+      "submission_git_sha": "3d9a7878bdc9fb3cb79049281d13684b78bfe6ce",
+      "run_id": "marker-synthetic-r0-v2",
+      "candidate": "marker",
+      "status": "failed",
+      "source_sha256": "0fc70cf975e432c4089e78ed7b0cd6a4b491ac2a4df691ec3dd3cbf685052c56",
+      "registered_stage_manifest": "marker-r0-v2-final-stage.manifest.json",
+      "started_utc": "2026-10-23T07:14:32.563079+00:00",
+      "finished_utc": "2026-10-23T07:16:57.344996+00:00",
+      "setup": {
+        "status": "completed",
+        "exit_code": 0,
+        "wall_seconds": 80.42314131300003,
+        "peak_tree_rss_bytes": 361787392,
+        "rss_sample_count": 386,
+        "rss_sample_interval_seconds": 0.2,
+        "gpu_device_0_used_peak_bytes": 0,
+        "gpu_samples": 77,
+        "gpu_scope": "Device total including baseline; approximately 1 second samples."
+      },
+      "prepare": {
+        "status": "completed",
+        "exit_code": 0,
+        "wall_seconds": 22.969939572999976,
+        "peak_tree_rss_bytes": 807636992,
+        "rss_sample_count": 110,
+        "rss_sample_interval_seconds": 0.2,
+        "gpu_device_0_used_peak_bytes": 0,
+        "gpu_samples": 22,
+        "gpu_scope": "Device total including baseline; approximately 1 second samples."
+      },
+      "environment_fingerprint": "4ffa896c15879bbe627d214b2cdd5b663c20081d51bd9abbdc5ba9935615bdc0",
+      "model_inventory_fingerprint": "b31b28608bfe6de06b0c6ed48d90d2504aa2cf9337ff598a36824913e5c56081",
+      "gpu_inventory_csv": [
+        "0, Tesla T4, 580.178.04, 15360, 14912",
+        "1, Tesla T4, 580.178.04, 15360, 14912"
+      ],
+      "error": null,
+      "quality_gate": "NOT_EVALUATED",
+      "rows": [
+        {
+          "case": "synthetic-prose",
+          "status": "failed",
+          "exit_code": 1,
+          "wall_seconds": 14.979465591000007,
+          "peak_tree_rss_bytes": 542711808,
+          "rss_sample_count": 72,
+          "rss_sample_interval_seconds": 0.2,
+          "gpu_device_0_used_peak_bytes": 0,
+          "gpu_samples": 14,
+          "gpu_scope": "Device total including baseline; approximately 1 second samples.",
+          "synthetic_line_denominator": 3,
+          "synthetic_line_presence": null
+        },
+        {
+          "case": "synthetic-numbers",
+          "status": "failed",
+          "exit_code": 1,
+          "wall_seconds": 12.893483465000031,
+          "peak_tree_rss_bytes": 544980992,
+          "rss_sample_count": 62,
+          "rss_sample_interval_seconds": 0.2,
+          "gpu_device_0_used_peak_bytes": 0,
+          "gpu_samples": 12,
+          "gpu_scope": "Device total including baseline; approximately 1 second samples.",
+          "synthetic_line_denominator": 4,
+          "synthetic_line_presence": null
+        },
+        {
+          "case": "synthetic-rows",
+          "status": "failed",
+          "exit_code": 1,
+          "wall_seconds": 13.309476344000018,
+          "peak_tree_rss_bytes": 545275904,
+          "rss_sample_count": 64,
+          "rss_sample_interval_seconds": 0.2,
+          "gpu_device_0_used_peak_bytes": 0,
+          "gpu_samples": 12,
+          "gpu_scope": "Device total including baseline; approximately 1 second samples.",
+          "synthetic_line_denominator": 4,
+          "synthetic_line_presence": null
+        }
+      ]
+    },
+    {
+      "submission_git_sha": "3d9a7878bdc9fb3cb79049281d13684b78bfe6ce",
+      "run_id": "marker-synthetic-r0-v3",
+      "candidate": "marker",
+      "status": "failed",
+      "source_sha256": "ad513cf01afaf5d544511e508174f6f4411b88bfb1279d990bd761ac5eb45ba2",
+      "registered_stage_manifest": "marker-r0-v3-stage.manifest.json",
+      "started_utc": "2026-10-23T07:20:23.111313+00:00",
+      "finished_utc": "2026-10-23T07:28:39.325635+00:00",
+      "setup": {
+        "status": "completed",
+        "exit_code": 0,
+        "wall_seconds": 95.65513319400003,
+        "peak_tree_rss_bytes": 361914368,
+        "rss_sample_count": 459,
+        "rss_sample_interval_seconds": 0.2,
+        "gpu_device_0_used_peak_bytes": 0,
+        "gpu_samples": 91,
+        "gpu_scope": "Device total including baseline; approximately 1 second samples."
+      },
+      "prepare": {
+        "status": "completed",
+        "exit_code": 0,
+        "wall_seconds": 22.159554264000008,
+        "peak_tree_rss_bytes": 829935616,
+        "rss_sample_count": 106,
+        "rss_sample_interval_seconds": 0.2,
+        "gpu_device_0_used_peak_bytes": 0,
+        "gpu_samples": 21,
+        "gpu_scope": "Device total including baseline; approximately 1 second samples."
+      },
+      "environment_fingerprint": "4ffa896c15879bbe627d214b2cdd5b663c20081d51bd9abbdc5ba9935615bdc0",
+      "model_inventory_fingerprint": "2c5da950edf12f75ca3ec18b53d07feafa03146cdc71bc091851d9ea66c9820f",
+      "gpu_inventory_csv": [
+        "0, Tesla T4, 580.178.04, 15360, 14912",
+        "1, Tesla T4, 580.178.04, 15360, 14912"
+      ],
+      "error": null,
+      "quality_gate": "NOT_EVALUATED",
+      "rows": [
+        {
+          "case": "synthetic-prose",
+          "status": "failed",
+          "exit_code": 1,
+          "wall_seconds": 127.82651139699999,
+          "peak_tree_rss_bytes": 2776653824,
+          "rss_sample_count": 613,
+          "rss_sample_interval_seconds": 0.2,
+          "gpu_device_0_used_peak_bytes": 1972371456,
+          "gpu_samples": 122,
+          "gpu_scope": "Device total including baseline; approximately 1 second samples.",
+          "synthetic_line_denominator": 3,
+          "synthetic_line_presence": null
+        },
+        {
+          "case": "synthetic-numbers",
+          "status": "failed",
+          "exit_code": 1,
+          "wall_seconds": 123.95853794600009,
+          "peak_tree_rss_bytes": 2963607552,
+          "rss_sample_count": 593,
+          "rss_sample_interval_seconds": 0.2,
+          "gpu_device_0_used_peak_bytes": 1972371456,
+          "gpu_samples": 118,
+          "gpu_scope": "Device total including baseline; approximately 1 second samples.",
+          "synthetic_line_denominator": 4,
+          "synthetic_line_presence": null
+        },
+        {
+          "case": "synthetic-rows",
+          "status": "failed",
+          "exit_code": 1,
+          "wall_seconds": 126.40805693899995,
+          "peak_tree_rss_bytes": 2830397440,
+          "rss_sample_count": 603,
+          "rss_sample_interval_seconds": 0.2,
+          "gpu_device_0_used_peak_bytes": 1972371456,
+          "gpu_samples": 120,
+          "gpu_scope": "Device total including baseline; approximately 1 second samples.",
+          "synthetic_line_denominator": 4,
+          "synthetic_line_presence": null
+        }
+      ]
+    },
+    {
+      "submission_git_sha": "3d9a7878bdc9fb3cb79049281d13684b78bfe6ce",
+      "run_id": "mineru-synthetic-r0-v1",
+      "candidate": "mineru",
+      "status": "failed",
+      "source_sha256": "e3e950802ba5f067f77a0efacded31157fd3fce7c4afece54f666bda690da6c9",
+      "registered_stage_manifest": "mineru-r0-final-stage.manifest.json",
+      "started_utc": "2026-10-23T07:01:32.137940+00:00",
+      "finished_utc": "2026-10-23T07:05:42.678717+00:00",
+      "setup": {
+        "status": "completed",
+        "exit_code": 0,
+        "wall_seconds": 195.313310505,
+        "peak_tree_rss_bytes": 1070215168,
+        "rss_sample_count": 937,
+        "rss_sample_interval_seconds": 0.2,
+        "gpu_device_0_used_peak_bytes": 0,
+        "gpu_samples": 187,
+        "gpu_scope": "Device total including baseline; approximately 1 second samples."
+      },
+      "prepare": {
+        "status": "completed",
+        "exit_code": 0,
+        "wall_seconds": 19.719938928000033,
+        "peak_tree_rss_bytes": 792268800,
+        "rss_sample_count": 94,
+        "rss_sample_interval_seconds": 0.2,
+        "gpu_device_0_used_peak_bytes": 0,
+        "gpu_samples": 18,
+        "gpu_scope": "Device total including baseline; approximately 1 second samples."
+      },
+      "environment_fingerprint": "17c1b6144c5f57567d1dd724af903c8f27ada62662599e96a8f7c691843ff2f8",
+      "model_inventory_fingerprint": "9c21ecb3eb26cff83b67ff19e25c6810b7f82256cfffb47a591463f570c07b64",
+      "gpu_inventory_csv": [
+        "0, Tesla T4, 580.178.04, 15360, 14912",
+        "1, Tesla T4, 580.178.04, 15360, 14912"
+      ],
+      "error": null,
+      "quality_gate": "NOT_EVALUATED",
+      "rows": [
+        {
+          "case": "synthetic-prose",
+          "status": "failed",
+          "exit_code": 1,
+          "wall_seconds": 12.049550783999962,
+          "peak_tree_rss_bytes": 1159815168,
+          "rss_sample_count": 58,
+          "rss_sample_interval_seconds": 0.2,
+          "gpu_device_0_used_peak_bytes": 0,
+          "gpu_samples": 11,
+          "gpu_scope": "Device total including baseline; approximately 1 second samples.",
+          "synthetic_line_denominator": 3,
+          "synthetic_line_presence": null
+        },
+        {
+          "case": "synthetic-numbers",
+          "status": "failed",
+          "exit_code": 1,
+          "wall_seconds": 11.648149978999982,
+          "peak_tree_rss_bytes": 1033752576,
+          "rss_sample_count": 56,
+          "rss_sample_interval_seconds": 0.2,
+          "gpu_device_0_used_peak_bytes": 0,
+          "gpu_samples": 11,
+          "gpu_scope": "Device total including baseline; approximately 1 second samples.",
+          "synthetic_line_denominator": 4,
+          "synthetic_line_presence": null
+        },
+        {
+          "case": "synthetic-rows",
+          "status": "failed",
+          "exit_code": 1,
+          "wall_seconds": 11.649753443000009,
+          "peak_tree_rss_bytes": 1034006528,
+          "rss_sample_count": 56,
+          "rss_sample_interval_seconds": 0.2,
+          "gpu_device_0_used_peak_bytes": 0,
+          "gpu_samples": 11,
+          "gpu_scope": "Device total including baseline; approximately 1 second samples.",
+          "synthetic_line_denominator": 4,
+          "synthetic_line_presence": null
+        }
+      ]
+    },
+    {
+      "submission_git_sha": "3d9a7878bdc9fb3cb79049281d13684b78bfe6ce",
+      "run_id": "mineru-synthetic-r0-v2",
+      "candidate": "mineru",
+      "status": "completed",
+      "source_sha256": "02db63749a1c6d107a223581130614a9cf15201ac098816e6ca6baab39896f61",
+      "registered_stage_manifest": "mineru-r0-v2-stage.manifest.json",
+      "started_utc": "2026-10-23T07:08:48.954902+00:00",
+      "finished_utc": "2026-10-23T07:13:16.968500+00:00",
+      "setup": {
+        "status": "completed",
+        "exit_code": 0,
+        "wall_seconds": 188.226622281,
+        "peak_tree_rss_bytes": 1070895104,
+        "rss_sample_count": 903,
+        "rss_sample_interval_seconds": 0.2,
+        "gpu_device_0_used_peak_bytes": 0,
+        "gpu_samples": 180,
+        "gpu_scope": "Device total including baseline; approximately 1 second samples."
+      },
+      "prepare": {
+        "status": "completed",
+        "exit_code": 0,
+        "wall_seconds": 16.0450798789999,
+        "peak_tree_rss_bytes": 737210368,
+        "rss_sample_count": 76,
+        "rss_sample_interval_seconds": 0.2,
+        "gpu_device_0_used_peak_bytes": 0,
+        "gpu_samples": 15,
+        "gpu_scope": "Device total including baseline; approximately 1 second samples."
+      },
+      "environment_fingerprint": "17c1b6144c5f57567d1dd724af903c8f27ada62662599e96a8f7c691843ff2f8",
+      "model_inventory_fingerprint": "9c21ecb3eb26cff83b67ff19e25c6810b7f82256cfffb47a591463f570c07b64",
+      "gpu_inventory_csv": [
+        "0, Tesla T4, 580.178.04, 15360, 14912",
+        "1, Tesla T4, 580.178.04, 15360, 14912"
+      ],
+      "error": null,
+      "quality_gate": "NOT_EVALUATED",
+      "rows": [
+        {
+          "case": "synthetic-prose",
+          "status": "completed",
+          "exit_code": 0,
+          "wall_seconds": 21.944043770999997,
+          "peak_tree_rss_bytes": 3061063680,
+          "rss_sample_count": 105,
+          "rss_sample_interval_seconds": 0.2,
+          "gpu_device_0_used_peak_bytes": 3618635776,
+          "gpu_samples": 21,
+          "gpu_scope": "Device total including baseline; approximately 1 second samples.",
+          "synthetic_line_denominator": 3,
+          "synthetic_line_presence": [
+            true,
+            true,
+            true
+          ],
+          "synthetic_line_present_count": 3,
+          "observations": 3,
+          "native_sha256": "b8c90bbefa1f3d6126077f2fc27030e9a802eac0cfbd346337031f1c559e5fb0",
+          "native_metrics": {
+            "native_status": "completed",
+            "device": "cuda:0",
+            "constructor_seconds": 1.9058771689999503,
+            "conversion_seconds": 7.107023271999992,
+            "cuda_forward_calls": 88,
+            "parameters": [
+              [
+                "cuda:0:torch.float16"
+              ]
+            ],
+            "peak_cuda_allocated_bytes": 2784383488
+          }
+        },
+        {
+          "case": "synthetic-numbers",
+          "status": "completed",
+          "exit_code": 0,
+          "wall_seconds": 21.614723285999958,
+          "peak_tree_rss_bytes": 3135782912,
+          "rss_sample_count": 104,
+          "rss_sample_interval_seconds": 0.2,
+          "gpu_device_0_used_peak_bytes": 3618635776,
+          "gpu_samples": 20,
+          "gpu_scope": "Device total including baseline; approximately 1 second samples.",
+          "synthetic_line_denominator": 4,
+          "synthetic_line_presence": [
+            true,
+            true,
+            true,
+            true
+          ],
+          "synthetic_line_present_count": 4,
+          "observations": 4,
+          "native_sha256": "eefa84cab95d89b63a493d981661e8e147b4c116bf92d0e1e42befb9da47f001",
+          "native_metrics": {
+            "native_status": "completed",
+            "device": "cuda:0",
+            "constructor_seconds": 1.8520642540000836,
+            "conversion_seconds": 7.119323219999956,
+            "cuda_forward_calls": 116,
+            "parameters": [
+              [
+                "cuda:0:torch.float16"
+              ]
+            ],
+            "peak_cuda_allocated_bytes": 2784383488
+          }
+        },
+        {
+          "case": "synthetic-rows",
+          "status": "completed",
+          "exit_code": 0,
+          "wall_seconds": 19.968290070999956,
+          "peak_tree_rss_bytes": 3449737216,
+          "rss_sample_count": 96,
+          "rss_sample_interval_seconds": 0.2,
+          "gpu_device_0_used_peak_bytes": 3618635776,
+          "gpu_samples": 19,
+          "gpu_scope": "Device total including baseline; approximately 1 second samples.",
+          "synthetic_line_denominator": 4,
+          "synthetic_line_presence": [
+            true,
+            true,
+            true,
+            true
+          ],
+          "synthetic_line_present_count": 4,
+          "observations": 3,
+          "native_sha256": "e53d0c5f2e8a7da662c50f7eb37d4f1b80ab72b5136ec1bb7ff45d8383424c3a",
+          "native_metrics": {
+            "native_status": "completed",
+            "device": "cuda:0",
+            "constructor_seconds": 1.9032033720000072,
+            "conversion_seconds": 5.570234128000038,
+            "cuda_forward_calls": 82,
+            "parameters": [
+              [
+                "cuda:0:torch.float16"
+              ]
+            ],
+            "peak_cuda_allocated_bytes": 2784383488
+          }
+        }
+      ]
+    },
+    {
+      "submission_git_sha": "3d9a7878bdc9fb3cb79049281d13684b78bfe6ce",
+      "run_id": "paddlevl-synthetic-r0-v1",
+      "candidate": "paddlevl",
+      "status": "completed",
+      "source_sha256": "756a4095e05815be7b8d4421d834c3b54b6e2ad8a449c51a1ee461bf39faf80e",
+      "registered_stage_manifest": "paddlevl-r0-final-stage.manifest.json",
+      "started_utc": "2026-10-23T06:54:48.515636+00:00",
+      "finished_utc": "2026-10-23T07:00:05.465393+00:00",
+      "setup": {
+        "status": "completed",
+        "exit_code": 0,
+        "wall_seconds": 82.031434058,
+        "peak_tree_rss_bytes": 378159104,
+        "rss_sample_count": 408,
+        "rss_sample_interval_seconds": 0.2,
+        "gpu_device_0_used_peak_bytes": null,
+        "gpu_samples": 0,
+        "gpu_scope": "Device total including baseline; approximately 1 second samples."
+      },
+      "prepare": {
+        "status": "completed",
+        "exit_code": 0,
+        "wall_seconds": 15.287814330000003,
+        "peak_tree_rss_bytes": 712495104,
+        "rss_sample_count": 76,
+        "rss_sample_interval_seconds": 0.2,
+        "gpu_device_0_used_peak_bytes": null,
+        "gpu_samples": 0,
+        "gpu_scope": "Device total including baseline; approximately 1 second samples."
+      },
+      "environment_fingerprint": "8c750711dff2f4240481d13a20d41d647511dc2f79f5f8e82fe254b2dc017324",
+      "model_inventory_fingerprint": "9ef91092a1d210fdbcdfdb647c02b63b016ce0ea71897cd4b2983f7aa5588105",
+      "gpu_inventory_csv": null,
+      "error": null,
+      "quality_gate": "NOT_EVALUATED",
+      "rows": [
+        {
+          "case": "synthetic-prose",
+          "status": "completed",
+          "exit_code": 0,
+          "wall_seconds": 79.96610307100002,
+          "peak_tree_rss_bytes": 9799331840,
+          "rss_sample_count": 398,
+          "rss_sample_interval_seconds": 0.2,
+          "gpu_device_0_used_peak_bytes": null,
+          "gpu_samples": 0,
+          "gpu_scope": "Device total including baseline; approximately 1 second samples.",
+          "synthetic_line_denominator": 3,
+          "synthetic_line_presence": [
+            true,
+            true,
+            true
+          ],
+          "synthetic_line_present_count": 3,
+          "observations": 3,
+          "native_sha256": "8529ba237e23e48a80ade0b7a0db806f515656ee8656eba4f60eb89083d76084",
+          "native_metrics": {
+            "native_status": "completed",
+            "pages": 1,
+            "device": "cpu",
+            "constructor_seconds": 22.321183269000016,
+            "conversion_seconds": 45.04246532800005
+          }
+        },
+        {
+          "case": "synthetic-numbers",
+          "status": "completed",
+          "exit_code": 0,
+          "wall_seconds": 86.59570464399997,
+          "peak_tree_rss_bytes": 9706946560,
+          "rss_sample_count": 431,
+          "rss_sample_interval_seconds": 0.2,
+          "gpu_device_0_used_peak_bytes": null,
+          "gpu_samples": 0,
+          "gpu_scope": "Device total including baseline; approximately 1 second samples.",
+          "synthetic_line_denominator": 4,
+          "synthetic_line_presence": [
+            true,
+            true,
+            true,
+            true
+          ],
+          "synthetic_line_present_count": 4,
+          "observations": 4,
+          "native_sha256": "3652128f2d0ef8f792297a3e10c9c5698c7e44c1dbae318fc3f59bfc8d68e3db",
+          "native_metrics": {
+            "native_status": "completed",
+            "pages": 1,
+            "device": "cpu",
+            "constructor_seconds": 21.799158153000008,
+            "conversion_seconds": 55.28549436200001
+          }
+        },
+        {
+          "case": "synthetic-rows",
+          "status": "completed",
+          "exit_code": 0,
+          "wall_seconds": 52.89426344600008,
+          "peak_tree_rss_bytes": 9727438848,
+          "rss_sample_count": 263,
+          "rss_sample_interval_seconds": 0.2,
+          "gpu_device_0_used_peak_bytes": null,
+          "gpu_samples": 0,
+          "gpu_scope": "Device total including baseline; approximately 1 second samples.",
+          "synthetic_line_denominator": 4,
+          "synthetic_line_presence": [
+            true,
+            true,
+            true,
+            true
+          ],
+          "synthetic_line_present_count": 4,
+          "observations": 1,
+          "native_sha256": "33bc4711fbe93d5376c12b933d56e8003412bb577909d2805346ec995456b496",
+          "native_metrics": {
+            "native_status": "completed",
+            "pages": 1,
+            "device": "cpu",
+            "constructor_seconds": 21.626638930000013,
+            "conversion_seconds": 21.80987978400003
+          }
+        }
+      ]
+    },
+    {
+      "submission_git_sha": "3d9a7878bdc9fb3cb79049281d13684b78bfe6ce",
+      "run_id": "ppstructure-synthetic-r0-v1",
+      "candidate": "ppstructure",
+      "status": "failed",
+      "source_sha256": "aad155827e0f7505673fa534766091ad278ab3abfadc90e41932a25ea84a55fe",
+      "registered_stage_manifest": "ppstructure-r0-stage.manifest.json",
+      "started_utc": "2026-10-23T06:41:05.898984+00:00",
+      "finished_utc": "2026-10-23T06:44:29.846404+00:00",
+      "setup": {
+        "status": "completed",
+        "exit_code": 0,
+        "wall_seconds": 74.99541673100003,
+        "peak_tree_rss_bytes": 377737216,
+        "rss_sample_count": 373,
+        "rss_sample_interval_seconds": 0.2,
+        "gpu_device_0_used_peak_bytes": null,
+        "gpu_samples": 0,
+        "gpu_scope": "Device total including baseline; approximately 1 second samples."
+      },
+      "prepare": {
+        "status": "completed",
+        "exit_code": 0,
+        "wall_seconds": 28.329908914999976,
+        "peak_tree_rss_bytes": 828874752,
+        "rss_sample_count": 141,
+        "rss_sample_interval_seconds": 0.2,
+        "gpu_device_0_used_peak_bytes": null,
+        "gpu_samples": 0,
+        "gpu_scope": "Device total including baseline; approximately 1 second samples."
+      },
+      "environment_fingerprint": "8c750711dff2f4240481d13a20d41d647511dc2f79f5f8e82fe254b2dc017324",
+      "model_inventory_fingerprint": "70e7bd35c92dfa5ddd5544e277b6e6f3c625130523e1ae15545eeee5c5bf6613",
+      "gpu_inventory_csv": null,
+      "error": null,
+      "quality_gate": "NOT_EVALUATED",
+      "rows": [
+        {
+          "case": "synthetic-prose",
+          "status": "failed",
+          "exit_code": 1,
+          "wall_seconds": 34.155155423999986,
+          "peak_tree_rss_bytes": 2681724928,
+          "rss_sample_count": 170,
+          "rss_sample_interval_seconds": 0.2,
+          "gpu_device_0_used_peak_bytes": null,
+          "gpu_samples": 0,
+          "gpu_scope": "Device total including baseline; approximately 1 second samples.",
+          "synthetic_line_denominator": 3,
+          "synthetic_line_presence": null
+        },
+        {
+          "case": "synthetic-numbers",
+          "status": "failed",
+          "exit_code": 1,
+          "wall_seconds": 33.148315642,
+          "peak_tree_rss_bytes": 2663661568,
+          "rss_sample_count": 165,
+          "rss_sample_interval_seconds": 0.2,
+          "gpu_device_0_used_peak_bytes": null,
+          "gpu_samples": 0,
+          "gpu_scope": "Device total including baseline; approximately 1 second samples.",
+          "synthetic_line_denominator": 4,
+          "synthetic_line_presence": null
+        },
+        {
+          "case": "synthetic-rows",
+          "status": "failed",
+          "exit_code": 1,
+          "wall_seconds": 33.148250793000045,
+          "peak_tree_rss_bytes": 2671538176,
+          "rss_sample_count": 165,
+          "rss_sample_interval_seconds": 0.2,
+          "gpu_device_0_used_peak_bytes": null,
+          "gpu_samples": 0,
+          "gpu_scope": "Device total including baseline; approximately 1 second samples.",
+          "synthetic_line_denominator": 4,
+          "synthetic_line_presence": null
+        }
+      ]
+    },
+    {
+      "submission_git_sha": "3d9a7878bdc9fb3cb79049281d13684b78bfe6ce",
+      "run_id": "ppstructure-synthetic-r0-v2",
+      "candidate": "ppstructure",
+      "status": "completed",
+      "source_sha256": "2248e291ba9b9d196faec7898c6c8e03d734ca2805add9012b4ad5f5c4447246",
+      "registered_stage_manifest": "ppstructure-r0-v2-stage.manifest.json",
+      "started_utc": "2026-10-23T06:46:44.633724+00:00",
+      "finished_utc": "2026-10-23T06:51:58.295982+00:00",
+      "setup": {
+        "status": "completed",
+        "exit_code": 0,
+        "wall_seconds": 72.37045023799999,
+        "peak_tree_rss_bytes": 377602048,
+        "rss_sample_count": 360,
+        "rss_sample_interval_seconds": 0.2,
+        "gpu_device_0_used_peak_bytes": null,
+        "gpu_samples": 0,
+        "gpu_scope": "Device total including baseline; approximately 1 second samples."
+      },
+      "prepare": {
+        "status": "completed",
+        "exit_code": 0,
+        "wall_seconds": 31.935011098000018,
+        "peak_tree_rss_bytes": 680255488,
+        "rss_sample_count": 159,
+        "rss_sample_interval_seconds": 0.2,
+        "gpu_device_0_used_peak_bytes": null,
+        "gpu_samples": 0,
+        "gpu_scope": "Device total including baseline; approximately 1 second samples."
+      },
+      "environment_fingerprint": "8c750711dff2f4240481d13a20d41d647511dc2f79f5f8e82fe254b2dc017324",
+      "model_inventory_fingerprint": "70e7bd35c92dfa5ddd5544e277b6e6f3c625130523e1ae15545eeee5c5bf6613",
+      "gpu_inventory_csv": null,
+      "error": null,
+      "quality_gate": "NOT_EVALUATED",
+      "rows": [
+        {
+          "case": "synthetic-prose",
+          "status": "completed",
+          "exit_code": 0,
+          "wall_seconds": 69.33326584300005,
+          "peak_tree_rss_bytes": 13199519744,
+          "rss_sample_count": 345,
+          "rss_sample_interval_seconds": 0.2,
+          "gpu_device_0_used_peak_bytes": null,
+          "gpu_samples": 0,
+          "gpu_scope": "Device total including baseline; approximately 1 second samples.",
+          "synthetic_line_denominator": 3,
+          "synthetic_line_presence": [
+            true,
+            true,
+            true
+          ],
+          "synthetic_line_present_count": 3,
+          "observations": 3,
+          "native_sha256": "db13179ad8469098bd4d4b37dccf0eb8827d4213560b10c85ebcb05ebcbffc5a",
+          "native_metrics": {
+            "native_status": "completed",
+            "pages": 1,
+            "device": "cpu",
+            "constructor_seconds": 11.627167712999949,
+            "conversion_seconds": 48.75478706299998
+          }
+        },
+        {
+          "case": "synthetic-numbers",
+          "status": "completed",
+          "exit_code": 0,
+          "wall_seconds": 68.943104769,
+          "peak_tree_rss_bytes": 13214314496,
+          "rss_sample_count": 343,
+          "rss_sample_interval_seconds": 0.2,
+          "gpu_device_0_used_peak_bytes": null,
+          "gpu_samples": 0,
+          "gpu_scope": "Device total including baseline; approximately 1 second samples.",
+          "synthetic_line_denominator": 4,
+          "synthetic_line_presence": [
+            true,
+            true,
+            true,
+            true
+          ],
+          "synthetic_line_present_count": 4,
+          "observations": 4,
+          "native_sha256": "a774bb624a1c235ff25da045ddeacc8cc5bec8bd304aee3212b95ead3137aab9",
+          "native_metrics": {
+            "native_status": "completed",
+            "pages": 1,
+            "device": "cpu",
+            "constructor_seconds": 11.455920214999992,
+            "conversion_seconds": 48.77196712900002
+          }
+        },
+        {
+          "case": "synthetic-rows",
+          "status": "completed",
+          "exit_code": 0,
+          "wall_seconds": 70.90962624000008,
+          "peak_tree_rss_bytes": 13193216000,
+          "rss_sample_count": 353,
+          "rss_sample_interval_seconds": 0.2,
+          "gpu_device_0_used_peak_bytes": null,
+          "gpu_samples": 0,
+          "gpu_scope": "Device total including baseline; approximately 1 second samples.",
+          "synthetic_line_denominator": 4,
+          "synthetic_line_presence": [
+            true,
+            true,
+            false,
+            false
+          ],
+          "synthetic_line_present_count": 2,
+          "observations": 4,
+          "native_sha256": "7ad513c19836e9208b9627cac24cf2c477e5461ca4727b3756d695543a1c1491",
+          "native_metrics": {
+            "native_status": "completed",
+            "pages": 1,
+            "device": "cpu",
+            "constructor_seconds": 11.474221446000001,
+            "conversion_seconds": 50.58127708200004
+          }
+        }
+      ]
+    }
+  ]
+}
