@@ -1,0 +1,1179 @@
+{
+  "candidate_order": [
+    "docling",
+    "marker2",
+    "ppstructurev3",
+    "paddleocr_vl_1_6",
+    "mineru25pro"
+  ],
+  "code_sha256": {
+    "src/doclens_ai/extraction/bounded.py": "352b619dea5e465e026095e7a3fc150599005c5a8ffa32b2cd292daa1b01f792",
+    "src/doclens_ai/extraction/docling_candidate.py": "8b9bbcdcc4a3951da27107fc4ef9cca4ef3a5bcee99e37ec9f8dc14018038973",
+    "src/doclens_ai/extraction/fidelity_gold.py": "c8324420244e14b8e357eddbcef978386bd1eff0e22817bdc2833c78fcb26a15",
+    "src/doclens_ai/extraction/limits.py": "b4507ed9ebeb8c61851d59730b8ffb60cd8abdd0542c4e4435be539897ff3f76",
+    "src/doclens_ai/extraction/models.py": "eb8c242decab88df3765634e6ba689ba41863969aa4c3952fd30279b48327e24",
+    "src/doclens_ai/extraction/parsers.py": "71e159b36debeaa6b30b5a4d8caa429b388a71b3b5e02cd438e94004526c03c0",
+    "tools/extraction_campaign/__init__.py": "7a998bd04d2cf4a53585c77955ca856421f24212253109888045a8c47609d4da",
+    "tools/extraction_campaign/adapters.py": "2dfb7480f49e670e609c9d8fe22a0ce99dbf4107fc524b2b31e0023dae0a4a8e",
+    "tools/extraction_campaign/evidence.py": "587c511b5fdfac67b613fc0a778f10245cb8a0ea4f834c20b3074bed734d1f25",
+    "tools/extraction_campaign/protocol.py": "ee1bbf6d187c71fedfad4c6da6427067e2d9732581ddcee0a2a06d323e53cfe8",
+    "tools/extraction_campaign/resources.py": "bbea3a059c9ffbed89516d717dfceb043146871eb6d6d015e7a725b62bfc79c8",
+    "tools/extraction_campaign/run.py": "450e4ff3d2f9c37d47f2350bbb03418454b46fec044a837948c8665df9c746ac",
+    "tools/extraction_campaign/staging.py": "32023b3b63d8c100fb48eee3095f643fd336963130606ee766f631e8fed3947a",
+    "tools/extraction_campaign/worker.py": "29aca34fd882a31447a9d7065b4ab3d55d2623c41f7ddea14345fd072fd423ae",
+    "tools/extraction_quality/dataset_readiness.py": "13a43099b255f8ae013131ce871e615a6fca15a276237098dfef3b23d6d3974c"
+  },
+  "excluded": [
+    {
+      "document_id": "c1-0045",
+      "reason": "new_processing_permission_unresolved_in_20261021_inventory"
+    }
+  ],
+  "family_split": {
+    "development": "all_selected_exposed",
+    "family_completeness": "unreviewed",
+    "independent_split_validity": "NOT_EVALUATED",
+    "qa_test_families_excluded": true,
+    "sealed_test": [],
+    "validation": []
+  },
+  "git_base_sha": "2bbcbdc696ebe3a0cb514d9a4e3732317299278f",
+  "gold_scope": "historical_partial_single_reviewer_attestation_not_independent_gold",
+  "input_sha256": {
+    "docs/eda/corpus_v1_manifest.csv": "c3a91af4bf789400f23821a30c6468040334bdd65135460b96dc21bb64d335c0",
+    "docs/eda/dataset_readiness_inventory_20261021.md": "9e2e3f93ec5aaf7b97f115d7b673fc8f77fa3fee4671172da171ef9584a420d1",
+    "docs/eda/extraction_corpus_v2_manifest.json": "8e40445669b209af568d81c20c41c34257cd41f3cbc19ced2a5eebc77ccc8b54",
+    "evaluation-output/extraction-v2-20261021/control-manifest-final.json": "d90b343a648bd9b73f193914329e22291b4a77d5290264159742cf4ec2414a08",
+    "local-evaluation/extraction_fidelity_v1_expanded_approved.jsonl": "f372f54d65916b57994ee62ce1fc00fdc536bcdd459b384c6d6e11e9f114bfaf",
+    "local-evaluation/rag_gold_v1_approved.jsonl": "a818104a22833e174ceef572df8c699b81e93a5fd61d90092f33705ad61d7fa0",
+    "local-evaluation/retrieval_gold_v1.jsonl": "e166af3010ac821513380c8f9ce509bb6b84c8305f3f2afa1e1c77b978510118"
+  },
+  "limitations": [
+    "no_real_RU_KK_gold",
+    "no_independent_whole_document_gold",
+    "no_sealed_test",
+    "difficulty_labels_not_invented",
+    "no_expansion_without_gold"
+  ],
+  "metrics": {
+    "CER_WER_GriTS_TEDS_layout_AP_formula_accuracy": "NOT_EVALUATED_missing_valid_gold",
+    "exact_anchors": "whitespace_only_and_numeric_token_boundaries",
+    "numbers": "exact_numeric_bearing_reviewed_anchors_not_all_source_numbers",
+    "order": "historical_reviewed_pairs_with_native_order_not_spatial_sort",
+    "p50_p95": "nearest_rank_completed_runs_only_full_attempt_counts_separate",
+    "page": "exact_original_one_based_page_presence",
+    "table_cells_geometry_relations": "native_observations_retained_not_independent_gold"
+  },
+  "policy": {
+    "cloud_transfer": false,
+    "concurrency": 1,
+    "cpu_seconds": 1200,
+    "critical_loss_gate": "any_measured_new_critical_loss_REJECT_frozen_config",
+    "inference_network": "deny_external_allow_only_explicit_owned_loopback",
+    "max_configurations": 3,
+    "minimum_available_ram_bytes": 4294967296,
+    "native_output_bytes": 134217728,
+    "oom_modifications_max": 1,
+    "os_commit_bytes": 4294967296,
+    "process_tree_rss_bytes": 3221225472,
+    "production_promotion": false,
+    "quality_thresholds": "TBD_no_QG_claim",
+    "repetitions": 2,
+    "scratch_bytes": 268435456,
+    "stop": "R3_only_after_R2_DEV_recovery_no_sealed_tuning",
+    "wall_seconds_per_document": 600
+  },
+  "private_protocol_fingerprint": "7dc10d9f449675bbf2fbeb06f9f485a6c695920386a2eebb8af23c29d26df2c2",
+  "sources": [
+    {
+      "document_id": "c1-0031",
+      "family_id": "f-a5cc36a66167fdfb833f9778",
+      "gold": {
+        "anchors": 7,
+        "class": "historical_partial_single_reviewer_attestation",
+        "numeric_anchors": 2,
+        "order_pairs": 5,
+        "table_relation_assertions": 0,
+        "table_span_assertions": 0
+      },
+      "language": "en",
+      "language_basis": "historical_manifest_not_fresh_human_language_review",
+      "license": "Open Government Licence v3.0",
+      "local_evaluation": "historically_admitted_local_only",
+      "new_annotation_permission": "not_inferred",
+      "pages": [
+        {
+          "mediabox": [
+            0.0,
+            0.0,
+            595.0,
+            842.0
+          ],
+          "page_number": 1,
+          "physical_page_id": "16531a1b9e45c9d8d9498d2d7047d259281b778f19e55c2eeb2fb499cba51f65",
+          "rotation": 0
+        }
+      ],
+      "sha256": "1179d9f2925a83d6503608b8049b2a23b8e81f15a42d60e7bdd0bce52d6cc253",
+      "size_bytes": 1732,
+      "split": "dev_exposed"
+    },
+    {
+      "document_id": "c1-0032",
+      "family_id": "f-7b2873808bd7865529b49476",
+      "gold": {
+        "anchors": 10,
+        "class": "historical_partial_single_reviewer_attestation",
+        "numeric_anchors": 0,
+        "order_pairs": 4,
+        "table_relation_assertions": 0,
+        "table_span_assertions": 0
+      },
+      "language": "en",
+      "language_basis": "historical_manifest_not_fresh_human_language_review",
+      "license": "Open Government Licence v3.0",
+      "local_evaluation": "historically_admitted_local_only",
+      "new_annotation_permission": "not_inferred",
+      "pages": [
+        {
+          "mediabox": [
+            0.0,
+            0.0,
+            540.0,
+            720.0
+          ],
+          "page_number": 1,
+          "physical_page_id": "c9ee27a09f3097493c9feccb5fd2bc4c762e069de33a5e6bb09ba344096f587f",
+          "rotation": 0
+        }
+      ],
+      "sha256": "5f9082eabbb52eaf71510592a043958cb7f67b955158f7d9d12435783bc52471",
+      "size_bytes": 20617,
+      "split": "dev_exposed"
+    },
+    {
+      "document_id": "c1-0033",
+      "family_id": "f-de5a37738e823a8f44ec7b0f",
+      "gold": {
+        "anchors": 9,
+        "class": "historical_partial_single_reviewer_attestation",
+        "numeric_anchors": 0,
+        "order_pairs": 3,
+        "table_relation_assertions": 8,
+        "table_span_assertions": 8
+      },
+      "language": "en",
+      "language_basis": "historical_manifest_not_fresh_human_language_review",
+      "license": "Open Government Licence v3.0",
+      "local_evaluation": "historically_admitted_local_only",
+      "new_annotation_permission": "not_inferred",
+      "pages": [
+        {
+          "mediabox": [
+            0.0,
+            0.0,
+            595.32,
+            841.92
+          ],
+          "page_number": 1,
+          "physical_page_id": "ef47670fd78bc71d9118bf9097bf0f311433ce947129f37c7a376aef9a7ced73",
+          "rotation": 0
+        }
+      ],
+      "sha256": "081c9cfcc8e885544698f617dfdb9bf351fcf60b512cc449a3620deb538695fd",
+      "size_bytes": 29702,
+      "split": "dev_exposed"
+    },
+    {
+      "document_id": "c1-0035",
+      "family_id": "f-0ceeb6b558d37493a160996e",
+      "gold": {
+        "anchors": 8,
+        "class": "historical_partial_single_reviewer_attestation",
+        "numeric_anchors": 0,
+        "order_pairs": 5,
+        "table_relation_assertions": 0,
+        "table_span_assertions": 0
+      },
+      "language": "en",
+      "language_basis": "historical_manifest_not_fresh_human_language_review",
+      "license": "Open Government Licence v3.0",
+      "local_evaluation": "historically_admitted_local_only",
+      "new_annotation_permission": "not_inferred",
+      "pages": [
+        {
+          "mediabox": [
+            0.0,
+            0.0,
+            595.0,
+            842.0
+          ],
+          "page_number": 1,
+          "physical_page_id": "d9aecebdcfb7c50c1d4b283b88bb9efbf981ae4ecd4d602ab23ea6b0ab26ec60",
+          "rotation": 0
+        }
+      ],
+      "sha256": "94a5b7cdc01f39d482683e7480f4f593089c54731d333d60544558db903b8c3a",
+      "size_bytes": 38361,
+      "split": "dev_exposed"
+    },
+    {
+      "document_id": "c1-0040",
+      "family_id": "f-3ed94a499073bb2cc8254c6e",
+      "gold": {
+        "anchors": 8,
+        "class": "historical_partial_single_reviewer_attestation",
+        "numeric_anchors": 1,
+        "order_pairs": 3,
+        "table_relation_assertions": 4,
+        "table_span_assertions": 4
+      },
+      "language": "en",
+      "language_basis": "historical_manifest_not_fresh_human_language_review",
+      "license": "Open Government Licence v3.0",
+      "local_evaluation": "historically_admitted_local_only",
+      "new_annotation_permission": "not_inferred",
+      "pages": [
+        {
+          "mediabox": [
+            0.0,
+            0.0,
+            1191.0,
+            842.0
+          ],
+          "page_number": 1,
+          "physical_page_id": "47a1f5cfbed29263c9822027202bb4f49a582584b068db574572747d082ec20d",
+          "rotation": 0
+        }
+      ],
+      "sha256": "18a25155acbe6dfb0a97309097234dc3040a67d2f54250af82288e56dc8c4344",
+      "size_bytes": 64968,
+      "split": "dev_exposed"
+    },
+    {
+      "document_id": "c1-0041",
+      "family_id": "f-830f2203363b54893438a2b6",
+      "gold": {
+        "anchors": 4,
+        "class": "historical_partial_single_reviewer_attestation",
+        "numeric_anchors": 0,
+        "order_pairs": 3,
+        "table_relation_assertions": 0,
+        "table_span_assertions": 0
+      },
+      "language": "en",
+      "language_basis": "historical_manifest_not_fresh_human_language_review",
+      "license": "Open Government Licence v3.0",
+      "local_evaluation": "historically_admitted_local_only",
+      "new_annotation_permission": "not_inferred",
+      "pages": [
+        {
+          "mediabox": [
+            0.0,
+            0.0,
+            596.0,
+            842.0
+          ],
+          "page_number": 1,
+          "physical_page_id": "5dffec9e787b71c2fe3bab264cc61643555a6be651500f384afe345178bacdf2",
+          "rotation": 0
+        },
+        {
+          "mediabox": [
+            0.0,
+            0.0,
+            596.0,
+            842.0
+          ],
+          "page_number": 2,
+          "physical_page_id": "9526cf13f2b8bcd90c0bfdf76d6f907ee673e6c73caec383744cc10ef49bfb23",
+          "rotation": 0
+        },
+        {
+          "mediabox": [
+            0.0,
+            0.0,
+            596.0,
+            842.0
+          ],
+          "page_number": 3,
+          "physical_page_id": "b7226b1cd2fe20e9ebf68854bba6234c0ffd87510c348495ae9a0dcca30eaf44",
+          "rotation": 0
+        },
+        {
+          "mediabox": [
+            0.0,
+            0.0,
+            596.0,
+            842.0
+          ],
+          "page_number": 4,
+          "physical_page_id": "747d210ce77fa5858c7a73eeae3102e2b17afe5e4e0209316f5b8fa45beebeed",
+          "rotation": 0
+        }
+      ],
+      "sha256": "daef7ef6b8dd4200817d1342dfdb480ace0f4a0a3f921165f777ee294bf0485a",
+      "size_bytes": 77333,
+      "split": "dev_exposed"
+    },
+    {
+      "document_id": "c1-0043",
+      "family_id": "f-7245126a39555fbc4d4d0bab",
+      "gold": {
+        "anchors": 6,
+        "class": "historical_partial_single_reviewer_attestation",
+        "numeric_anchors": 3,
+        "order_pairs": 4,
+        "table_relation_assertions": 0,
+        "table_span_assertions": 0
+      },
+      "language": "cy",
+      "language_basis": "historical_manifest_not_fresh_human_language_review",
+      "license": "Open Government Licence v3.0",
+      "local_evaluation": "historically_admitted_local_only",
+      "new_annotation_permission": "not_inferred",
+      "pages": [
+        {
+          "mediabox": [
+            0.0,
+            0.0,
+            595.32,
+            841.92
+          ],
+          "page_number": 1,
+          "physical_page_id": "b3e887dcf78879e89e753779e90e3c70e8b6c9baff7ce54531e29126345c2fd4",
+          "rotation": 0
+        },
+        {
+          "mediabox": [
+            0.0,
+            0.0,
+            595.32,
+            841.92
+          ],
+          "page_number": 2,
+          "physical_page_id": "aed5a64067dd035b6260b6483f301739f9a034df348660684a44451e7c608255",
+          "rotation": 0
+        },
+        {
+          "mediabox": [
+            0.0,
+            0.0,
+            595.32,
+            841.92
+          ],
+          "page_number": 3,
+          "physical_page_id": "c73ecdaf705df7794c2c010b6806bd4d29c6501d1923e7ebb09e78f00d1ecb5c",
+          "rotation": 0
+        },
+        {
+          "mediabox": [
+            0.0,
+            0.0,
+            595.32,
+            841.92
+          ],
+          "page_number": 4,
+          "physical_page_id": "fcc394650d6d2919f4a4bd24d7c685eac3254fc6cfb7b9e5ef4efbc62d92716c",
+          "rotation": 0
+        }
+      ],
+      "sha256": "b70a5d33160ee12eba6b5f66e305df69b6d504389c11c142657c41d2be45c3ce",
+      "size_bytes": 91484,
+      "split": "dev_exposed"
+    },
+    {
+      "document_id": "c1-0044",
+      "family_id": "f-9ba97fd12d7b243cfa892534",
+      "gold": {
+        "anchors": 5,
+        "class": "historical_partial_single_reviewer_attestation",
+        "numeric_anchors": 0,
+        "order_pairs": 2,
+        "table_relation_assertions": 0,
+        "table_span_assertions": 0
+      },
+      "language": "en",
+      "language_basis": "historical_manifest_not_fresh_human_language_review",
+      "license": "Open Government Licence v3.0",
+      "local_evaluation": "historically_admitted_local_only",
+      "new_annotation_permission": "not_inferred",
+      "pages": [
+        {
+          "mediabox": [
+            0.0,
+            0.0,
+            595.32,
+            841.92
+          ],
+          "page_number": 1,
+          "physical_page_id": "bd25baff1bd4f46e65265ffa15f2f636f7fe9545554d66b634bd538537015199",
+          "rotation": 0
+        }
+      ],
+      "sha256": "43a961d9f86849a18ddf680a77ed4e4d38dd8f7b4c0e795dc5a51ec9ff255410",
+      "size_bytes": 100551,
+      "split": "dev_exposed"
+    },
+    {
+      "document_id": "c1-0048",
+      "family_id": "f-f0bd89c34bff45a759be9ba2",
+      "gold": {
+        "anchors": 11,
+        "class": "historical_partial_single_reviewer_attestation",
+        "numeric_anchors": 3,
+        "order_pairs": 6,
+        "table_relation_assertions": 1,
+        "table_span_assertions": 3
+      },
+      "language": "en",
+      "language_basis": "historical_manifest_not_fresh_human_language_review",
+      "license": "Open Government Licence v3.0",
+      "local_evaluation": "historically_admitted_local_only",
+      "new_annotation_permission": "not_inferred",
+      "pages": [
+        {
+          "mediabox": [
+            0.0,
+            0.0,
+            595.32,
+            841.92
+          ],
+          "page_number": 1,
+          "physical_page_id": "f4e5327c521ccce91c2f34b5660353fdf4f467771aaa6b404e2b3ac6c3d8ace7",
+          "rotation": 0
+        },
+        {
+          "mediabox": [
+            0.0,
+            0.0,
+            595.32,
+            841.92
+          ],
+          "page_number": 2,
+          "physical_page_id": "3ee94e17680aec093ac05ba1c3f9195c39a3cca6a781190d1fe3424768eda47e",
+          "rotation": 0
+        },
+        {
+          "mediabox": [
+            0.0,
+            0.0,
+            595.32,
+            841.92
+          ],
+          "page_number": 3,
+          "physical_page_id": "9fe8d2f6542767b37ff7559a5c8f0dbb59c3b46b08efc3d9191866f6873d6921",
+          "rotation": 0
+        },
+        {
+          "mediabox": [
+            0.0,
+            0.0,
+            595.32,
+            841.92
+          ],
+          "page_number": 4,
+          "physical_page_id": "4d59fafd22c72dd9f671dcfd2cc9412af71ccfea13d6b21d3f79a92a05fd621d",
+          "rotation": 0
+        },
+        {
+          "mediabox": [
+            0.0,
+            0.0,
+            595.32,
+            841.92
+          ],
+          "page_number": 5,
+          "physical_page_id": "a1c4689a2136e309104cb95b8637f225013ee80b377d1eaad8006438b431225c",
+          "rotation": 0
+        },
+        {
+          "mediabox": [
+            0.0,
+            0.0,
+            595.32,
+            841.92
+          ],
+          "page_number": 6,
+          "physical_page_id": "935b1fcd9a772d3195a8d8907d2788588a1c95602d792c60daabb5bffeca994b",
+          "rotation": 0
+        },
+        {
+          "mediabox": [
+            0.0,
+            0.0,
+            595.32,
+            841.92
+          ],
+          "page_number": 7,
+          "physical_page_id": "ed1607d3d0875e47a74946ce019a47413c318ff93dbf92cb9b70de6ff597714c",
+          "rotation": 0
+        },
+        {
+          "mediabox": [
+            0.0,
+            0.0,
+            595.32,
+            841.92
+          ],
+          "page_number": 8,
+          "physical_page_id": "0323924721c7389bd48fc1a7b724a12153aed9549873e7ce52d64843a0f0656e",
+          "rotation": 0
+        },
+        {
+          "mediabox": [
+            0.0,
+            0.0,
+            595.32,
+            841.92
+          ],
+          "page_number": 9,
+          "physical_page_id": "1075f479c6d4470eb1f1f9a2f7cd177abf06b0ff9b89a5f57cde6bff9d1cc323",
+          "rotation": 0
+        },
+        {
+          "mediabox": [
+            0.0,
+            0.0,
+            595.32,
+            841.92
+          ],
+          "page_number": 10,
+          "physical_page_id": "62f7e30ab6378fa02714050448a24f97fac1379c3bee65a8661cdc6d43bfa431",
+          "rotation": 0
+        },
+        {
+          "mediabox": [
+            0.0,
+            0.0,
+            595.32,
+            841.92
+          ],
+          "page_number": 11,
+          "physical_page_id": "b923597a0515dd5ab02970bfc092255b5144f4a3974ff97f1a7b6f378eaa8030",
+          "rotation": 0
+        },
+        {
+          "mediabox": [
+            0.0,
+            0.0,
+            595.32,
+            841.92
+          ],
+          "page_number": 12,
+          "physical_page_id": "d536f872a195116fed6ed8569eae55f9404c90d9f26b412280713c1078f9e1b3",
+          "rotation": 0
+        },
+        {
+          "mediabox": [
+            0.0,
+            0.0,
+            595.32,
+            841.92
+          ],
+          "page_number": 13,
+          "physical_page_id": "abc04ebb8aa58d64d354b7535fd1ed689119cc59e578177d434aab587df07648",
+          "rotation": 0
+        },
+        {
+          "mediabox": [
+            0.0,
+            0.0,
+            595.32,
+            841.92
+          ],
+          "page_number": 14,
+          "physical_page_id": "ea4d3cf9444042d209f59c607dd34544b016fffd3e17b54a4874c831afe25a3f",
+          "rotation": 0
+        },
+        {
+          "mediabox": [
+            0.0,
+            0.0,
+            595.32,
+            841.92
+          ],
+          "page_number": 15,
+          "physical_page_id": "bccf8363867a58fd9b4ba734ad48a9ed53fdaffdb6952011d309e79558993fac",
+          "rotation": 0
+        },
+        {
+          "mediabox": [
+            0.0,
+            0.0,
+            595.32,
+            841.92
+          ],
+          "page_number": 16,
+          "physical_page_id": "0d7fd8c06024dd3796087ce31e43563c63bbca28c48a94e224b5683d285398a7",
+          "rotation": 0
+        },
+        {
+          "mediabox": [
+            0.0,
+            0.0,
+            595.32,
+            841.92
+          ],
+          "page_number": 17,
+          "physical_page_id": "a7d1cec31e0ebe9bf232c47a491418efaed420b481eedde37956373fd34e983a",
+          "rotation": 0
+        }
+      ],
+      "sha256": "5928ffa7f5f8d44678a56d810794f4263e4a3db9a7d87422ec8d3c6907186f4f",
+      "size_bytes": 228777,
+      "split": "dev_exposed"
+    },
+    {
+      "document_id": "c1-0049",
+      "family_id": "f-ecde49af375b0b63304f2d97",
+      "gold": {
+        "anchors": 12,
+        "class": "historical_partial_single_reviewer_attestation",
+        "numeric_anchors": 4,
+        "order_pairs": 6,
+        "table_relation_assertions": 5,
+        "table_span_assertions": 5
+      },
+      "language": "en",
+      "language_basis": "historical_manifest_not_fresh_human_language_review",
+      "license": "Open Government Licence v3.0",
+      "local_evaluation": "historically_admitted_local_only",
+      "new_annotation_permission": "not_inferred",
+      "pages": [
+        {
+          "mediabox": [
+            0.0,
+            0.0,
+            595.32,
+            841.92
+          ],
+          "page_number": 1,
+          "physical_page_id": "cbbe613edc8acbb110c0f29fbad0f42d14f0f0484bc38270c58b00b0537b1e56",
+          "rotation": 0
+        },
+        {
+          "mediabox": [
+            0.0,
+            0.0,
+            595.32,
+            841.92
+          ],
+          "page_number": 2,
+          "physical_page_id": "215d9038d48e9e5cf3661ea3af0749870510b8ea0940e743e721a321be11e260",
+          "rotation": 0
+        },
+        {
+          "mediabox": [
+            0.0,
+            0.0,
+            595.32,
+            841.92
+          ],
+          "page_number": 3,
+          "physical_page_id": "ec8cecf181ff9d7fcf4d0bce5f12352c584d8fdab4f0da5d52f1b0e2ea65694a",
+          "rotation": 0
+        },
+        {
+          "mediabox": [
+            0.0,
+            0.0,
+            595.32,
+            841.92
+          ],
+          "page_number": 4,
+          "physical_page_id": "1ec86d2184684de45f49e0c4b198bffc32f2ee9624006f99f84a1712a271bfcb",
+          "rotation": 0
+        },
+        {
+          "mediabox": [
+            0.0,
+            0.0,
+            595.32,
+            841.92
+          ],
+          "page_number": 5,
+          "physical_page_id": "b454c1ac9a77e70f0245bf554a910bdb74629f9e5e63046978d791c288405032",
+          "rotation": 0
+        },
+        {
+          "mediabox": [
+            0.0,
+            0.0,
+            595.32,
+            841.92
+          ],
+          "page_number": 6,
+          "physical_page_id": "71325274e04a6de1e155f3d9bc08e293bbe30d0ee28c59ea68ce50f890812875",
+          "rotation": 0
+        },
+        {
+          "mediabox": [
+            0.0,
+            0.0,
+            595.32,
+            841.92
+          ],
+          "page_number": 7,
+          "physical_page_id": "c02208d345c3790cfd6b099f885a72565789d370aea122daf5535cbc3b09907a",
+          "rotation": 0
+        },
+        {
+          "mediabox": [
+            0.0,
+            0.0,
+            595.32,
+            841.92
+          ],
+          "page_number": 8,
+          "physical_page_id": "afae1e74f77bbad77586a216949392d8cec13b5c566a4a210840f15efff4af55",
+          "rotation": 0
+        }
+      ],
+      "sha256": "fa821b92dde14335883c0327f70851d9b5813feea8584136eb125fe8833a9240",
+      "size_bytes": 254032,
+      "split": "dev_exposed"
+    },
+    {
+      "document_id": "c1-0050",
+      "family_id": "f-8c5d8621865679e9baf0076c",
+      "gold": {
+        "anchors": 4,
+        "class": "historical_partial_single_reviewer_attestation",
+        "numeric_anchors": 4,
+        "order_pairs": 3,
+        "table_relation_assertions": 0,
+        "table_span_assertions": 0
+      },
+      "language": "en",
+      "language_basis": "historical_manifest_not_fresh_human_language_review",
+      "license": "Open Government Licence v3.0",
+      "local_evaluation": "historically_admitted_local_only",
+      "new_annotation_permission": "not_inferred",
+      "pages": [
+        {
+          "mediabox": [
+            0.0,
+            0.0,
+            595.32,
+            841.92
+          ],
+          "page_number": 1,
+          "physical_page_id": "5359322671e20b3ab911f06404f74f020c5a834d8e5f0e2b22ecd42b200ce482",
+          "rotation": 0
+        },
+        {
+          "mediabox": [
+            0.0,
+            0.0,
+            595.32,
+            841.92
+          ],
+          "page_number": 2,
+          "physical_page_id": "1ac3a51eab37009cb28ef09e5015a2ff59c3e35f47c2627644e142e33df831ae",
+          "rotation": 0
+        },
+        {
+          "mediabox": [
+            0.0,
+            0.0,
+            595.32,
+            841.92
+          ],
+          "page_number": 3,
+          "physical_page_id": "efb942b16d97c39978008028d81e31a52d1894340911280a43949e79a42757dc",
+          "rotation": 0
+        },
+        {
+          "mediabox": [
+            0.0,
+            0.0,
+            594.96,
+            842.04
+          ],
+          "page_number": 4,
+          "physical_page_id": "7495a9ee1570395dea8f8586f0ee76add6426bc545ab7a6b1d40f78255cb08f5",
+          "rotation": 0
+        },
+        {
+          "mediabox": [
+            0.0,
+            0.0,
+            594.96,
+            842.04
+          ],
+          "page_number": 5,
+          "physical_page_id": "ebc3e5945b1d707d7d5b2c17deef453d614692f12f047275ed5349946bac88ab",
+          "rotation": 0
+        },
+        {
+          "mediabox": [
+            0.0,
+            0.0,
+            594.96,
+            842.04
+          ],
+          "page_number": 6,
+          "physical_page_id": "1d8c67529becfc55ee648f2729aae488b7059d0a9e061809cc6e72073a78fcb6",
+          "rotation": 0
+        },
+        {
+          "mediabox": [
+            0.0,
+            0.0,
+            594.96,
+            842.04
+          ],
+          "page_number": 7,
+          "physical_page_id": "90d45960a764fdf51ce6e40589cd5bfdd10d1fcc71538eee659485cfbe904807",
+          "rotation": 0
+        },
+        {
+          "mediabox": [
+            0.0,
+            0.0,
+            594.96,
+            842.04
+          ],
+          "page_number": 8,
+          "physical_page_id": "08ae03109f63fd6186ce29dd2ae826046f071689cd66618be6e8fa81f4a1f4ed",
+          "rotation": 0
+        },
+        {
+          "mediabox": [
+            0.0,
+            0.0,
+            594.96,
+            842.04
+          ],
+          "page_number": 9,
+          "physical_page_id": "46e414049a88133d05569e72fd5f923300e4d31be746bd5db8e04bbb288afe7d",
+          "rotation": 0
+        },
+        {
+          "mediabox": [
+            0.0,
+            0.0,
+            594.96,
+            842.04
+          ],
+          "page_number": 10,
+          "physical_page_id": "44fb68065af2bb231bfbc77951bb25e75a0c4491e5b965c724bf0d8b55dcb644",
+          "rotation": 0
+        },
+        {
+          "mediabox": [
+            0.0,
+            0.0,
+            594.96,
+            842.04
+          ],
+          "page_number": 11,
+          "physical_page_id": "94886023fb35d6e877da53e48438ed7084e00650fe921491ec044c42ed21fa97",
+          "rotation": 0
+        },
+        {
+          "mediabox": [
+            0.0,
+            0.0,
+            594.96,
+            842.04
+          ],
+          "page_number": 12,
+          "physical_page_id": "a1126cad73b22367291c55535580761a892ebeb2f2776bd78663bcc2dd5420fd",
+          "rotation": 0
+        },
+        {
+          "mediabox": [
+            0.0,
+            0.0,
+            594.96,
+            842.04
+          ],
+          "page_number": 13,
+          "physical_page_id": "9128d9740b7e2b51e114d9c334b2ba7f1fe51c51a63b483d2ece762fd7aa6dcc",
+          "rotation": 0
+        },
+        {
+          "mediabox": [
+            0.0,
+            0.0,
+            594.96,
+            842.04
+          ],
+          "page_number": 14,
+          "physical_page_id": "fd013f5e4b0f7793ec1b5c7c91bc85f07c537620d6d019fdbac2be884df34282",
+          "rotation": 0
+        },
+        {
+          "mediabox": [
+            0.0,
+            0.0,
+            594.96,
+            842.04
+          ],
+          "page_number": 15,
+          "physical_page_id": "8c5765d3d72bbb2bba5986b702b48aee2a87aa5a184cf9fe17a61022463c715e",
+          "rotation": 0
+        },
+        {
+          "mediabox": [
+            0.0,
+            0.0,
+            594.96,
+            842.04
+          ],
+          "page_number": 16,
+          "physical_page_id": "66ca6045f4898cb0411051ed75fc1122eb98eb77c0cf650b5940ae4bc9662277",
+          "rotation": 0
+        },
+        {
+          "mediabox": [
+            0.0,
+            0.0,
+            594.96,
+            842.04
+          ],
+          "page_number": 17,
+          "physical_page_id": "ab002ee8c35c6e1b2b39c14c3932318cbaf2e326d8e39a7d8d11fd7a814911e7",
+          "rotation": 0
+        },
+        {
+          "mediabox": [
+            0.0,
+            0.0,
+            594.96,
+            842.04
+          ],
+          "page_number": 18,
+          "physical_page_id": "67013e43bff4610ffb6d56ad08401297bc6afc3ea7cc70e86e32cf8e927a3f7e",
+          "rotation": 0
+        },
+        {
+          "mediabox": [
+            0.0,
+            0.0,
+            594.96,
+            842.04
+          ],
+          "page_number": 19,
+          "physical_page_id": "bb0a2937c21bac26d6d078ad9504fc4702d95ff7f01f737b049e6e05706547db",
+          "rotation": 0
+        },
+        {
+          "mediabox": [
+            0.0,
+            0.0,
+            594.96,
+            842.04
+          ],
+          "page_number": 20,
+          "physical_page_id": "89ab4313091b156565aa252d9c22676636869af128a6f8e2009253a96bb80ae1",
+          "rotation": 0
+        },
+        {
+          "mediabox": [
+            0.0,
+            0.0,
+            594.96,
+            842.04
+          ],
+          "page_number": 21,
+          "physical_page_id": "389e0d45bb3954daed883fb2dcf3b8db879cfea4a55a1d1c9c5359259080f31a",
+          "rotation": 0
+        },
+        {
+          "mediabox": [
+            0.0,
+            0.0,
+            594.96,
+            842.04
+          ],
+          "page_number": 22,
+          "physical_page_id": "fdf56543ce8a922e650e3654b893853d3d10949907123fe61289b9980d8ad934",
+          "rotation": 0
+        },
+        {
+          "mediabox": [
+            0.0,
+            0.0,
+            594.96,
+            842.04
+          ],
+          "page_number": 23,
+          "physical_page_id": "afe68264c213121cb3f944bf60f61384c3dc021ba6ef2a7d47af3c06a2dfdedf",
+          "rotation": 0
+        },
+        {
+          "mediabox": [
+            0.0,
+            0.0,
+            594.96,
+            842.04
+          ],
+          "page_number": 24,
+          "physical_page_id": "10193a12fedfed7bc8331318add94109189446b52a973fe3a462feecbc11d79b",
+          "rotation": 0
+        },
+        {
+          "mediabox": [
+            0.0,
+            0.0,
+            594.96,
+            842.04
+          ],
+          "page_number": 25,
+          "physical_page_id": "13836e3b92f50c3585b5c70c6c854eed535f10f04fe85ee83fc803a5694cad78",
+          "rotation": 0
+        },
+        {
+          "mediabox": [
+            0.0,
+            0.0,
+            594.96,
+            842.04
+          ],
+          "page_number": 26,
+          "physical_page_id": "3065dea3d68561efdad7508c16fbd14aa605b73e8d52db7fb6e6219af3016ec5",
+          "rotation": 0
+        },
+        {
+          "mediabox": [
+            0.0,
+            0.0,
+            594.96,
+            842.04
+          ],
+          "page_number": 27,
+          "physical_page_id": "11d95bfa98499f7d7f1a8e6d068911055bc29940ed42aff8fd9a57be78bbb749",
+          "rotation": 0
+        },
+        {
+          "mediabox": [
+            0.0,
+            0.0,
+            594.96,
+            842.04
+          ],
+          "page_number": 28,
+          "physical_page_id": "a88b48b52518ae8bbf32c0f4cbbdccde663d39bf7c92cc8b3397d80a88529718",
+          "rotation": 0
+        },
+        {
+          "mediabox": [
+            0.0,
+            0.0,
+            594.96,
+            842.04
+          ],
+          "page_number": 29,
+          "physical_page_id": "96ca981b31cbe4f2f208cfc03ecdcc2bc6e292577a90016bef49ba23dad7e861",
+          "rotation": 0
+        },
+        {
+          "mediabox": [
+            0.0,
+            0.0,
+            594.96,
+            842.04
+          ],
+          "page_number": 30,
+          "physical_page_id": "47c0cd741fb9ae6bf8fd8ea9f7b35b50169bfd037579343d21085fef0bfebbd6",
+          "rotation": 0
+        },
+        {
+          "mediabox": [
+            0.0,
+            0.0,
+            594.96,
+            842.04
+          ],
+          "page_number": 31,
+          "physical_page_id": "7d72f9c2c9c83e78b9e89f0eae848d244624ffe4834dc506abce9e8e254d691b",
+          "rotation": 0
+        },
+        {
+          "mediabox": [
+            0.0,
+            0.0,
+            594.96,
+            842.04
+          ],
+          "page_number": 32,
+          "physical_page_id": "dd0bd93df48a7a52f81c07b9e764df9d1a6d0f88d6ce27ccf2fe57ae55dac0ab",
+          "rotation": 0
+        },
+        {
+          "mediabox": [
+            0.0,
+            0.0,
+            594.96,
+            842.04
+          ],
+          "page_number": 33,
+          "physical_page_id": "7025faf88f05bec5a037883ae23626af780702fad658e7c24c61d152c43c8858",
+          "rotation": 0
+        },
+        {
+          "mediabox": [
+            0.0,
+            0.0,
+            594.96,
+            842.04
+          ],
+          "page_number": 34,
+          "physical_page_id": "46244745df375601cbb151d615fa9f95d0936f81f99874d9b2e2773a4b6f40b1",
+          "rotation": 0
+        },
+        {
+          "mediabox": [
+            0.0,
+            0.0,
+            594.96,
+            842.04
+          ],
+          "page_number": 35,
+          "physical_page_id": "322a8ee0aff155a126ad7731bd3a99836902446352d8c8c029eef5ec3d1289c7",
+          "rotation": 0
+        },
+        {
+          "mediabox": [
+            0.0,
+            0.0,
+            594.96,
+            842.04
+          ],
+          "page_number": 36,
+          "physical_page_id": "898bf8c58f0c407ab35a8becd2a1d1efdf847b66a3e724ff4540f26fbe69e23d",
+          "rotation": 0
+        },
+        {
+          "mediabox": [
+            0.0,
+            0.0,
+            594.96,
+            842.04
+          ],
+          "page_number": 37,
+          "physical_page_id": "c139684b751997981dfc2cca20f22035a2dd1d5fe53668a3321f8bfd01c68f08",
+          "rotation": 0
+        },
+        {
+          "mediabox": [
+            0.0,
+            0.0,
+            594.96,
+            842.04
+          ],
+          "page_number": 38,
+          "physical_page_id": "2cf2e49438941b8e4c6bcfa3169faf0d09010f460f1fbea3a0f7e820e4432ec6",
+          "rotation": 0
+        }
+      ],
+      "sha256": "f1ac87dc692b4e6a48f821a06457e6ee09023ddc83c6e121af60b521d14b9524",
+      "size_bytes": 461365,
+      "split": "dev_exposed"
+    }
+  ],
+  "version": "extraction-research-20261023-v1"
+}
