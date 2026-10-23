@@ -146,6 +146,50 @@ def test_mineru_missing_page_is_unknown_and_spans_stay_ordered():
     assert out[0].page is None and out[0].text == "-2,5\nkg"
 
 
+def test_mineru_nested_table_retains_caption_and_visible_html_without_invented_cells():
+    data = {
+        "pdf_info": [
+            {
+                "page_idx": 0,
+                "para_blocks": [
+                    {
+                        "type": "table",
+                        "blocks": [
+                            {
+                                "type": "table_caption",
+                                "lines": [{"spans": [{"content": "Synthetic caption"}]}],
+                            },
+                            {
+                                "type": "table_body",
+                                "lines": [
+                                    {
+                                        "spans": [
+                                            {
+                                                "type": "table",
+                                                "html": (
+                                                    '<table data-false="999"><tr>'
+                                                    "<td>0042</td><td>-12.50</td>"
+                                                    "</tr></table>"
+                                                ),
+                                            }
+                                        ]
+                                    }
+                                ],
+                            },
+                        ],
+                    }
+                ],
+            }
+        ]
+    }
+    out = adapters.mineru(data)
+    text = " ".join(item.text or "" for item in out)
+    assert "Synthetic caption" in text
+    assert "0042" in text and "-12.50" in text and "999" not in text
+    assert all(item.page == 1 and item.row is None and item.column is None for item in out)
+    assert out[1].parent == out[0].native_id
+
+
 @pytest.mark.parametrize(
     "a,b,present",
     [

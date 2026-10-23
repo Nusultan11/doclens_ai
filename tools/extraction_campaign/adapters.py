@@ -182,26 +182,37 @@ def mineru(payload: dict) -> tuple[Observation, ...]:
         if index is not None and (type(index) is not int or index < 0):
             raise ValueError("mineru_page")
         number = index + 1 if index is not None else None
-        for i, block in enumerate(page.get("para_blocks", [])):
+
+        def walk(block, identity, parent=None, *, page_number=number):
             texts = []
             for line in block.get("lines", []):
                 for span in line.get("spans", []):
                     if span.get("content") is not None:
                         texts.append(span["content"])
+                    elif span.get("html") is not None:
+                        projection = NativeHTMLText()
+                        projection.feed(span["html"])
+                        texts.append("".join(projection.parts))
             # Explicit line/span order supplies separators; original native content survives.
             box = block.get("bbox")
             out.append(
                 Observation(
-                    native_id=f"page/{number}/block/{i}",
+                    native_id=identity,
                     kind=block.get("type", "unknown"),
                     text="\n".join(texts) if texts else None,
-                    page=number,
+                    page=page_number,
                     order=len(out),
                     bbox=tuple(box) if box is not None else None,
                     coordinate_system=None,  # Must be verified for the exact installed workflow.
+                    parent=parent,
                     unresolved=("coordinate_basis_requires_native_schema_verification",),
                 )
             )
+            for child_index, child in enumerate(block.get("blocks", [])):
+                walk(child, f"{identity}/child/{child_index}", identity)
+
+        for i, block in enumerate(page.get("para_blocks", [])):
+            walk(block, f"page/{number}/block/{i}")
     return unique(out)
 
 
