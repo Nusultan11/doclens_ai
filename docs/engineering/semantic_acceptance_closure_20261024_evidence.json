@@ -1,0 +1,2307 @@
+{
+  "schema": "doclens.semantic-acceptance-closure.v1",
+  "created_utc": "2026-10-24T11:30:26.463609+00:00",
+  "engineering_status": "PASS",
+  "branch": "main",
+  "baseline_head": "fd8f927e19f4c12b051896eea9fe5c947aa806e1",
+  "implementation_commit": "3ea1ca0359e929b924496838b318313c963c629d",
+  "implementation_subject": "fix(rag): bind supported facts to question scope",
+  "documentation_commit": "recorded in final chat/Git log; cannot embed own SHA",
+  "source_and_test_sha256": {
+    "README.md": "6b60a5d88e2e051c1a998db5243f4d1e1e10060fd02f79270d8cccaaa7d0ede8",
+    "src/doclens_ai/services/answer_support.py": "24f72c279c46a87aee3897c9d7dcad8f16315f33dcb3f5a957577bdf3826a651",
+    "src/doclens_ai/services/rag.py": "12b5e277a605fb4a58c8d9bf8302e21b42bd95d38f65c9e4b1b325e2fd47ec86",
+    "tests/unit/test_answer_support.py": "0c48ff35424c1ca6939609c7f462b3ba5379068d80f9e4646a1d9dc1fc7ddada",
+    "tests/integration/test_answer_semantics.py": "e5cd8840f5e0abda81ebcbfb33693a02e3654a6dad48b44bb2658b975383ce40",
+    "tests/integration/test_answers_api.py": "a271b512ecd6411f7258031dd51586e2d59be4319465108584e8390ef73e701a",
+    "tests/integration/test_rag.py": "159ecd939cbd62887c565cb274d02cd045356026385c71f2e2658d61b1a11a8b"
+  },
+  "original_probe_sha256": "a141fa16b11f97b59e5220337d0f5377d117a57fa21a6424868732d7164a2ce1",
+  "preserved_paths_sha256": {
+    "tools/kaggle_gpu/extraction_remote.py": null,
+    "docs/evaluation/qg_qualification_20261024.md": "b2968cad98625ba3406c6baa03679b38613ff006ece75c2ed4d4e57861fe6d01",
+    "docs/evaluation/qg_qualification_20261024_evidence.json": "4160a4b49a563f84ba9a07e92f4354b20d0070fc2dd81c862cef0b80f37db881",
+    "docs/evaluation/final_qg_qualification_20261024.md": "f3bb1329912e5545f49ca00305bab65f5643774097f59f550b936b7bd027fc1f",
+    "docs/evaluation/final_qg_qualification_20261024_evidence.json": "9b7ca18f5df820b9e88f52fa3c66be955894c086495482efb21263feaedc9810"
+  },
+  "original_defects": {
+    "negation": "RESOLVED in bounded support grammar",
+    "document_instruction_as_fact": "RESOLVED in bounded support grammar",
+    "wrong_period": "RESOLVED in bounded support grammar"
+  },
+  "quality_verdicts_unchanged": {
+    "QG-08": "FAIL",
+    "QG-09": "FAIL"
+  },
+  "production_authorized": false,
+  "commands": [
+    {
+      "command": "C:/Users/nurs/doclens_ai/.venv/Scripts/python.exe -B evaluation-output/semantic-closure-20261024/services.py start",
+      "exit_code": 0
+    },
+    {
+      "command": "C:/Users/nurs/doclens_ai/.venv/Scripts/python.exe -m pytest tests/unit/test_answer_support.py tests/unit/test_rag.py tests/unit/test_rag_safety.py -q -p no:cacheprovider --basetemp=evaluation-output/semantic-closure-20261024/targeted-first --junitxml=evaluation-output/semantic-closure-20261024/targeted-first.xml --tb=short",
+      "exit_code": 1
+    },
+    {
+      "command": "C:/Users/nurs/doclens_ai/.venv/Scripts/python.exe -m pytest tests/unit/test_answer_support.py tests/unit/test_rag.py tests/unit/test_rag_safety.py -q -p no:cacheprovider --basetemp=evaluation-output/semantic-closure-20261024/targeted-second --junitxml=evaluation-output/semantic-closure-20261024/targeted-second.xml --tb=short",
+      "exit_code": 0
+    },
+    {
+      "command": "C:/Users/nurs/doclens_ai/.venv/Scripts/python.exe -B evaluation-output/semantic-closure-20261024/services.py evaluation-output/semantic-closure-20261024/semantic_probes.py -q --strict-config --strict-markers -p no:cacheprovider --basetemp=evaluation-output/semantic-closure-20261024/original-red --junitxml=evaluation-output/semantic-closure-20261024/original-red.xml --tb=short",
+      "exit_code": 1
+    },
+    {
+      "command": "C:/Users/nurs/doclens_ai/.venv/Scripts/python.exe -B evaluation-output/semantic-closure-20261024/services.py evaluation-output/semantic-closure-20261024/semantic_probes.py -q --strict-config --strict-markers -p no:cacheprovider --basetemp=evaluation-output/semantic-closure-20261024/original-green --junitxml=evaluation-output/semantic-closure-20261024/original-green.xml --tb=short",
+      "exit_code": 0
+    },
+    {
+      "command": "C:/Users/nurs/doclens_ai/.venv/Scripts/python.exe -m pytest tests/unit/test_answer_support.py -q -p no:cacheprovider --basetemp=evaluation-output/semantic-closure-20261024/review-red --junitxml=evaluation-output/semantic-closure-20261024/review-red.xml --tb=short",
+      "exit_code": 1
+    },
+    {
+      "command": "C:/Users/nurs/doclens_ai/.venv/Scripts/python.exe -m pytest tests/unit/test_answer_support.py tests/unit/test_rag.py tests/unit/test_rag_safety.py tests/unit/test_rag_quote_binding.py tests/unit/test_citation_binding_candidate.py tests/unit/test_retrieval.py -q --strict-config --strict-markers -p no:cacheprovider --basetemp=evaluation-output/semantic-closure-20261024/targeted-final --junitxml=evaluation-output/semantic-closure-20261024/targeted-final.xml --tb=short",
+      "exit_code": 0
+    },
+    {
+      "command": "C:/Users/nurs/doclens_ai/.venv/Scripts/python.exe -m pytest tests/unit -q --strict-config --strict-markers -p no:cacheprovider --basetemp=evaluation-output/semantic-closure-20261024/unit-full --junitxml=evaluation-output/semantic-closure-20261024/unit-full.xml --tb=short",
+      "exit_code": 0
+    },
+    {
+      "command": "C:/Users/nurs/doclens_ai/.venv/Scripts/python.exe -m pytest tests/unit/test_answer_support.py -q -p no:cacheprovider --basetemp=evaluation-output/semantic-closure-20261024/untimed-red --junitxml=evaluation-output/semantic-closure-20261024/untimed-red.xml --tb=short",
+      "exit_code": 1
+    },
+    {
+      "command": "C:/Users/nurs/doclens_ai/.venv/Scripts/python.exe -m pytest tests/unit/test_answer_support.py tests/unit/test_rag.py tests/unit/test_rag_safety.py tests/unit/test_rag_quote_binding.py tests/unit/test_citation_binding_candidate.py tests/unit/test_retrieval.py -q --strict-config --strict-markers -p no:cacheprovider --basetemp=evaluation-output/semantic-closure-20261024/targeted-current --junitxml=evaluation-output/semantic-closure-20261024/targeted-current.xml --tb=short",
+      "exit_code": 0
+    },
+    {
+      "command": "C:/Users/nurs/doclens_ai/.venv/Scripts/python.exe -m pytest tests/unit -q --strict-config --strict-markers -p no:cacheprovider --basetemp=evaluation-output/semantic-closure-20261024/unit-verified --junitxml=evaluation-output/semantic-closure-20261024/unit-verified.xml --tb=short",
+      "exit_code": 0
+    },
+    {
+      "command": "C:/Users/nurs/doclens_ai/.venv/Scripts/python.exe -m pytest tests/unit/test_answer_support.py -q -p no:cacheprovider --basetemp=evaluation-output/semantic-closure-20261024/period-type-red --junitxml=evaluation-output/semantic-closure-20261024/period-type-red.xml --tb=short",
+      "exit_code": 1
+    },
+    {
+      "command": "C:/Users/nurs/doclens_ai/.venv/Scripts/python.exe -m pytest tests/unit/test_answer_support.py tests/unit/test_rag.py tests/unit/test_rag_safety.py tests/unit/test_rag_quote_binding.py tests/unit/test_citation_binding_candidate.py tests/unit/test_retrieval.py -q --strict-config --strict-markers -p no:cacheprovider --basetemp=evaluation-output/semantic-closure-20261024/targeted-sealed --junitxml=evaluation-output/semantic-closure-20261024/targeted-sealed.xml --tb=short",
+      "exit_code": 0
+    },
+    {
+      "command": "C:/Users/nurs/doclens_ai/.venv/Scripts/python.exe -m pytest tests/unit -q --strict-config --strict-markers -p no:cacheprovider --basetemp=evaluation-output/semantic-closure-20261024/unit-sealed --junitxml=evaluation-output/semantic-closure-20261024/unit-sealed.xml --tb=short",
+      "exit_code": 0
+    },
+    {
+      "command": "C:/Users/nurs/doclens_ai/.venv/Scripts/python.exe -B evaluation-output/semantic-closure-20261024/services.py tests/integration/test_answer_semantics.py tests/integration/test_answers_api.py tests/integration/test_rag.py tests/integration/test_retrieval.py tests/integration/test_search_api.py tests/integration/test_authenticated_upload.py -q --strict-config --strict-markers -p no:cacheprovider --basetemp=evaluation-output/semantic-closure-20261024/services-final --junitxml=evaluation-output/semantic-closure-20261024/services-final.xml --tb=short",
+      "exit_code": 0,
+      "scope": "before final tense/identifier correction"
+    },
+    {
+      "command": "C:/Users/nurs/doclens_ai/.venv/Scripts/python.exe -B evaluation-output/semantic-closure-20261024/services.py tests/integration/test_answer_semantics.py tests/integration/test_answers_api.py tests/integration/test_rag.py tests/integration/test_retrieval.py tests/integration/test_search_api.py tests/integration/test_authenticated_upload.py evaluation-output/semantic-closure-20261024/semantic_probes.py -q --strict-config --strict-markers -p no:cacheprovider --basetemp=evaluation-output/semantic-closure-20261024/services-verified --junitxml=evaluation-output/semantic-closure-20261024/services-verified.xml --tb=short",
+      "exit_code": 0,
+      "scope": "before final temporal scope-type guard; retrieval/search/upload implementations unchanged"
+    },
+    {
+      "command": "C:/Users/nurs/doclens_ai/.venv/Scripts/python.exe -B evaluation-output/semantic-closure-20261024/services.py tests/integration/test_answer_semantics.py tests/integration/test_answers_api.py tests/integration/test_rag.py evaluation-output/semantic-closure-20261024/semantic_probes.py -q --strict-config --strict-markers -p no:cacheprovider --basetemp=evaluation-output/semantic-closure-20261024/api-sealed --junitxml=evaluation-output/semantic-closure-20261024/api-sealed.xml --tb=short",
+      "exit_code": 0
+    },
+    {
+      "command": "C:/Users/nurs/doclens_ai/.venv/Scripts/python.exe -m ruff check src tests tools alembic",
+      "exit_code": 0
+    },
+    {
+      "command": "C:/Users/nurs/doclens_ai/.venv/Scripts/python.exe -m ruff format --check src/doclens_ai/services/answer_support.py src/doclens_ai/services/rag.py tests/unit/test_answer_support.py tests/integration/test_answer_semantics.py tests/integration/test_answers_api.py tests/integration/test_rag.py",
+      "exit_code": 0
+    },
+    {
+      "command": "C:/Users/nurs/doclens_ai/.venv/Scripts/python.exe -B evaluation-output/semantic-closure-20261024/services.py stop",
+      "exit_code": 0
+    },
+    {
+      "command": "git diff --check",
+      "exit_code": 0
+    },
+    {
+      "command": "git diff --cached --check",
+      "exit_code": 0
+    }
+  ],
+  "junit": {
+    "original-red.xml": {
+      "tests": 6,
+      "failures": 3,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 34.822,
+      "sha256": "5bf836157391aa3bebac3ce82d5b89f255c8823404c286da5dbb317c7613b1da",
+      "per_file": {
+        "evaluation-output.semantic-closure-20261024.semantic_probes": {
+          "tests": 6,
+          "failures": 3,
+          "errors": 0,
+          "skipped": 0
+        }
+      }
+    },
+    "original-green.xml": {
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 26.957,
+      "sha256": "5006e8285955c7ac011422e97f16ee0da84364680995d4f29ae6dc39177275d4",
+      "per_file": {
+        "evaluation-output.semantic-closure-20261024.semantic_probes": {
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      }
+    },
+    "targeted-first.xml": {
+      "tests": 136,
+      "failures": 2,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 2.736,
+      "sha256": "f7c4f258325e29bcd276b340e673355c8931af5e0e5e3a32539074b5a3bdb90c",
+      "per_file": {
+        "tests.unit.test_answer_support": {
+          "tests": 51,
+          "failures": 2,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_rag": {
+          "tests": 57,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_rag_safety": {
+          "tests": 28,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      }
+    },
+    "targeted-second.xml": {
+      "tests": 139,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 1.863,
+      "sha256": "04da744742f51cacf940dfd1dcec1f3bb4d44c61d32cc6e3ab3e192f62c61ef7",
+      "per_file": {
+        "tests.unit.test_answer_support": {
+          "tests": 54,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_rag": {
+          "tests": 57,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_rag_safety": {
+          "tests": 28,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      }
+    },
+    "review-red.xml": {
+      "tests": 62,
+      "failures": 5,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 1.483,
+      "sha256": "0309c4f21a34d2e30a06011eb90152fa25b22ceb65b21b7bf877b4310560a40c",
+      "per_file": {
+        "tests.unit.test_answer_support": {
+          "tests": 62,
+          "failures": 5,
+          "errors": 0,
+          "skipped": 0
+        }
+      }
+    },
+    "targeted-final.xml": {
+      "tests": 259,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 2.812,
+      "sha256": "3f8e8c4938dbea2ff86e34a07895c86b3e964cb321ca59a4d90011eec0cfbfe8",
+      "per_file": {
+        "tests.unit.test_answer_support": {
+          "tests": 65,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_rag": {
+          "tests": 57,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_rag_safety": {
+          "tests": 28,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_rag_quote_binding": {
+          "tests": 46,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_citation_binding_candidate": {
+          "tests": 33,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_retrieval": {
+          "tests": 30,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      }
+    },
+    "unit-full.xml": {
+      "tests": 2306,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 6,
+      "seconds": 281.521,
+      "sha256": "979bfd8fcf2499e5c7fb8474ec74be5ffc1c394763fc719455934dcd58e70c78",
+      "per_file": {
+        "tests.unit.test_answer_support": {
+          "tests": 65,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_artifact_contracts": {
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_auth_jwt": {
+          "tests": 17,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_bm25_baseline": {
+          "tests": 18,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_bm25_runner": {
+          "tests": 15,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_bounded_engines": {
+          "tests": 9,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_chunking": {
+          "tests": 14,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_citation_binding_candidate": {
+          "tests": 33,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_config": {
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_corpus_v2": {
+          "tests": 41,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_data_quality_gate": {
+          "tests": 36,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 1
+        },
+        "tests.unit.test_dataset_adapters_v2": {
+          "tests": 26,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_dataset_readiness": {
+          "tests": 16,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_dense_baseline": {
+          "tests": 34,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_dockerignore": {
+          "tests": 40,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_docling_candidate": {
+          "tests": 125,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_document_ir": {
+          "tests": 19,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_docx_ancillary_limits": {
+          "tests": 8,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_docx_ancillary_warnings": {
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_docx_footnote_candidate": {
+          "tests": 62,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_docx_footnote_locator_review_packet": {
+          "tests": 42,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_docx_note_context": {
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_eda_profiling": {
+          "tests": 14,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_engine_router_contracts": {
+          "tests": 22,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_evidence_regressions": {
+          "tests": 55,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_extraction": {
+          "tests": 13,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_extraction_campaign": {
+          "tests": 31,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_extraction_coverage_audit": {
+          "tests": 28,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_extraction_engines": {
+          "tests": 8,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_extraction_fidelity": {
+          "tests": 34,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_extraction_kaggle": {
+          "tests": 10,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_extraction_v2": {
+          "tests": 36,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_fidelity_duplicate_keys": {
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_fidelity_relationship_scope": {
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_indexing": {
+          "tests": 30,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_ingestion": {
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_ir_chunk_fidelity": {
+          "tests": 18,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_ir_evidence": {
+          "tests": 46,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_ir_publication": {
+          "tests": 13,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_kaggle_rag_baseline": {
+          "tests": 51,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_kaggle_rag_model_compare": {
+          "tests": 13,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_kaggle_rag_schema_dev": {
+          "tests": 43,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_kaggle_rag_sufficiency_dev": {
+          "tests": 39,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_ml28_comparison": {
+          "tests": 33,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_ml28_evidence": {
+          "tests": 39,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_ml28_ocr": {
+          "tests": 22,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_ml28_review": {
+          "tests": 22,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_office_corpus_v2": {
+          "tests": 9,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_pdf_assisted_review": {
+          "tests": 17,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 1
+        },
+        "tests.unit.test_pdf_cell_recovery": {
+          "tests": 19,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_pdf_dev_reference": {
+          "tests": 26,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_pdf_filled_ruling_normalization": {
+          "tests": 47,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_pdf_grid_proposals": {
+          "tests": 42,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 1
+        },
+        "tests.unit.test_pdf_native_dev_diagnostic": {
+          "tests": 19,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_pdf_ocr_candidate": {
+          "tests": 53,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_pdf_proposal_review": {
+          "tests": 27,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 1
+        },
+        "tests.unit.test_pdf_review_eligibility": {
+          "tests": 28,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_pdf_review_visual": {
+          "tests": 23,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 1
+        },
+        "tests.unit.test_pdf_review_workbench": {
+          "tests": 34,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_pdf_source_only_faces": {
+          "tests": 13,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_pdf_source_unit_bounds": {
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_pdf_table_candidate": {
+          "tests": 45,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_pdf_table_geometry": {
+          "tests": 30,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_pdf_table_review_packet": {
+          "tests": 20,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_pdf_table_source_only_probe": {
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_pdfplumber_table_candidate": {
+          "tests": 32,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_processing_state": {
+          "tests": 10,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_rag": {
+          "tests": 57,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_rag_gold": {
+          "tests": 18,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_rag_quote_binding": {
+          "tests": 46,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_rag_safety": {
+          "tests": 28,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_readiness_continuation": {
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_readiness_evaluator": {
+          "tests": 25,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_readiness_partitions": {
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_readiness_release": {
+          "tests": 24,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 1
+        },
+        "tests.unit.test_readiness_scoring_fixes": {
+          "tests": 36,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_readiness_source_metrics": {
+          "tests": 14,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_retrieval": {
+          "tests": 30,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_retrieval_eval": {
+          "tests": 31,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_safe_cleaning": {
+          "tests": 86,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_storage_config": {
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_textblock_offsets": {
+          "tests": 61,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_upload_service": {
+          "tests": 10,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_worker": {
+          "tests": 22,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_xlsx_number_formats": {
+          "tests": 16,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_xlsx_shared_string_source": {
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_xlsx_sheet_classification": {
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      }
+    },
+    "services-final.xml": {
+      "tests": 68,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 337.308,
+      "sha256": "6186e467fcc88621317841d171a70570d701e05fd1037b5656737104a9973c1c",
+      "per_file": {
+        "tests.integration.test_answer_semantics": {
+          "tests": 18,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.integration.test_answers_api": {
+          "tests": 12,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.integration.test_rag": {
+          "tests": 12,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.integration.test_retrieval": {
+          "tests": 16,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.integration.test_search_api": {
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.integration.test_authenticated_upload": {
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      }
+    },
+    "services-verified.xml": {
+      "tests": 81,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 442.856,
+      "sha256": "8cfc9f097250d74b8c18edb120337380eb5696cd22270e29b4a34d9a34c34b27",
+      "per_file": {
+        "tests.integration.test_answer_semantics": {
+          "tests": 25,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.integration.test_answers_api": {
+          "tests": 12,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.integration.test_rag": {
+          "tests": 12,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.integration.test_retrieval": {
+          "tests": 16,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.integration.test_search_api": {
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.integration.test_authenticated_upload": {
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "evaluation-output.semantic-closure-20261024.semantic_probes": {
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      }
+    },
+    "untimed-red.xml": {
+      "tests": 71,
+      "failures": 3,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 2.123,
+      "sha256": "e444b3e34c5fb6cb92dbf2b8ac7268cb48a38f3573fce3bfd862779a35eca39a",
+      "per_file": {
+        "tests.unit.test_answer_support": {
+          "tests": 71,
+          "failures": 3,
+          "errors": 0,
+          "skipped": 0
+        }
+      }
+    },
+    "targeted-current.xml": {
+      "tests": 265,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 3.275,
+      "sha256": "9dfaf42783005f3060046d196e2efb5853cd9cbd4df54340bd53ddd5970286cf",
+      "per_file": {
+        "tests.unit.test_answer_support": {
+          "tests": 71,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_rag": {
+          "tests": 57,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_rag_safety": {
+          "tests": 28,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_rag_quote_binding": {
+          "tests": 46,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_citation_binding_candidate": {
+          "tests": 33,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_retrieval": {
+          "tests": 30,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      }
+    },
+    "unit-verified.xml": {
+      "tests": 2312,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 6,
+      "seconds": 280.466,
+      "sha256": "e5296230e7def4fe8849870f11a69b26a1e4d33404272680f1c1bfaf18013a9a",
+      "per_file": {
+        "tests.unit.test_answer_support": {
+          "tests": 71,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_artifact_contracts": {
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_auth_jwt": {
+          "tests": 17,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_bm25_baseline": {
+          "tests": 18,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_bm25_runner": {
+          "tests": 15,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_bounded_engines": {
+          "tests": 9,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_chunking": {
+          "tests": 14,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_citation_binding_candidate": {
+          "tests": 33,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_config": {
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_corpus_v2": {
+          "tests": 41,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_data_quality_gate": {
+          "tests": 36,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 1
+        },
+        "tests.unit.test_dataset_adapters_v2": {
+          "tests": 26,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_dataset_readiness": {
+          "tests": 16,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_dense_baseline": {
+          "tests": 34,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_dockerignore": {
+          "tests": 40,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_docling_candidate": {
+          "tests": 125,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_document_ir": {
+          "tests": 19,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_docx_ancillary_limits": {
+          "tests": 8,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_docx_ancillary_warnings": {
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_docx_footnote_candidate": {
+          "tests": 62,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_docx_footnote_locator_review_packet": {
+          "tests": 42,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_docx_note_context": {
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_eda_profiling": {
+          "tests": 14,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_engine_router_contracts": {
+          "tests": 22,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_evidence_regressions": {
+          "tests": 55,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_extraction": {
+          "tests": 13,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_extraction_campaign": {
+          "tests": 31,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_extraction_coverage_audit": {
+          "tests": 28,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_extraction_engines": {
+          "tests": 8,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_extraction_fidelity": {
+          "tests": 34,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_extraction_kaggle": {
+          "tests": 10,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_extraction_v2": {
+          "tests": 36,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_fidelity_duplicate_keys": {
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_fidelity_relationship_scope": {
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_indexing": {
+          "tests": 30,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_ingestion": {
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_ir_chunk_fidelity": {
+          "tests": 18,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_ir_evidence": {
+          "tests": 46,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_ir_publication": {
+          "tests": 13,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_kaggle_rag_baseline": {
+          "tests": 51,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_kaggle_rag_model_compare": {
+          "tests": 13,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_kaggle_rag_schema_dev": {
+          "tests": 43,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_kaggle_rag_sufficiency_dev": {
+          "tests": 39,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_ml28_comparison": {
+          "tests": 33,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_ml28_evidence": {
+          "tests": 39,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_ml28_ocr": {
+          "tests": 22,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_ml28_review": {
+          "tests": 22,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_office_corpus_v2": {
+          "tests": 9,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_pdf_assisted_review": {
+          "tests": 17,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 1
+        },
+        "tests.unit.test_pdf_cell_recovery": {
+          "tests": 19,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_pdf_dev_reference": {
+          "tests": 26,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_pdf_filled_ruling_normalization": {
+          "tests": 47,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_pdf_grid_proposals": {
+          "tests": 42,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 1
+        },
+        "tests.unit.test_pdf_native_dev_diagnostic": {
+          "tests": 19,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_pdf_ocr_candidate": {
+          "tests": 53,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_pdf_proposal_review": {
+          "tests": 27,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 1
+        },
+        "tests.unit.test_pdf_review_eligibility": {
+          "tests": 28,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_pdf_review_visual": {
+          "tests": 23,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 1
+        },
+        "tests.unit.test_pdf_review_workbench": {
+          "tests": 34,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_pdf_source_only_faces": {
+          "tests": 13,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_pdf_source_unit_bounds": {
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_pdf_table_candidate": {
+          "tests": 45,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_pdf_table_geometry": {
+          "tests": 30,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_pdf_table_review_packet": {
+          "tests": 20,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_pdf_table_source_only_probe": {
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_pdfplumber_table_candidate": {
+          "tests": 32,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_processing_state": {
+          "tests": 10,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_rag": {
+          "tests": 57,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_rag_gold": {
+          "tests": 18,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_rag_quote_binding": {
+          "tests": 46,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_rag_safety": {
+          "tests": 28,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_readiness_continuation": {
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_readiness_evaluator": {
+          "tests": 25,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_readiness_partitions": {
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_readiness_release": {
+          "tests": 24,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 1
+        },
+        "tests.unit.test_readiness_scoring_fixes": {
+          "tests": 36,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_readiness_source_metrics": {
+          "tests": 14,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_retrieval": {
+          "tests": 30,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_retrieval_eval": {
+          "tests": 31,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_safe_cleaning": {
+          "tests": 86,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_storage_config": {
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_textblock_offsets": {
+          "tests": 61,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_upload_service": {
+          "tests": 10,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_worker": {
+          "tests": 22,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_xlsx_number_formats": {
+          "tests": 16,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_xlsx_shared_string_source": {
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_xlsx_sheet_classification": {
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      }
+    },
+    "period-type-red.xml": {
+      "tests": 75,
+      "failures": 2,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 2.795,
+      "sha256": "7c7e3488a34eabec826ff1aa42f8a5d2609b3d296b89849e39d4137b93c8cba4",
+      "per_file": {
+        "tests.unit.test_answer_support": {
+          "tests": 75,
+          "failures": 2,
+          "errors": 0,
+          "skipped": 0
+        }
+      }
+    },
+    "targeted-sealed.xml": {
+      "tests": 269,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 3.288,
+      "sha256": "c2167a8ac7597861c0c1ac7d8286777e2eb12fcf52c091b5a189413a049a70bb",
+      "per_file": {
+        "tests.unit.test_answer_support": {
+          "tests": 75,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_rag": {
+          "tests": 57,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_rag_safety": {
+          "tests": 28,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_rag_quote_binding": {
+          "tests": 46,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_citation_binding_candidate": {
+          "tests": 33,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_retrieval": {
+          "tests": 30,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      }
+    },
+    "unit-sealed.xml": {
+      "tests": 2316,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 6,
+      "seconds": 277.579,
+      "sha256": "8bb4481ad03173090a6474c79871c96673a666dc8da0e034ba0312ab0e13e919",
+      "per_file": {
+        "tests.unit.test_answer_support": {
+          "tests": 75,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_artifact_contracts": {
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_auth_jwt": {
+          "tests": 17,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_bm25_baseline": {
+          "tests": 18,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_bm25_runner": {
+          "tests": 15,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_bounded_engines": {
+          "tests": 9,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_chunking": {
+          "tests": 14,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_citation_binding_candidate": {
+          "tests": 33,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_config": {
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_corpus_v2": {
+          "tests": 41,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_data_quality_gate": {
+          "tests": 36,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 1
+        },
+        "tests.unit.test_dataset_adapters_v2": {
+          "tests": 26,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_dataset_readiness": {
+          "tests": 16,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_dense_baseline": {
+          "tests": 34,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_dockerignore": {
+          "tests": 40,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_docling_candidate": {
+          "tests": 125,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_document_ir": {
+          "tests": 19,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_docx_ancillary_limits": {
+          "tests": 8,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_docx_ancillary_warnings": {
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_docx_footnote_candidate": {
+          "tests": 62,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_docx_footnote_locator_review_packet": {
+          "tests": 42,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_docx_note_context": {
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_eda_profiling": {
+          "tests": 14,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_engine_router_contracts": {
+          "tests": 22,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_evidence_regressions": {
+          "tests": 55,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_extraction": {
+          "tests": 13,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_extraction_campaign": {
+          "tests": 31,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_extraction_coverage_audit": {
+          "tests": 28,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_extraction_engines": {
+          "tests": 8,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_extraction_fidelity": {
+          "tests": 34,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_extraction_kaggle": {
+          "tests": 10,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_extraction_v2": {
+          "tests": 36,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_fidelity_duplicate_keys": {
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_fidelity_relationship_scope": {
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_indexing": {
+          "tests": 30,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_ingestion": {
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_ir_chunk_fidelity": {
+          "tests": 18,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_ir_evidence": {
+          "tests": 46,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_ir_publication": {
+          "tests": 13,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_kaggle_rag_baseline": {
+          "tests": 51,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_kaggle_rag_model_compare": {
+          "tests": 13,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_kaggle_rag_schema_dev": {
+          "tests": 43,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_kaggle_rag_sufficiency_dev": {
+          "tests": 39,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_ml28_comparison": {
+          "tests": 33,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_ml28_evidence": {
+          "tests": 39,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_ml28_ocr": {
+          "tests": 22,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_ml28_review": {
+          "tests": 22,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_office_corpus_v2": {
+          "tests": 9,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_pdf_assisted_review": {
+          "tests": 17,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 1
+        },
+        "tests.unit.test_pdf_cell_recovery": {
+          "tests": 19,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_pdf_dev_reference": {
+          "tests": 26,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_pdf_filled_ruling_normalization": {
+          "tests": 47,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_pdf_grid_proposals": {
+          "tests": 42,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 1
+        },
+        "tests.unit.test_pdf_native_dev_diagnostic": {
+          "tests": 19,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_pdf_ocr_candidate": {
+          "tests": 53,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_pdf_proposal_review": {
+          "tests": 27,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 1
+        },
+        "tests.unit.test_pdf_review_eligibility": {
+          "tests": 28,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_pdf_review_visual": {
+          "tests": 23,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 1
+        },
+        "tests.unit.test_pdf_review_workbench": {
+          "tests": 34,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_pdf_source_only_faces": {
+          "tests": 13,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_pdf_source_unit_bounds": {
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_pdf_table_candidate": {
+          "tests": 45,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_pdf_table_geometry": {
+          "tests": 30,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_pdf_table_review_packet": {
+          "tests": 20,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_pdf_table_source_only_probe": {
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_pdfplumber_table_candidate": {
+          "tests": 32,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_processing_state": {
+          "tests": 10,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_rag": {
+          "tests": 57,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_rag_gold": {
+          "tests": 18,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_rag_quote_binding": {
+          "tests": 46,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_rag_safety": {
+          "tests": 28,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_readiness_continuation": {
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_readiness_evaluator": {
+          "tests": 25,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_readiness_partitions": {
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_readiness_release": {
+          "tests": 24,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 1
+        },
+        "tests.unit.test_readiness_scoring_fixes": {
+          "tests": 36,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_readiness_source_metrics": {
+          "tests": 14,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_retrieval": {
+          "tests": 30,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_retrieval_eval": {
+          "tests": 31,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_safe_cleaning": {
+          "tests": 86,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_storage_config": {
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_textblock_offsets": {
+          "tests": 61,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_upload_service": {
+          "tests": 10,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_worker": {
+          "tests": 22,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_xlsx_number_formats": {
+          "tests": 16,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_xlsx_shared_string_source": {
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_xlsx_sheet_classification": {
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      }
+    },
+    "api-sealed.xml": {
+      "tests": 61,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 323.124,
+      "sha256": "1348c97953b50fe4612a8f45228b352a516308326303b11a76a6d448135b6fd8",
+      "per_file": {
+        "tests.integration.test_answer_semantics": {
+          "tests": 31,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.integration.test_answers_api": {
+          "tests": 12,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.integration.test_rag": {
+          "tests": 12,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "evaluation-output.semantic-closure-20261024.semantic_probes": {
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      }
+    }
+  },
+  "unit_skips": [
+    {
+      "case": "tests.unit.test_data_quality_gate::test_output_symlink_escape_rejected",
+      "reason": "Windows symlink privilege unavailable"
+    },
+    {
+      "case": "tests.unit.test_pdf_assisted_review::test_offline_browser_review_and_csv_export",
+      "reason": "Local Node/Playwright/Edge browser inputs required"
+    },
+    {
+      "case": "tests.unit.test_pdf_grid_proposals::test_grid_http_security_and_browser",
+      "reason": "Set ML30_NODE and ML30_NODE_MODULES for actual overlay/acceptance UI"
+    },
+    {
+      "case": "tests.unit.test_pdf_proposal_review::test_browser_confirm_correct_reject_and_export",
+      "reason": "Set ML30_NODE and ML30_NODE_MODULES for actual independent-review UI"
+    },
+    {
+      "case": "tests.unit.test_pdf_review_visual::test_browser_rendered_mouse_selection",
+      "reason": "Set ML30_NODE and ML30_NODE_MODULES for the actual browser path"
+    },
+    {
+      "case": "tests.unit.test_readiness_release::test_symlink_rejected",
+      "reason": "Windows host lacks symlink privilege"
+    }
+  ],
+  "unit_count_reconciliation": "2235 existing passed + 75 new unit cases = 2310 passed; six unchanged skips",
+  "final_code_verification": [
+    "targeted-sealed.xml",
+    "unit-sealed.xml",
+    "api-sealed.xml"
+  ],
+  "startup": {
+    "compose_project": "doclens-semantic-closure-20261024",
+    "states": {
+      "/api/v1/health/live": {
+        "status": "alive"
+      },
+      "/api/v1/health/ready": {
+        "status": "ready",
+        "database": "healthy"
+      },
+      "/api/v1/search": {
+        "status": 401
+      },
+      "/api/v1/answers": {
+        "status": 401
+      }
+    },
+    "source_mount_read_only": true,
+    "models": "not_enabled_in_base_profile"
+  },
+  "cleanup": {
+    "recorded_containers_removed": 6,
+    "remaining_task_containers": 0,
+    "remaining_task_networks": 0,
+    "remaining_task_volumes": 0,
+    "unrelated_containers_present": 11,
+    "method": "only exact container IDs after task-label verification and empty private network"
+  },
+  "staged_review": {
+    "files": [
+      "README.md",
+      "src/doclens_ai/services/answer_support.py",
+      "src/doclens_ai/services/rag.py",
+      "tests/integration/test_answer_semantics.py",
+      "tests/integration/test_answers_api.py",
+      "tests/integration/test_rag.py",
+      "tests/unit/test_answer_support.py"
+    ],
+    "scope_exact": true,
+    "deletion_not_staged": true,
+    "credentials_excluded": true,
+    "source_hashes_unchanged": true,
+    "review": "full staged flow and sealed delta: trusted question, whole quotes/claims, source subject/period/tense, temporal versus entity scope, numeric/ACL invariants, positive/negative oracles and compatibility limits"
+  },
+  "prompt_unchanged": {
+    "version": "grounded-qa-v1",
+    "sha256": "33622b5889415d5ec23df5995dfa647d4d8b0b3369838f03934b355be052ec89",
+    "ir_schema": "2.0"
+  },
+  "environment": {
+    "packages": {
+      "pytest": "9.1.1",
+      "ruff": "0.17.0",
+      "pydantic": "2.14.0",
+      "pydantic-core": "2.50.0",
+      "SQLAlchemy": "2.1.4",
+      "asyncpg": "0.32.0",
+      "boto3": "1.43.111",
+      "httpx": "0.28.1",
+      "pypdf": "6.20.0",
+      "python-docx": "1.2.0",
+      "openpyxl": "3.1.5",
+      "lxml": "6.1.3"
+    },
+    "PYTHONPATH": "C:/Users/nurs/doclens_ai;C:/Users/nurs/doclens_ai/src",
+    "PYTHONDONTWRITEBYTECODE": "1",
+    "full_unit_offline": [
+      "HF_HUB_OFFLINE=1",
+      "TRANSFORMERS_OFFLINE=1"
+    ],
+    "fixture_access": "authorized Windows asyncio loopback and task-owned Docker fixtures"
+  },
+  "evidence_sha256": {
+    "evaluation-output/semantic-closure-20261024/api-sealed.log": "ac3e910942e233496a777b7115aa2c8d308f062b007c91bcfab2d44ce845674a",
+    "evaluation-output/semantic-closure-20261024/api-sealed.xml": "1348c97953b50fe4612a8f45228b352a516308326303b11a76a6d448135b6fd8",
+    "evaluation-output/semantic-closure-20261024/cleanup.json": "d1b8c4eb16ad90f0259e65477a2cbe763c460ace0e75a9fe046fb753d81d30cd",
+    "evaluation-output/semantic-closure-20261024/cleanup.log": "c064695ac42631a702797a805fe3e75a9dd5ec2625ce04edb80a64c55f830826",
+    "evaluation-output/semantic-closure-20261024/format.log": "ef7d13d02214e98ca902b05257cdbe6a8e84f3b4714508efdc19766460b54209",
+    "evaluation-output/semantic-closure-20261024/implementation-final-sha.json": "f5bf291cda27025020cb1f7e07f4e93de5f4401060c107f0edded1f7238b5b77",
+    "evaluation-output/semantic-closure-20261024/implementation-sealed-sha.json": "c597e4babdb9fa2b28d25f1e65191268eada85bb335682de70953caecc60d260",
+    "evaluation-output/semantic-closure-20261024/implementation-sha.json": "700cf88eb7e4c8d2a60ea9f4b7e46bc5ec622f0d7fb58355a0bab3d150820fb1",
+    "evaluation-output/semantic-closure-20261024/initial.json": "2f3595e3c4aac450889044ca020fd37c5425152da43da883f84c8a0c42e31a49",
+    "evaluation-output/semantic-closure-20261024/instruction-negative.json": "c3c6a7e3fb72d3e502e6b18092c1e6c9a49ddf7cf4f207f805e137fd367b9551",
+    "evaluation-output/semantic-closure-20261024/invented-numeric-negative.json": "b1bc1fafcfb3eb2e7e3e61e6c677fa0626f1ca5add3e5a490a3e758e7b3ad737",
+    "evaluation-output/semantic-closure-20261024/lint-final.log": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+    "evaluation-output/semantic-closure-20261024/lint.log": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+    "evaluation-output/semantic-closure-20261024/negation-negative.json": "b2000a65469275b50a2cf11a533d813e083c87a86c3462a37772d64ea4c33abd",
+    "evaluation-output/semantic-closure-20261024/negation-positive.json": "e4eb4b95d0bc2653fd64c7f1fcf8c94532b5620fc8ddd0257352b1206dd7b8ce",
+    "evaluation-output/semantic-closure-20261024/original-green.log": "10ef21373b9541325d85aac7e4a118865a27e2fac26b8216876eaa092577ef3b",
+    "evaluation-output/semantic-closure-20261024/original-green.xml": "5006e8285955c7ac011422e97f16ee0da84364680995d4f29ae6dc39177275d4",
+    "evaluation-output/semantic-closure-20261024/original-red.log": "6e7e46bad8fe6e9d7047b9d86d6c376a76e8b951a853ee5ee0c10fcc322f5211",
+    "evaluation-output/semantic-closure-20261024/original-red.xml": "5bf836157391aa3bebac3ce82d5b89f255c8823404c286da5dbb317c7613b1da",
+    "evaluation-output/semantic-closure-20261024/period-negative.json": "e06a44724f2fa2dca9718d79b573c3795e78b19fbcc85796c0278308a6304e79",
+    "evaluation-output/semantic-closure-20261024/period-positive.json": "19b8b53a5f6d0db5f9c897ea1ca8403229cfe693eb1ea5712bb590f43c6c970c",
+    "evaluation-output/semantic-closure-20261024/period-type-red.log": "3bef08618b341d52763f2854e2427822c50581f08c6e9bd3c0c64d259c5cd48f",
+    "evaluation-output/semantic-closure-20261024/period-type-red.xml": "7c7e3488a34eabec826ff1aa42f8a5d2609b3d296b89849e39d4137b93c8cba4",
+    "evaluation-output/semantic-closure-20261024/review-red.log": "f07fa9b7b18f7e40f4721f69ab25cf1ba740e890f6a5dd0b1bd056dbd2847aba",
+    "evaluation-output/semantic-closure-20261024/review-red.xml": "0309c4f21a34d2e30a06011eb90152fa25b22ceb65b21b7bf877b4310560a40c",
+    "evaluation-output/semantic-closure-20261024/semantic_probes.py": "a141fa16b11f97b59e5220337d0f5377d117a57fa21a6424868732d7164a2ce1",
+    "evaluation-output/semantic-closure-20261024/services-final.log": "c04a15eb0b3df6db305f9e93c37a5da41ebd9c6120faf188b56e1010e1c3cb54",
+    "evaluation-output/semantic-closure-20261024/services-final.xml": "6186e467fcc88621317841d171a70570d701e05fd1037b5656737104a9973c1c",
+    "evaluation-output/semantic-closure-20261024/services-verified.log": "2803ddf6c4ecfc250e6b6a0982c3e4c9e43a8d7ca16e3d2b6bf8c7c53644d159",
+    "evaluation-output/semantic-closure-20261024/services-verified.xml": "8cfc9f097250d74b8c18edb120337380eb5696cd22270e29b4a34d9a34c34b27",
+    "evaluation-output/semantic-closure-20261024/services.py": "07450995adbffc8c04384c9e3ec605ac45bf21ef2e403c0393998cffe04ecd58",
+    "evaluation-output/semantic-closure-20261024/staged-review-final.json": "b93888dbf8ff27c207b40c5e2d9b9a348e39050a19d22b57f275ee931f708e09",
+    "evaluation-output/semantic-closure-20261024/staged-review.json": "8f3d328bd97d2949ff51e3d740edc37734132b318f92135d5037a1b4ea3087f3",
+    "evaluation-output/semantic-closure-20261024/startup.json": "bfdea72ae2d31f03d80ce382f67d26f0670112c894c13a9ade451ace581eb18b",
+    "evaluation-output/semantic-closure-20261024/startup.log": "34a11db49f061f5e85ed032da162440abf5c0cc4fbd01f7fe01650b9d64eec03",
+    "evaluation-output/semantic-closure-20261024/targeted-current.log": "9b9b90bb8d4da8d1bfae281a0fdee5224c9b29eaaa59aa0727ee820bde5f0ef4",
+    "evaluation-output/semantic-closure-20261024/targeted-current.xml": "9dfaf42783005f3060046d196e2efb5853cd9cbd4df54340bd53ddd5970286cf",
+    "evaluation-output/semantic-closure-20261024/targeted-final.log": "f2174753199455a602663b1aae98eb9d7ca37cfc318c2c34edfdbe86245ff46e",
+    "evaluation-output/semantic-closure-20261024/targeted-final.xml": "3f8e8c4938dbea2ff86e34a07895c86b3e964cb321ca59a4d90011eec0cfbfe8",
+    "evaluation-output/semantic-closure-20261024/targeted-first.log": "c912795abf0ea6be2f5ef9fd70b888660f229f05280c9cae512857eea8e700d8",
+    "evaluation-output/semantic-closure-20261024/targeted-first.xml": "f7c4f258325e29bcd276b340e673355c8931af5e0e5e3a32539074b5a3bdb90c",
+    "evaluation-output/semantic-closure-20261024/targeted-sealed.log": "7645886bc63a9bd214e7af0e7519f5704912014fa898138436f715ef9b8d46f8",
+    "evaluation-output/semantic-closure-20261024/targeted-sealed.xml": "c2167a8ac7597861c0c1ac7d8286777e2eb12fcf52c091b5a189413a049a70bb",
+    "evaluation-output/semantic-closure-20261024/targeted-second.log": "7befb3cf65e6a22af7b1ffd2e42b3678e2b91e484a125298f00bdee823374394",
+    "evaluation-output/semantic-closure-20261024/targeted-second.xml": "04da744742f51cacf940dfd1dcec1f3bb4d44c61d32cc6e3ab3e192f62c61ef7",
+    "evaluation-output/semantic-closure-20261024/unit-full.log": "fe36634f3d592dba7363b189315e7113c0ff8dd1186445e2f2c61df1c78bf1c4",
+    "evaluation-output/semantic-closure-20261024/unit-full.xml": "979bfd8fcf2499e5c7fb8474ec74be5ffc1c394763fc719455934dcd58e70c78",
+    "evaluation-output/semantic-closure-20261024/unit-sealed.log": "6a1f36b4bcf6ab05818411a02ab0730281f4045598d757f4d29739b339969dea",
+    "evaluation-output/semantic-closure-20261024/unit-sealed.xml": "8bb4481ad03173090a6474c79871c96673a666dc8da0e034ba0312ab0e13e919",
+    "evaluation-output/semantic-closure-20261024/unit-verified.log": "843bebaf7f9eca0422ff4cb93fbf6d423d9b161e910575a01a60309fdc8c5eb8",
+    "evaluation-output/semantic-closure-20261024/unit-verified.xml": "e5296230e7def4fe8849870f11a69b26a1e4d33404272680f1c1bfaf18013a9a",
+    "evaluation-output/semantic-closure-20261024/untimed-red.log": "d47ef0e0a250a54fde168c5966eb004473e1bb7c09c28b96f58070a2d654694a",
+    "evaluation-output/semantic-closure-20261024/untimed-red.xml": "e444b3e34c5fb6cb92dbf2b8ac7268cb48a38f3573fce3bfd862779a35eca39a",
+    "evaluation-output/semantic-closure-20261024/write_receipt.py": "49ec8ab6a442733fc79dc84c2dd665f4399818395d5d5233aae0285f6ad2bc85"
+  },
+  "report_sha256": "1fb0f7cd5af82aee15b3208ef12de02cd158c7c347b94400e04625e16417f52c",
+  "limits": [
+    "Positive finite grammar, not universal entailment or independent semantic Gold.",
+    "Unsupported paraphrases/questions/implicit coreference/multiline fact reasoning are refused.",
+    "Explicit complete quotations are document data, not factual inference or privileged instructions.",
+    "Real services use fake embeddings and an adversarial test generator; no new real-model campaign.",
+    "No full operational lifecycle/recovery/rollback/SLO qualification performed.",
+    "No QG verdict changed, no push/merge/deploy, no new dependency/model."
+  ],
+  "qg09_independent_requirements": [
+    "Full lifecycle/restore/rebuild/rollback",
+    "All-enabled real-model E2E",
+    "Approved SLO/load/resources/deployment"
+  ]
+}
