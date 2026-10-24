@@ -7,6 +7,7 @@ from dataclasses import replace
 import pytest
 from sqlalchemy import select
 
+from doclens_ai.chunking.ir import IR_CHUNKER_VERSION
 from doclens_ai.extraction.engines import (
     EngineCapability,
     EngineRegistry,
@@ -44,7 +45,7 @@ async def prepare_engine_run(factory, storage, keys, engine, path, *, route_over
     route = EngineRoute(
         engines=(pin(engine),),
         mode="verified_ir",
-        chunker_version="2.0",
+        chunker_version=IR_CHUNKER_VERSION,
         runtime_manifest_json=default_route().runtime_manifest_json,
         policy_sha256=evidence_policy_fingerprint(policy),
         review_id="fixture-review-1",

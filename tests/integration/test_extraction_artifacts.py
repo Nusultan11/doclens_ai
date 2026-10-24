@@ -70,7 +70,7 @@ class PartialFakeIR(FakeWordsIR):
         )
 
 
-def test_partial_page_failure_is_saved_but_only_independently_allowed_page_is_chunked(
+def test_partial_page_failure_is_saved_without_publishing_canonical_chunks(
     migrated_database_url, test_storage_settings, tmp_path
 ):
     path = fixture_path(tmp_path)
@@ -85,15 +85,17 @@ def test_partial_page_failure_is_saved_but_only_independently_allowed_page_is_ch
                 factory, storage, keys, PartialFakeIR(), path
             )
             claim = await ProcessingCoordinator(factory).claim_next(worker_id="partial-worker")
-            await service.ingest(
-                claim.processing_run_id, worker_id="partial-worker", lease_token=claim.lease_token
-            )
+            with pytest.raises(IngestionFailure, match="extraction_needs_review"):
+                await service.ingest(
+                    claim.processing_run_id,
+                    worker_id="partial-worker",
+                    lease_token=claim.lease_token,
+                )
             async with factory() as session:
                 artifact = await session.scalar(select(ExtractionArtifact))
                 assert artifact.source_state == "partial"
                 chunks = tuple(await session.scalars(select(CanonicalChunk)))
-                assert [chunk.chunk_text for chunk in chunks] == ["-10 kg"]
-                assert chunks[0].source_provenance[0]["source"]["page_number"] == 1
+                assert chunks == ()
             _, snapshot = await service.artifacts.load(artifact.id, expected=expected)
             assert snapshot.observations[0].elements[1].state == "failed"
             assert snapshot.observations[0].issues[0].source.page_number == 2

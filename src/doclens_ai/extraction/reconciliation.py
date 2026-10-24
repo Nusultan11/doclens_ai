@@ -6,7 +6,7 @@ from pathlib import Path
 
 from doclens_ai.extraction.ir import DocumentIR, Issue, Provenance, Relation, SourceIdentity
 
-RECONCILER_VERSION = "1.0"
+RECONCILER_VERSION = "1.1"
 
 
 def reconcile(observations: tuple[DocumentIR, ...], *, expected: SourceIdentity) -> DocumentIR:
@@ -93,7 +93,7 @@ def reconcile(observations: tuple[DocumentIR, ...], *, expected: SourceIdentity)
         next(iter(states))
         if len(states) == 1 and states <= {"failed", "unsupported", "unresolved"}
         else "partial"
-        if issues
+        if issues or states != {"complete"}
         else "complete"
     )
     return DocumentIR(

@@ -7,6 +7,7 @@ ingestion retain their existing PDF rejection until a pinned route is integrated
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Literal
 
 from doclens_ai.chunking.models import Chunk, ChunkingStrategy, ChunkSourceSpan
 from doclens_ai.extraction.ir import (
@@ -27,7 +28,7 @@ from doclens_ai.extraction.ir_validation import (
     validate_ir,
 )
 
-IR_CHUNKER_VERSION = "2.0"
+IR_CHUNKER_VERSION = "2.1"
 
 
 @dataclass(frozen=True)
@@ -44,6 +45,16 @@ class EvidenceChunks:
     units: tuple[SearchableUnit, ...]
     chunks: tuple[Chunk, ...]
     held: tuple[tuple[str, str], ...]
+    document_state: str = "complete"
+
+    @property
+    def status(self) -> Literal["complete", "partial_review_required", "blocked"]:
+        """Diagnostic chunks are publishable only as a complete admitted document."""
+        if self.validation.global_reasons or not self.chunks:
+            return "blocked"
+        if self.document_state != "complete" or self.validation.rejected or self.held:
+            return "partial_review_required"
+        return "complete"
 
 
 def _render(element: DocumentElement) -> str:
@@ -75,7 +86,7 @@ def chunk_verified_ir(
     ir = DocumentIR.model_validate_json(ir.model_dump_json())
     validation = validate_ir(ir, expected=expected, review=review, policy=policy)
     if not validation.allowed:
-        return EvidenceChunks(validation, (), (), ())
+        return EvidenceChunks(validation, (), (), (), ir.state)
     allowed = set(validation.allowed)
     groups = {identity: identity for identity in allowed}
 
@@ -132,7 +143,7 @@ def chunk_verified_ir(
         total += len(text)
         if total > max_source_characters or len(chunks) >= max_chunks:
             # No partially published prefix when a document budget is exceeded.
-            return EvidenceChunks(validation, (), (), ((unit_id, "document_limit"),))
+            return EvidenceChunks(validation, (), (), ((unit_id, "document_limit"),), ir.state)
         units.append(SearchableUnit(unit_id, text, tuple(elements), relations))
         spans = tuple(
             ChunkSourceSpan(
@@ -167,4 +178,4 @@ def chunk_verified_ir(
                 provenance=spans,
             )
         )
-    return EvidenceChunks(validation, tuple(units), tuple(chunks), tuple(held))
+    return EvidenceChunks(validation, tuple(units), tuple(chunks), tuple(held), ir.state)

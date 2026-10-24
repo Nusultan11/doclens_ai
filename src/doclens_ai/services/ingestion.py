@@ -510,7 +510,7 @@ class IngestionService:
                 ir, expected=expected, review=reviewed, policy=self._evidence_policy,
                 **json.loads(route.ir_chunk_options_json),
             )
-            if not result.chunks:
+            if result.status != "complete":
                 raise IngestionFailure(
                     IngestionFailureCategory.EXTRACTION_NEEDS_REVIEW, retryable=False
                 )
