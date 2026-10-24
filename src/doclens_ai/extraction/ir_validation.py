@@ -15,6 +15,7 @@ from dataclasses import asdict, dataclass, fields
 from typing import Literal
 
 from doclens_ai.extraction.ir import (
+    ATOMIC_RELATION_KINDS,
     CellElement,
     DocumentIR,
     Element,
@@ -25,7 +26,7 @@ from doclens_ai.extraction.ir import (
 )
 from doclens_ai.extraction.models import DocumentFormat
 
-VALIDATOR_VERSION = "2.0"
+VALIDATOR_VERSION = "2.1"
 
 
 def canonical_digest(payload: object) -> str:
@@ -292,7 +293,8 @@ def validate_ir(
     owners: dict[str, list[str]] = {}
     edges = []
     for relation in ir.relations:
-        edges.append((relation.source_id, relation.target_id))
+        if relation.kind in ATOMIC_RELATION_KINDS or relation.kind in {"conflict", "duplicate"}:
+            edges.append((relation.source_id, relation.target_id))
         parent, child = by_id[relation.source_id], by_id[relation.target_id]
         bad_type = False
         if relation.kind == "contains" and isinstance(parent, TableElement):
@@ -348,7 +350,7 @@ def validate_ir(
                     if position in occupied:
                         rejected.setdefault(element.id, set()).add("overlapping_table_cells")
                     occupied.add(position)
-    # Any unsafe member holds its whole connected evidence group. This also
+    # Any unsafe member holds its whole atomic evidence group. This also
     # prevents a row/value from being indexed after losing an unreviewed header.
     adjacent = {element.id: [] for element in ir.elements}
     for a, b in edges:

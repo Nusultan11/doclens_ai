@@ -5,7 +5,7 @@ import hashlib
 import json
 import tempfile
 from collections.abc import AsyncIterator, Awaitable, Callable
-from dataclasses import dataclass, field, fields
+from dataclasses import asdict, dataclass, field, fields
 from enum import StrEnum
 from pathlib import Path
 from typing import Protocol
@@ -30,6 +30,7 @@ from doclens_ai.extraction.engines import EngineRegistry, EngineRoute, default_r
 from doclens_ai.extraction.ir import DocumentIR, SourceIdentity
 from doclens_ai.extraction.ir_validation import (
     DEFAULT_EVIDENCE_POLICY,
+    VALIDATOR_VERSION,
     EvidencePolicy,
     EvidenceReview,
     evidence_policy_fingerprint,
@@ -403,6 +404,7 @@ class IngestionService:
             else:
                 valid_route = (
                     valid_route
+                    and route.validator_version == VALIDATOR_VERSION
                     and route.policy_sha256 == evidence_policy_fingerprint(self._evidence_policy)
                     and bool(route.review_id)
                     and self._review_loader is not None
@@ -827,6 +829,16 @@ def canonicalize_chunk(
             "source_end": span.source_end,
             "source_length": span.source_length,
             "offset_basis": "rendered_source_unit",
+            **(
+                {
+                    "text_block_map": {
+                        **asdict(span.text_block_map),
+                        "ranges": [asdict(r) for r in span.text_block_map.ranges],
+                    }
+                }
+                if span.text_block_map is not None
+                else {}
+            ),
             **(
                 {
                     "extraction_artifact_id": str(extraction_artifact_id),

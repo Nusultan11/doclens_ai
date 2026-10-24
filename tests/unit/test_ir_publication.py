@@ -2,19 +2,25 @@
 
 import asyncio
 import json
+from dataclasses import replace
 from uuid import UUID, uuid4
 
 import pytest
 
-from doclens_ai.chunking.ir import chunk_verified_ir
+from doclens_ai.chunking.ir import IR_CHUNKER_VERSION, chunk_verified_ir
 from doclens_ai.extraction.engines import EngineRoute, default_route
 from doclens_ai.extraction.ir import DocumentIR
+from doclens_ai.extraction.ir_validation import evidence_policy_fingerprint
 from doclens_ai.extraction.models import SourceLocation
 from doclens_ai.extraction.reconciliation import reconcile
 from doclens_ai.services.ingestion import (
     IngestionFailure,
     IngestionService,
     _SourceIdentity,
+)
+from doclens_ai.services.processing import (
+    PROCESSING_CONFIGURATION_VERSION,
+    default_processing_configuration_fingerprint,
 )
 from doclens_ai.services.upload import PDF_CONTENT_TYPE
 from tests.unit.test_ir_evidence import document, policy, review
@@ -36,6 +42,7 @@ def boundary(ir, **options):
         engines=default_route().engines,
         runtime_manifest_json=default_route().runtime_manifest_json,
         mode="verified_ir",
+        chunker_version=IR_CHUNKER_VERSION,
         review_id="fixture-review-1",
     )
     if options:
@@ -109,3 +116,34 @@ def test_complete_and_blocked_outcomes_are_explicit():
     assert asyncio.run(service._chunk_ir(boundary(ir), ir)) == result.chunks
     blocked = chunk_verified_ir(ir, expected=ir.source, review=None, policy=evidence_policy)
     assert blocked.status == "blocked" and blocked.chunks == ()
+
+
+@pytest.mark.parametrize(
+    "change", [{"validator_version": "2.0"}, {"chunker_version": "2.0"}, {"chunker_version": "2.1"}]
+)
+def test_artifact_reprocessing_cannot_silently_use_an_obsolete_validator_or_chunker(change):
+    ir = scoped_document()
+    evidence_policy = policy(ir, allow_verified_pdf=True)
+    service = IngestionService(
+        object(), object(), evidence_policy=evidence_policy, review_loader=lambda _: review(ir)
+    )
+    original = boundary(ir)
+    route = EngineRoute.model_validate(original.extraction_route).model_copy(
+        update={
+            "policy_sha256": evidence_policy_fingerprint(evidence_policy),
+        }
+    )
+
+    def pinned(value):
+        return replace(
+            original,
+            extraction_route=value.model_dump(mode="json"),
+            configuration_version=PROCESSING_CONFIGURATION_VERSION,
+            configuration_fingerprint=default_processing_configuration_fingerprint(value),
+        )
+
+    service._validate_processing_configuration(pinned(route), require_engines=False)
+    with pytest.raises(IngestionFailure, match="configuration_mismatch"):
+        service._validate_processing_configuration(
+            pinned(route.model_copy(update=change)), require_engines=False
+        )

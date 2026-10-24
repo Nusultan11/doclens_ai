@@ -1,8 +1,4 @@
-"""Atomic verified IR evidence groups to the existing Chunk contract.
-
-This is an explicit opt-in standalone boundary. Legacy chunking and production
-ingestion retain their existing PDF rejection until a pinned route is integrated.
-"""
+"""Reviewed IR evidence groups; only complete outcomes may enter ingestion."""
 
 from __future__ import annotations
 
@@ -11,6 +7,7 @@ from typing import Literal
 
 from doclens_ai.chunking.models import Chunk, ChunkingStrategy, ChunkSourceSpan
 from doclens_ai.extraction.ir import (
+    ATOMIC_RELATION_KINDS,
     CellElement,
     DocumentElement,
     DocumentIR,
@@ -28,7 +25,7 @@ from doclens_ai.extraction.ir_validation import (
     validate_ir,
 )
 
-IR_CHUNKER_VERSION = "2.1"
+IR_CHUNKER_VERSION = "2.2"
 
 
 @dataclass(frozen=True)
@@ -67,7 +64,14 @@ def _render(element: DocumentElement) -> str:
             if (value := getattr(element, field)) is not None
         )
     if isinstance(element, FormulaElement):
-        return f"formula={element.expression}\ncached_value={element.cached_value}"
+        return "\n".join(
+            f"{label}={value}"
+            for label, value in (
+                ("formula", element.expression),
+                ("cached_value", element.cached_value),
+            )
+            if value is not None
+        )
     return getattr(element, "text", None) or getattr(element, "caption", None) or ""
 
 
@@ -97,7 +101,11 @@ def chunk_verified_ir(
         return identity
 
     for relation in ir.relations:
-        if relation.source_id in allowed and relation.target_id in allowed:
+        if (
+            relation.kind in ATOMIC_RELATION_KINDS
+            and relation.source_id in allowed
+            and relation.target_id in allowed
+        ):
             groups[root(relation.target_id)] = root(relation.source_id)
     members: dict[str, list[DocumentElement]] = {}
     for element in ir.elements:
@@ -106,6 +114,8 @@ def chunk_verified_ir(
     grouped_relations: dict[str, list[Relation]] = {}
     for relation in ir.relations:
         if relation.source_id in allowed and relation.target_id in allowed:
+            # Keep outgoing reading-order links even when their endpoints belong
+            # to different units. The original reviewed relation is not rewritten.
             grouped_relations.setdefault(root(relation.source_id), []).append(relation)
     config_fingerprint = canonical_digest(
         {

@@ -15,6 +15,11 @@ from doclens_ai.extraction.models import DocumentFormat, ExtractionResult, Sourc
 
 IR_VERSION = "2.0"
 ADAPTER_VERSION = "2.0"
+# These relationships must survive as one evidence unit. Reading order links
+# independent units and never makes an entire document an atomic chunk.
+ATOMIC_RELATION_KINDS = frozenset(
+    {"contains", "header_value", "row_value", "unit_value", "period_value", "formula_value"}
+)
 Digest = Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")]
 Coordinate = Annotated[float, Field(strict=True)]
 
