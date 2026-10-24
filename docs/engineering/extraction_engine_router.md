@@ -50,6 +50,19 @@ same registry. Production verified-IR admission requires trusted application-own
 engine/reviewer allowlists and a source/tenant/version-bound independent review.
 No upload request grants PDF trust, and native/default PDF admission stays closed.
 
+Verified-IR chunking reports `complete`, `partial_review_required`, or `blocked`.
+Only `complete` may persist canonical chunks. Rejected/unreviewed elements,
+held oversized units, or a partial document keep diagnostic artifacts but cannot
+silently publish the remaining prefix. Failed reprocessing preserves existing
+ACTIVE data. Current validator/chunker pins are 2.1/2.2; historical pins remain
+readable and require explicit compatible reprocessing rather than silent execution.
+Index preparation and transactional ACTIVE cutover also reject obsolete verified-IR
+routes/chunks, including candidates verified before rollout. Existing records are
+retained; this guard does not rewrite or retrospectively certify earlier ACTIVE data.
+Containment and semantic relations remain atomic; reading-order links connect
+independent units. Canonical text provenance labels rendered offsets separately
+from an optional native TextBlock offset map; no native offsets are inferred for IR.
+
 The prototype `extract_routed -> ExtractionResult` API is deliberately superseded
 by the single versioned IR API. Native callers needing the original result use
 `.native`; candidate observations remain distinct from approved searchable chunks.
@@ -75,5 +88,5 @@ Downgrade/re-upgrade checks use only task-owned disposable databases.
 Sources: `Doclens_AI-architecture.md`, `DocLens_AI_Extraction_Strategy.md`,
 `DocLens_AI_ML_Quality_Strategy.md`, `DocLens_AI_Project_Goals_and_Quality_Policy-1.md`.
 Current verification and prototype behavior mapping:
-`extraction_consolidation_20261024.md`. Historical integration execution:
+`audit_closure_20261024.md`. Historical integration execution:
 `extraction_integration_20261022.md`.
