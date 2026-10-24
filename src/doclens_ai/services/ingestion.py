@@ -312,6 +312,8 @@ class IngestionService:
                 or route.preprocessing != snapshot.route.preprocessing
                 or route.ir_version != snapshot.route.ir_version
                 or route.adapter_version != snapshot.route.adapter_version
+                or route.required_capabilities
+                != getattr(snapshot.route, "required_capabilities", ())
             ):
                 raise ArtifactError("artifact_extraction_configuration_mismatch")
             chunks = await self._chunk_ir(source, snapshot.reconciled)
@@ -407,7 +409,8 @@ class IngestionService:
                 )
             for pin in route.engines if require_engines else ():
                 self._registry.resolve(
-                    pin, DocumentFormat(_SUFFIX_BY_CONTENT_TYPE[source.content_type][1:])
+                    pin, DocumentFormat(_SUFFIX_BY_CONTENT_TYPE[source.content_type][1:]),
+                    require=frozenset(route.required_capabilities),
                 )
         except (ValueError, KeyError):
             valid_route = False

@@ -7,7 +7,9 @@ No candidate, dependency download, fallback or preprocessing is implicit.
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import asdict, dataclass
+from enum import StrEnum
 from pathlib import Path
 from typing import Literal, Protocol
 
@@ -28,6 +30,13 @@ from doclens_ai.extraction.ir_validation import VALIDATOR_VERSION, canonical_dig
 from doclens_ai.extraction.limits import ExtractionLimits
 from doclens_ai.extraction.models import DocumentFormat
 from doclens_ai.extraction.runtime import extraction_runtime_manifest
+
+
+class EngineCapability(StrEnum):
+    NATIVE_TEXT = "native_text"
+    STRUCTURED_TABLES = "structured_tables"
+    SPATIAL_LOCATORS = "spatial_locators"
+    OCR = "ocr"
 
 
 class EnginePin(Contract):
@@ -52,6 +61,7 @@ class EnginePin(Contract):
 
 class StoredEngineRouteV1(Contract):
     """Exact historical snapshot contract; never infer new execution controls."""
+
     version: Literal["1.0"] = "1.0"
     engines: tuple[EnginePin, ...] = Field(min_length=1)
     runtime_manifest_json: str
@@ -88,10 +98,23 @@ class StoredEngineRouteV1(Contract):
         return canonical_digest(self.model_dump(mode="json"))
 
 
-class EngineRoute(StoredEngineRouteV1):
+class StoredEngineRouteV1_1(StoredEngineRouteV1):
+    """Historical bounded route; retain its original fields and fingerprint."""
+
     version: Literal["1.1"] = "1.1"
     executor_version: Literal["1.0"] = EXECUTOR_VERSION
     execution_budget: ExecutionBudget = Field(default_factory=ExecutionBudget)
+
+
+class EngineRoute(StoredEngineRouteV1_1):
+    version: Literal["1.2"] = "1.2"
+    required_capabilities: tuple[EngineCapability, ...] = ()
+
+    @model_validator(mode="after")
+    def capabilities(self) -> EngineRoute:
+        if self.required_capabilities != tuple(sorted(set(self.required_capabilities))):
+            raise ValueError("required capabilities must be unique and in canonical order")
+        return self
 
 
 @dataclass(frozen=True)
@@ -100,6 +123,23 @@ class EngineDescriptor:
     revision: str
     implementation_sha256: str
     formats: frozenset[DocumentFormat]
+    capabilities: frozenset[EngineCapability] = frozenset()
+
+    def __post_init__(self) -> None:
+        if (
+            not isinstance(self.name, str)
+            or not self.name.strip()
+            or not isinstance(self.revision, str)
+            or not self.revision.strip()
+            or not isinstance(self.implementation_sha256, str)
+            or re.fullmatch(r"[0-9a-f]{64}", self.implementation_sha256) is None
+            or not isinstance(self.formats, frozenset)
+            or not self.formats
+            or any(not isinstance(fmt, DocumentFormat) for fmt in self.formats)
+            or not isinstance(self.capabilities, frozenset)
+            or any(not isinstance(capability, EngineCapability) for capability in self.capabilities)
+        ):
+            raise ValueError("invalid extraction engine descriptor")
 
 
 class ExtractionEngine(Protocol):
@@ -123,6 +163,7 @@ class NativeEngine:
             "1.1",
             canonical_digest(extraction_runtime_manifest()),
             frozenset(DocumentFormat),
+            frozenset({EngineCapability.NATIVE_TEXT}),
         )
 
     def extract(self, source: Path, *, options_json: str) -> DocumentIR:
@@ -148,15 +189,31 @@ class NativeEngine:
 
 class EngineRegistry:
     def __init__(self, engines: tuple[ExtractionEngine, ...] = ()) -> None:
-        self._engines = {}
+        self._engines: dict[tuple[str, str, str], ExtractionEngine] = {}
         for engine in engines:
-            descriptor = engine.descriptor
-            key = (descriptor.name, descriptor.revision, descriptor.implementation_sha256)
-            if key in self._engines or not descriptor.formats:
-                raise EngineRoutingError("duplicate or invalid engine registration")
-            self._engines[key] = engine
+            self.register(engine)
 
-    def resolve(self, pin: EnginePin, fmt: DocumentFormat) -> ExtractionEngine:
+    def register(self, engine: ExtractionEngine) -> None:
+        """Application-owned exact-pin allowlist; registration never grants evidence trust."""
+        descriptor = engine.descriptor
+        if not isinstance(descriptor, EngineDescriptor):
+            raise EngineRoutingError("invalid engine registration")
+        key = (descriptor.name, descriptor.revision, descriptor.implementation_sha256)
+        if key in self._engines:
+            raise EngineRoutingError("duplicate engine registration")
+        self._engines[key] = engine
+
+    @property
+    def descriptors(self) -> tuple[EngineDescriptor, ...]:
+        return tuple(engine.descriptor for engine in self._engines.values())
+
+    def resolve(
+        self,
+        pin: EnginePin,
+        fmt: DocumentFormat,
+        *,
+        require: frozenset[EngineCapability] = frozenset(),
+    ) -> ExtractionEngine:
         engine = self._engines.get((pin.name, pin.revision, pin.implementation_sha256))
         if engine is None:
             raise EngineRoutingError("exact engine pin is unavailable")
@@ -167,10 +224,12 @@ class EngineRegistry:
             pin.implementation_sha256,
         ) or fmt not in descriptor.formats:
             raise EngineRoutingError("engine identity or supported format changed")
+        if not require.issubset(descriptor.capabilities):
+            raise EngineRoutingError("extraction engine lacks required capabilities")
         return engine
 
     def extract(self, path: Path, *, route: EngineRoute) -> tuple[DocumentIR, ...]:
-        fmt = DocumentFormat(path.suffix.lstrip(".").lower())
+        fmt = select_format(path)
         if (
             route.preprocessing
             or route.runtime_manifest_json
@@ -181,7 +240,10 @@ class EngineRegistry:
         ):
             raise EngineRoutingError("unsupported preprocessing or contract version")
         # Resolve all pins before performing any extraction: no partial fallback.
-        selected = [(pin, self.resolve(pin, fmt)) for pin in route.engines]
+        selected = [
+            (pin, self.resolve(pin, fmt, require=frozenset(route.required_capabilities)))
+            for pin in route.engines
+        ]
         outputs = []
         for pin, engine in selected:
             ir = DocumentIR.model_validate_json(
@@ -195,6 +257,14 @@ class EngineRegistry:
                 raise EngineRoutingError("engine observation provenance mismatch")
             outputs.append(ir)
         return tuple(outputs)
+
+
+def select_format(path: str | Path) -> DocumentFormat:
+    """Strict extension selection; the selected parser validates the actual bytes."""
+    try:
+        return DocumentFormat(Path(path).suffix.lstrip(".").lower())
+    except ValueError as exc:
+        raise EngineRoutingError("unsupported extraction document format") from exc
 
 
 def default_registry() -> EngineRegistry:

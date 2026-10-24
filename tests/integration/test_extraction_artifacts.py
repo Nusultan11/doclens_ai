@@ -11,7 +11,7 @@ import pytest
 from sqlalchemy import select, text
 from sqlalchemy.exc import IntegrityError
 
-from doclens_ai.extraction.engines import EngineRegistry, EngineRoute
+from doclens_ai.extraction.engines import EngineCapability, EngineRegistry, EngineRoute
 from doclens_ai.extraction.ir import Issue, TextElement
 from doclens_ai.extraction.models import SourceLocation
 from doclens_ai.models import CanonicalChunk, ExtractionArtifact, ProcessingJob, ProcessingRun
@@ -308,8 +308,9 @@ def test_failed_staging_cleanup_preserves_raw_and_is_retryable(
     asyncio.run(exercise())
 
 
+@pytest.mark.parametrize("change_requirements", [False, True])
 def test_rechunk_existing_artifact_with_new_pinned_budget_and_no_engine(
-    migrated_database_url, test_storage_settings, tmp_path
+    migrated_database_url, test_storage_settings, tmp_path, change_requirements
 ):
     path = fixture_path(tmp_path)
 
@@ -343,6 +344,10 @@ def test_rechunk_existing_artifact_with_new_pinned_budget_and_no_engine(
                         )
                     }
                 )
+                if change_requirements:
+                    route = route.model_copy(
+                        update={"required_capabilities": (EngineCapability.OCR,)}
+                    )
                 run = ProcessingRun(
                     id=uuid4(),
                     operation_id=uuid4(),
@@ -366,6 +371,20 @@ def test_rechunk_existing_artifact_with_new_pinned_budget_and_no_engine(
                 )
             service._registry = EngineRegistry()
             claim = await coordinator.claim_next(worker_id="rechunk-worker")
+            if change_requirements:
+                with pytest.raises(IngestionFailure):
+                    await service.ingest_from_artifact(
+                        claim.processing_run_id,
+                        record.id,
+                        worker_id="rechunk-worker",
+                        lease_token=claim.lease_token,
+                    )
+                async with factory() as session:
+                    chunks = tuple(await session.scalars(select(CanonicalChunk)))
+                    assert (
+                        len(chunks) == 1 and chunks[0].processing_run_id == first.processing_run_id
+                    )
+                return
             await service.ingest_from_artifact(
                 claim.processing_run_id,
                 record.id,

@@ -7,7 +7,12 @@ from dataclasses import replace
 import pytest
 from sqlalchemy import select
 
-from doclens_ai.extraction.engines import EngineRegistry, EngineRoute, default_route
+from doclens_ai.extraction.engines import (
+    EngineCapability,
+    EngineRegistry,
+    EngineRoute,
+    default_route,
+)
 from doclens_ai.extraction.ir import SourceIdentity
 from doclens_ai.extraction.ir_validation import EvidencePolicy, evidence_policy_fingerprint
 from doclens_ai.extraction.reconciliation import reconcile
@@ -84,8 +89,9 @@ async def prepare_engine_run(factory, storage, keys, engine, path, *, route_over
 
 
 @pytest.mark.parametrize("engine_class", [FakeWordsIR, FakeRegionsIR])
+@pytest.mark.parametrize("require_ocr", [False, True])
 def test_fake_engine_routes_raw_pdf_to_canonical_chunks(
-    migrated_database_url, test_storage_settings, tmp_path, engine_class
+    migrated_database_url, test_storage_settings, tmp_path, engine_class, require_ocr
 ):
     path = tmp_path / "fixture.pdf"
     path.write_bytes(b"%PDF-1.7\nsynthetic engine source\n%%EOF")
@@ -96,8 +102,19 @@ def test_fake_engine_routes_raw_pdf_to_canonical_chunks(
             storage,
             keys,
         ):
+            engine = engine_class()
+            engine.descriptor = replace(
+                engine.descriptor, capabilities=frozenset({EngineCapability.OCR})
+            )
             uploaded, service, _, expected, _, _ = await prepare_engine_run(
-                factory, storage, keys, engine_class(), path
+                factory,
+                storage,
+                keys,
+                engine,
+                path,
+                route_overrides={
+                    "required_capabilities": (EngineCapability.OCR,) if require_ocr else ()
+                },
             )
             claim = await ProcessingCoordinator(factory).claim_next(worker_id="fake-worker")
             first = await service.ingest(
@@ -117,7 +134,9 @@ def test_fake_engine_routes_raw_pdf_to_canonical_chunks(
     asyncio.run(exercise())
 
 
-@pytest.mark.parametrize("failure", ["missing_review", "wrong_tenant", "missing_engine"])
+@pytest.mark.parametrize(
+    "failure", ["missing_review", "wrong_tenant", "missing_engine", "missing_capability"]
+)
 def test_fake_engine_failures_never_publish_chunks(
     migrated_database_url, test_storage_settings, tmp_path, failure
 ):
@@ -131,7 +150,14 @@ def test_fake_engine_failures_never_publish_chunks(
             keys,
         ):
             _, service, reviews, _, _, _ = await prepare_engine_run(
-                factory, storage, keys, FakeWordsIR(), path
+                factory,
+                storage,
+                keys,
+                FakeWordsIR(),
+                path,
+                route_overrides={"required_capabilities": (EngineCapability.OCR,)}
+                if failure == "missing_capability"
+                else None,
             )
             if failure == "missing_review":
                 reviews.clear()
@@ -140,13 +166,15 @@ def test_fake_engine_failures_never_publish_chunks(
                 reviews["fixture-review-1"] = replace(
                     r, source=r.source.model_copy(update={"workspace_id": "other-tenant"})
                 )
-            else:
+            elif failure == "missing_engine":
                 service._registry = EngineRegistry()
             claim = await ProcessingCoordinator(factory).claim_next(worker_id="fake-worker")
             with pytest.raises(IngestionFailure):
                 await service.ingest(
                     claim.processing_run_id, worker_id="fake-worker", lease_token=claim.lease_token
                 )
+            if failure == "missing_capability":
+                assert service.executor.last_pid is None
             async with factory() as session:
                 assert not tuple(await session.scalars(select(CanonicalChunk)))
 
