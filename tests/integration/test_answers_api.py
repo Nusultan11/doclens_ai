@@ -61,7 +61,9 @@ async def test_authenticated_numeric_fact_fidelity(
             ctx.application.state.retrieval_service, NumericGenerator(), RagSettings(_env_file=None)
         )
         response = await ctx.client.post(
-            "/api/v1/answers", json=body(ctx), headers=ctx.authorization(ctx.viewer_subject)
+            "/api/v1/answers",
+            json=body(ctx, question="What was the net mass for 2026?"),
+            headers=ctx.authorization(ctx.viewer_subject),
         )
         assert response.status_code == 200
         assert response.json()["answerable"] is supported
@@ -104,7 +106,7 @@ async def test_authenticated_unsupported_numeric_answer_is_refused(
 def body(context, **changes):
     return {
         "workspace_id": str(context.workspace_id),
-        "question": "Controlled question?",
+        "question": "What does the evidence say?",
         **changes,
     }
 

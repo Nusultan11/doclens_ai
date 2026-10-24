@@ -87,7 +87,9 @@ async def test_real_retrieval_grounding_and_invalid_output_isolation(
         _, retrieval, user, _, _, _, revisions = ctx
         generator = EvidenceGenerator(mutation=mutation)
         service = RagService(retrieval, generator, RagSettings(_env_file=None))
-        request = AnswerInput(workspace_id=revisions[0].workspace_id, question="Fixture question?")
+        request = AnswerInput(
+            workspace_id=revisions[0].workspace_id, question="What does the evidence say?"
+        )
         result = await service.answer(user_id=user.id, request=request)
         assert result.response.answerable == (mutation is None)
         if mutation is None:
@@ -159,7 +161,9 @@ async def test_generation_time_pg_changes_invalidate_whole_answer(
             before_return=change, mutation="refuse" if mutation == "revoked_refusal" else None
         )
         service = RagService(retrieval, generator, RagSettings(_env_file=None))
-        request = AnswerInput(workspace_id=revisions[0].workspace_id, question="Fixture question?")
+        request = AnswerInput(
+            workspace_id=revisions[0].workspace_id, question="What does the evidence say?"
+        )
         if mutation.startswith("revoked"):
             with pytest.raises(SearchForbidden):
                 await service.answer(user_id=user.id, request=request)

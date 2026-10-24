@@ -315,7 +315,7 @@ class RagService:
                 raise ValueError("generation too long")
             output = ModelAnswer.model_validate(strict_json(raw))
             citations = validate_citations(output, context)
-            validate_claim_support(output, context)
+            validate_claim_support(output, context, question=request.question)
         except (ValueError, TypeError, RecursionError):
             invalid = True
         # Revalidate ALL packed evidence, even on refusal/invalid output; no partial release.

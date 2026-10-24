@@ -227,12 +227,25 @@ Character caps do not establish a tokenizer window. A configured
 special tokens. The packer reserves `RAG_MAX_OUTPUT_TOKENS`. Missing/failing counters
 fail closed; the default HTTP adapter does not invent a tokenizer or token ratio.
 
-Accepted answer spans must be literal quoted text. Number-bearing answers use a
-conservative complete-fact check against the whole authorized chunk, retaining
-signs, precision, units, formulas and periods. Only explicitly recognized bare
-value labels may be omitted. Cropped numerical facts, ambiguous composition and
-unsupported paraphrases return the existing `insufficient_evidence` refusal.
-This is a fidelity guard, not general semantic entailment or production qualification.
+Answer support is checked against complete authorized chunks and the original
+question. Explicit quotation requests return complete source text as document data;
+embedded instructions gain no authority. Fact answers require a supported field or
+declarative clause whose subject and requested scope match the question. Predicate
+elision retains negation and every condition; a small EN/RU/KK permission grammar
+also accepts equivalent predicates such as `not allowed` / `prohibited`, with
+identical qualifiers. Recognized conflicting facts for the requested subject/scope
+are refused. Every citation must cover the whole answer and quote the whole chunk.
+
+Number-bearing answers additionally retain the existing literal complete-fact
+check, preserving signs, precision, units, formulas and periods. Only recognized
+bare value labels may be omitted; permission paraphrases cannot bypass this check.
+Unknown question/clause constructions, multi-sentence or multiline fact reasoning,
+partial source quotes, ambiguous composition and unverified paraphrases return
+`insufficient_evidence`. Explicit complete quotations remain available for such
+source text. These bounded support rules deliberately trade some answer coverage
+for refusal; they do not establish universal entailment, multilingual quality or
+QG-08/09 production qualification. Final ACL/ACTIVE revalidation still applies to
+all packed sources on accepted answers, refusals and invalid output.
 
 The endpoint/model are placeholders. Use an explicit reachable private/loopback IP;
 DNS names, public endpoints, redirects and environment proxies are rejected.
