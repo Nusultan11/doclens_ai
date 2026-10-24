@@ -5,6 +5,10 @@ three authored synthetic, born-digital, single-page PDFs. It does not upload the
 original corpus, private Gold, repository, credentials, or production dependencies.
 These controls are technical compatibility checks, not approved extraction Gold.
 
+The original bundled remote runner was removed by the owner. Staging now requires
+an explicit `--source` pointing to a separately reviewed standalone script; it does
+not restore the retired runner. The frozen R0 results remain historical.
+
 `extraction_registry.json` freezes the selected package/model revisions and weight
 hashes. Each kernel installs into `/tmp/extraction-env`, stages public models in
 `/tmp/extraction-models`, and processes cases sequentially. The uploaded directory
@@ -16,7 +20,7 @@ this is not an OS egress sandbox. No external inference service is configured.
 From the repository root, create a **new** directory and unique run ID:
 
 ```powershell
-.venv/Scripts/python.exe -m tools.kaggle_gpu.extraction_stage docling evaluation-output/extraction-campaign-20261023/kaggle/NEW-STAGE --run-id UNIQUE-RUN-ID
+.venv/Scripts/python.exe -m tools.kaggle_gpu.extraction_stage docling evaluation-output/extraction-campaign-20261023/kaggle/NEW-STAGE --run-id UNIQUE-RUN-ID --source PATH_TO_REVIEWED_RUNNER.py
 kaggle kernels push -p evaluation-output/extraction-campaign-20261023/kaggle/NEW-STAGE --accelerator NvidiaTeslaT4 --timeout 3900
 kaggle kernels status nurs2005/doclens-extraction-docling-r0
 kaggle kernels logs nurs2005/doclens-extraction-docling-r0

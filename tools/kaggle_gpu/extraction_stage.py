@@ -85,6 +85,9 @@ def main():
     )
     parser.add_argument("destination", type=Path)
     parser.add_argument("--run-id", required=True)
+    parser.add_argument(
+        "--source", type=Path, required=True, help="Explicit reviewed standalone runner"
+    )
     args = parser.parse_args()
     directory = Path(__file__).parent
     config = json.loads((directory / "extraction_registry.json").read_text())[args.candidate]
@@ -98,7 +101,7 @@ def main():
     }[args.candidate]
     print(
         configured_stage(
-            directory / "extraction_remote.py",
+            args.source,
             args.destination,
             config,
             slug=f"doclens-extraction-{label.lower()}-r0",
