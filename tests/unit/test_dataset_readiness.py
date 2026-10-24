@@ -67,6 +67,53 @@ def test_excludes_test_family_sibling_and_preserves_population():
     assert before == (reference.model_dump_json(), candidates.model_dump_json())
 
 
+def test_family_coverage_counts_connected_families_and_all_excluded_sources():
+    held = sample("e2-ref", "1", "reserved")
+    a = sample("e2-a", "2", "family-a").model_copy(
+        update={"languages": ("ru", "en"), "difficulty": ("scanned", "complex_tables")}
+    )
+    b = sample("e2-b", "3", "family-b").model_copy(
+        update={"languages": ("ru",), "related_families": ("family-a",), "difficulty": ("scanned",)}
+    )
+    denied = sample("e2-denied", "4", "family-c").model_copy(
+        update={
+            "languages": ("kk",),
+            "difficulty": ("scanned",),
+            "rights": a.rights.model_copy(update={"local_evaluation": None}),
+        }
+    )
+    report = readiness.isolation_report(corpus(held), corpus(a, b, denied), frozenset({"1" * 64}))
+    coverage = report["family_coverage"]
+    assert coverage["documents"] == 4 and coverage["families"] == 3
+    assert coverage["eligible_documents"] == 2 and coverage["eligible_families"] == 1
+    ru = coverage["facets"]["format.pdf.language.ru"]
+    assert ru == {"documents": 2, "families": 1, "eligible_documents": 2, "eligible_families": 1}
+    scan = coverage["facets"]["difficulty.scanned"]
+    assert scan == {"documents": 3, "families": 2, "eligible_documents": 2, "eligible_families": 1}
+    assert coverage["facets"]["format.pdf.language.mixed"]["families"] == 1
+    assert coverage["facets"]["format.pdf.language.kk"]["documents"] == 1
+    assert "format.pdf.language.kk" in coverage["missing_eligible_facets"]
+    assert "format.xlsx.language.en" in coverage["missing_eligible_facets"]
+    assert coverage["independent_gold"] == "NOT_EVALUATED"
+    assert coverage["family_completeness"] == "NOT_EVALUATED"
+
+
+def test_family_coverage_is_deterministic_metadata_only_and_preserves_unknowns():
+    held = sample("e2-ref", "1", "reserved")
+    absent = sample("e2-absent", "2", "other").model_copy(
+        update={"disposition": "unavailable", "original": None, "reasons": ("not_acquired",)}
+    )
+    before = absent.model_dump_json()
+    first = readiness.isolation_report(corpus(held), corpus(absent), frozenset({"1" * 64}))
+    second = readiness.isolation_report(corpus(absent, held), corpus(), frozenset({"1" * 64}))
+    assert first["family_coverage"] == second["family_coverage"]
+    coverage = first["family_coverage"]
+    assert coverage["facets"]["format.unknown"]["documents"] == 1
+    assert coverage["facets"]["language.unknown"]["documents"] == 2
+    assert coverage["eligible_documents"] == 0
+    assert absent.model_dump_json() == before
+
+
 @pytest.mark.parametrize("binding", ["related_family", "identical_source", "normalized_text"])
 def test_propagates_test_reservations_through_existing_family_components(binding):
     reference = sample("e2-ref", "1", "test-family")

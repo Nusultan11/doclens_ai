@@ -21,6 +21,64 @@ from doclens_ai.extraction.fidelity_gold import fingerprint
 ROOT = Path(__file__).resolve().parents[2]
 
 
+def family_coverage(
+    samples: tuple[v2.Sample, ...], components: dict[str, str], eligible: set[str]
+) -> dict:
+    """Count declared coverage at document and connected-family grains, without RAW I/O.
+
+    Eligibility is the enclosing dev-isolation decision, not independent review,
+    source integrity or permission for annotation/training/cloud processing.
+    A zero means missing declared eligible coverage, never a measured quality failure.
+    """
+    formats = ("pdf", "docx", "xlsx", "unknown")
+    languages = {"ru", "kk", "en", "mixed", "unknown"}
+    tags = {}
+    for sample in samples:
+        declared = {language.split("-")[0] for language in sample.languages}
+        if len(declared - {"unknown", "other"}) > 1:
+            declared.add("mixed")
+        languages.update(declared)
+        tags[sample.sample_id] = declared
+    facets: dict[str, set[str]] = {"format." + fmt: set() for fmt in formats}
+    facets.update({"language." + lang: set() for lang in sorted(languages)})
+    facets.update(
+        {f"format.{fmt}.language.{lang}": set() for fmt in formats for lang in sorted(languages)}
+    )
+    for sample in samples:
+        identity = sample.sample_id
+        fmt = sample.original.format if sample.original else "unknown"
+        if fmt not in formats:
+            fmt = "unknown"
+        facets["format." + fmt].add(identity)
+        for lang in tags[identity]:
+            facets["language." + lang].add(identity)
+            facets[f"format.{fmt}.language.{lang}"].add(identity)
+        for difficulty in sample.difficulty or ("unknown",):
+            facets.setdefault("difficulty." + difficulty, set()).add(identity)
+
+    def counts(ids: set[str]) -> dict[str, int]:
+        selected = ids & eligible
+        return {
+            "documents": len(ids),
+            "families": len({components[i] for i in ids}),
+            "eligible_documents": len(selected),
+            "eligible_families": len({components[i] for i in selected}),
+        }
+
+    return {
+        "scope": "declared_metadata_and_dev_isolation_only",
+        **counts(set(components)),
+        "facets": {name: counts(ids) for name, ids in sorted(facets.items())},
+        "missing_eligible_facets": sorted(
+            name for name, ids in facets.items() if not ids & eligible
+        ),
+        "overlap_rule": "Facets overlap; document/family counts must not be summed.",
+        "verified_language": "NOT_EVALUATED",
+        "family_completeness": "NOT_EVALUATED",
+        "independent_gold": "NOT_EVALUATED",
+    }
+
+
 def isolation_report(
     reference: v2.Corpus, candidates: v2.Corpus, held_out_sha256: frozenset[str]
 ) -> dict:
@@ -69,7 +127,7 @@ def isolation_report(
     eligible = [r["sample_id"] for r in rows if r["development_eligible_against_test_families"]]
     excluded = [r["sample_id"] for r in rows if not r["development_eligible_against_test_families"]]
     return {
-        "version": "dataset-dev-isolation-v1",
+        "version": "dataset-dev-isolation-v2",
         "scope": "declared_family_isolation_not_independent_review_or_source_integrity",
         "reference_fingerprint": fingerprint(reference.model_dump(mode="json")),
         "candidate_fingerprint": fingerprint(candidates.model_dump(mode="json")),
@@ -81,6 +139,7 @@ def isolation_report(
         "candidate_eligible": len(candidate_ids & set(eligible)),
         "candidate_excluded": len(candidate_ids & set(excluded)),
         "independent_gold": "NOT_EVALUATED",
+        "family_coverage": family_coverage(samples, components, set(eligible)),
         "rows": rows,
     }
 
