@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
@@ -10,12 +11,14 @@ from uuid import UUID, uuid4
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from doclens_ai.chunking.ir import IR_CHUNKER_VERSION
 from doclens_ai.chunking.models import (
     ChunkingConfig,
     ChunkingStrategy,
     config_as_dict,
 )
 from doclens_ai.extraction.engines import EngineRoute, default_route
+from doclens_ai.extraction.ir_validation import VALIDATOR_VERSION
 from doclens_ai.extraction.runtime import extraction_runtime_manifest
 from doclens_ai.models import (
     CanonicalChunk,
@@ -47,6 +50,30 @@ class LeaseOwnershipError(RuntimeError):
 
 class InvalidProcessingTransition(RuntimeError):
     pass
+
+
+def _require_current_ir_publication(run: ProcessingRun, chunker_versions: Iterable[str]) -> None:
+    """Old IR subsets have no complete-admission guarantee; never newly activate them.
+
+    Historical native/unpinned runs keep their established contract. IR runs must
+    be explicitly reprocessed through the current complete-admission boundary.
+    This checks execution provenance, not factual quality or independent review.
+    """
+    payload = run.extraction_route
+    if payload is None or payload.get("mode", "native") == "native":
+        return
+    try:
+        route = EngineRoute.model_validate(payload)
+    except ValueError:
+        raise InvalidProcessingTransition(
+            "publication requires complete current IR evidence"
+        ) from None
+    if (
+        route.validator_version != VALIDATOR_VERSION
+        or route.chunker_version != IR_CHUNKER_VERSION
+        or set(chunker_versions) != {IR_CHUNKER_VERSION}
+    ):
+        raise InvalidProcessingTransition("publication requires complete current IR evidence")
 
 
 @dataclass(frozen=True, slots=True)
@@ -428,6 +455,7 @@ class ProcessingCoordinator:
                         CanonicalChunk.ordinal,
                         CanonicalChunk.chunk_identity,
                         CanonicalChunk.content_sha256,
+                        CanonicalChunk.chunker_version,
                     )
                     .where(CanonicalChunk.processing_run_id == run.id)
                     .order_by(CanonicalChunk.ordinal)
@@ -438,6 +466,7 @@ class ProcessingCoordinator:
                 or chunk_set_fingerprint(canonical) != revision.canonical_chunk_set_fingerprint
             ):
                 raise InvalidProcessingTransition("verified canonical chunk set changed")
+            _require_current_ir_publication(run, (chunk.chunker_version for chunk in canonical))
             active = await session.scalar(
                 select(IndexRevision)
                 .where(

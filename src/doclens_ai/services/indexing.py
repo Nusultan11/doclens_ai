@@ -34,11 +34,13 @@ from doclens_ai.models import (
 )
 from doclens_ai.models.index_revision import chunk_set_fingerprint
 from doclens_ai.services.processing import (
+    InvalidProcessingTransition,
     LeaseOwnershipError,
     ProcessingJobNotFoundError,
     _locked_job_and_run,
     _processing_now,
     _require_active_lease,
+    _require_current_ir_publication,
 )
 from doclens_ai.vector.qdrant import ProductionQdrant, VectorFailure, VectorPoint, point_id
 
@@ -242,6 +244,12 @@ class IndexingService:
                 for chunk in chunks
             ):
                 raise IndexingFailure(IndexingFailureCategory.DATA_INVALID, retryable=False)
+            try:
+                _require_current_ir_publication(run, (chunk.chunker_version for chunk in chunks))
+            except InvalidProcessingTransition:
+                raise IndexingFailure(
+                    IndexingFailureCategory.CONFIGURATION_MISMATCH, retryable=False
+                ) from None
             version, document = (
                 await session.execute(
                     select(DocumentVersion, Document)

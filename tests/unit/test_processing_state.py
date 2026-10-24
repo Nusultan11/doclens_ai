@@ -1,11 +1,39 @@
 from datetime import timedelta
+from types import SimpleNamespace
 
 import pytest
 
+from doclens_ai.chunking.ir import IR_CHUNKER_VERSION
+from doclens_ai.extraction.engines import EngineRoute, default_route
 from doclens_ai.services.processing import (
+    InvalidProcessingTransition,
     ProcessingPolicy,
+    _require_current_ir_publication,
     default_processing_configuration_fingerprint,
 )
+
+
+def test_current_ir_publication_requires_consistent_current_chunk_provenance():
+    route = EngineRoute(
+        engines=default_route().engines,
+        runtime_manifest_json=default_route().runtime_manifest_json,
+        mode="verified_ir",
+        chunker_version=IR_CHUNKER_VERSION,
+    )
+    run = SimpleNamespace(extraction_route=route.model_dump(mode="json"))
+    _require_current_ir_publication(run, (IR_CHUNKER_VERSION,))
+    for versions in [(), ("2.0",), (IR_CHUNKER_VERSION, "2.0")]:
+        with pytest.raises(InvalidProcessingTransition, match="complete current IR evidence"):
+            _require_current_ir_publication(run, versions)
+    for change in [{"validator_version": "2.0"}, {"chunker_version": "2.0"}, {"version": "1.1"}]:
+        old = SimpleNamespace(extraction_route=run.extraction_route | change)
+        with pytest.raises(InvalidProcessingTransition, match="complete current IR evidence"):
+            _require_current_ir_publication(old, (IR_CHUNKER_VERSION,))
+
+
+@pytest.mark.parametrize("route", [None, {"mode": "native", "version": "1.0"}])
+def test_historical_native_publication_contract_is_preserved(route):
+    _require_current_ir_publication(SimpleNamespace(extraction_route=route), ("1.3",))
 
 
 def test_default_processing_configuration_fingerprint_is_stable() -> None:
