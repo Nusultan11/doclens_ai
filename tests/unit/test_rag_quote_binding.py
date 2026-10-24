@@ -2,6 +2,7 @@
 
 import copy
 import hashlib
+import json
 from dataclasses import replace
 from uuid import UUID
 
@@ -219,10 +220,18 @@ def test_invalid_citation_ranges_and_contradictory_refusal_are_not_repaired():
         bind_quote_offsets(refusal, context)
 
 
-def test_truncation_uses_only_visible_prefix_and_never_hidden_suffix():
-    context = make_context(
-        "ALPHA " + "x" * 200 + " HIDDEN", settings=RagSettings(_env_file=None, max_chunk_chars=128)
-    )
+def test_historical_prefix_context_cannot_bind_a_hidden_suffix():
+    # The offline binder may inspect frozen historical contexts. Current packing
+    # excludes this whole chunk; explicitly retain the old boundary as a negative.
+    from doclens_ai.services.rag import EvidenceContext
+
+    complete = make_context("ALPHA " + "x" * 200 + " HIDDEN")
+    prefix = complete.texts[0][:128]
+    messages = [dict(message) for message in complete.messages]
+    data = json.loads(messages[1]["content"])
+    data["evidence"][0]["text"] = prefix
+    messages[1]["content"] = json.dumps(data)
+    context = EvidenceContext(complete.evidence, (prefix,), messages)
     assert "HIDDEN" in context.evidence[0].text and "HIDDEN" not in context.texts[0]
     with pytest.raises(ValueError, match="missing exact quote"):
         bind_quote_offsets(answer(context, "HIDDEN", [(0, "HIDDEN")]), context)

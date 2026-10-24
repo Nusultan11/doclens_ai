@@ -18,6 +18,9 @@ class RagSettings(BaseSettings):
     api_key: SecretStr | None = None
     temperature: float = Field(default=0, ge=0, le=2, allow_inf_nan=False)
     max_output_tokens: int = Field(default=1024, ge=64, le=4096)
+    # Optional measured window. Runtime must supply the matching trusted tokenizer;
+    # no character/token ratio is assumed when it is configured.
+    context_window_tokens: int | None = Field(default=None, ge=128, le=1048576)
     timeout_seconds: float = Field(default=60, gt=0, le=300, allow_inf_nan=False)
     queue_timeout_seconds: float = Field(default=1, gt=0, le=10, allow_inf_nan=False)
     concurrency: int = Field(default=1, ge=1, le=4)
@@ -73,4 +76,9 @@ class RagSettings(BaseSettings):
     def configured(self):
         if self.enabled and (self.endpoint is None or self.model_id is None):
             raise ValueError("local generator endpoint and model identity are required")
+        if (
+            self.context_window_tokens is not None
+            and self.context_window_tokens <= self.max_output_tokens
+        ):
+            raise ValueError("context window must leave space after the output reserve")
         return self

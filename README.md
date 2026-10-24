@@ -218,6 +218,22 @@ $env:RAG_MODEL_ID = 'EXACT_OPERATOR_CONFIGURED_MODEL_ID'
 docker compose -f compose.yaml -f compose.search.yaml -f compose.rag.yaml up --build -d
 ```
 
+Context packing includes complete canonical chunks or excludes them with an internal
+budget reason; it never sends a truncated prefix. If all candidates exceed the
+budget, the answer path returns `insufficient_evidence` without generation.
+Character caps do not establish a tokenizer window. A configured
+`RAG_CONTEXT_WINDOW_TOKENS` requires a trusted `token_counter` supplied through
+`build_rag_runtime`/`RagService`; it must count the complete model chat template and
+special tokens. The packer reserves `RAG_MAX_OUTPUT_TOKENS`. Missing/failing counters
+fail closed; the default HTTP adapter does not invent a tokenizer or token ratio.
+
+Accepted answer spans must be literal quoted text. Number-bearing answers use a
+conservative complete-fact check against the whole authorized chunk, retaining
+signs, precision, units, formulas and periods. Only explicitly recognized bare
+value labels may be omitted. Cropped numerical facts, ambiguous composition and
+unsupported paraphrases return the existing `insufficient_evidence` refusal.
+This is a fidelity guard, not general semantic entailment or production qualification.
+
 The endpoint/model are placeholders. Use an explicit reachable private/loopback IP;
 DNS names, public endpoints, redirects and environment proxies are rejected.
 Docker loopback addresses the API container. HTTPS must validate the IP certificate.

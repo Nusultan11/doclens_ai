@@ -28,7 +28,13 @@ pytestmark = [pytest.mark.integration, pytest.mark.storage]
 
 
 @asynccontextmanager
-async def _search_api_context(url, settings, *, initialize=True):
+async def _search_api_context(
+    url,
+    settings,
+    *,
+    initialize=True,
+    paragraph="Controlled authenticated search fixture paragraph.",
+):
     endpoint = os.getenv("TEST_QDRANT_URL")
     if not endpoint:
         pytest.skip("TEST_QDRANT_URL is not configured")
@@ -47,7 +53,7 @@ async def _search_api_context(url, settings, *, initialize=True):
                 document_id = request.json()["id"]
                 stream = io.BytesIO()
                 document = DocxDocument()
-                document.add_paragraph("Controlled authenticated search fixture paragraph.")
+                document.add_paragraph(paragraph)
                 document.add_table(rows=1, cols=2).cell(0, 0).text = "Controlled authorized table"
                 document.save(stream)
                 response = await context.client.post(

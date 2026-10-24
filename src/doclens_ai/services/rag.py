@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Literal
 from uuid import UUID, uuid4
@@ -12,7 +13,8 @@ from uuid import UUID, uuid4
 from pydantic import BaseModel, ConfigDict, Field, StrictBool, StrictStr, model_validator
 
 from doclens_ai.core.rag_config import RagSettings
-from doclens_ai.llm.provider import Generator, strict_json
+from doclens_ai.llm.provider import Generator, GeneratorUnavailable, strict_json
+from doclens_ai.services.answer_support import validate_claim_support
 from doclens_ai.services.retrieval import (
     RetrievalService,
     SearchInput,
@@ -125,24 +127,50 @@ class AnswerResponse(BaseModel):
 
 
 @dataclass(frozen=True, slots=True)
+class ExcludedEvidence:
+    chunk_id: UUID
+    reason: Literal["chunk_limit", "context_limit", "token_limit", "count_limit"]
+
+
+TokenCounter = Callable[[list[dict[str, str]]], int]
+
+
+@dataclass(frozen=True, slots=True)
 class EvidenceContext:
     evidence: tuple[VerifiedResult, ...]
     texts: tuple[str, ...]
     messages: list[dict[str, str]]
+    excluded: tuple[ExcludedEvidence, ...] = ()
 
 
-def pack_context(question, results, settings: RagSettings) -> EvidenceContext:
+def pack_context(
+    question: str,
+    results: tuple[VerifiedResult, ...] | list[VerifiedResult],
+    settings: RagSettings,
+    *,
+    token_counter: TokenCounter | None = None,
+) -> EvidenceContext:
     """Deterministic score/UUID order, exact-text dedupe, bounded serialized user JSON.
 
-    Prefix truncation is explicit; quotes must refer to the supplied prefix, never hidden suffixes.
-    The local generator tokenizer is unavailable here; these are characters, NOT token counts.
+    Treat every canonical chunk as indivisible, including its semantic relations.
+    Token budgets require a trusted counter for the complete serialized chat prompt,
+    including model-specific template/special tokens. Character caps are separate.
     """
     records, evidence, texts, identities, hashes = [], [], [], set(), set()
+    excluded = []
+    if settings.context_window_tokens is not None and token_counter is None:
+        raise GeneratorUnavailable()
 
     def serialize(items):
         return json.dumps(
             {"question": question, "evidence": items}, ensure_ascii=False, separators=(",", ":")
         )
+
+    def messages(items):
+        return [
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": serialize(items)},
+        ]
 
     for item in sorted(results, key=lambda h: (-h.score, str(h.chunk_id))):
         digest = hashlib.sha256(item.text.encode()).hexdigest()
@@ -150,37 +178,44 @@ def pack_context(question, results, settings: RagSettings) -> EvidenceContext:
             continue
         identities.add(item.chunk_id)
         hashes.add(digest)
+        reason = None
+        if len(evidence) == settings.max_evidence_chunks:
+            reason = "count_limit"
+        elif len(item.text) > settings.max_chunk_chars:
+            reason = "chunk_limit"
+        if reason:
+            excluded.append(ExcludedEvidence(item.chunk_id, reason))
+            continue
         record = {
             "chunk_id": str(item.chunk_id),
             "document_id": str(item.document_id),
             "document_version_id": str(item.document_version_id),
             "index_revision_id": str(item.index_revision_id),
             "source_locator": item.locator.model_dump(mode="json", exclude_none=True),
-            "text": "",
+            "text": item.text,
         }
-        low, high = 0, min(len(item.text), settings.max_chunk_chars)
-        while low < high:
-            middle = (low + high + 1) // 2
-            record["text"] = item.text[:middle]
-            if len(serialize([*records, record])) <= settings.max_context_chars:
-                low = middle
-            else:
-                high = middle - 1
-        record["text"] = item.text[:low]
-        if not record["text"].strip():
+        candidate = [*records, record]
+        if len(serialize(candidate)) > settings.max_context_chars:
+            excluded.append(ExcludedEvidence(item.chunk_id, "context_limit"))
             continue
+        if settings.context_window_tokens is not None:
+            try:
+                tokens = token_counter(messages(candidate))
+                if type(tokens) is not int or tokens < 0:
+                    raise ValueError("invalid token count")
+            except Exception:
+                raise GeneratorUnavailable() from None
+            if tokens + settings.max_output_tokens > settings.context_window_tokens:
+                excluded.append(ExcludedEvidence(item.chunk_id, "token_limit"))
+                continue
         records.append(record)
         evidence.append(item)
         texts.append(record["text"])
-        if len(records) == settings.max_evidence_chunks:
-            break
     return EvidenceContext(
         tuple(evidence),
         tuple(texts),
-        [
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": serialize(records)},
-        ],
+        messages(records),
+        tuple(excluded),
     )
 
 
@@ -232,8 +267,16 @@ class RagOutcome:
 
 
 class RagService:
-    def __init__(self, retrieval: RetrievalService, generator: Generator, settings: RagSettings):
+    def __init__(
+        self,
+        retrieval: RetrievalService,
+        generator: Generator,
+        settings: RagSettings,
+        *,
+        token_counter: TokenCounter | None = None,
+    ):
         self.retrieval, self.generator, self.settings = retrieval, generator, settings
+        self.token_counter = token_counter
 
     async def answer(self, *, user_id: UUID, request: AnswerInput) -> RagOutcome:
         started, request_id = time.perf_counter(), uuid4()
@@ -255,12 +298,16 @@ class RagService:
             )
 
         retrieved = await self.retrieval.search(user_id=user_id, request=request.search_input())
-        context = pack_context(request.question, retrieved.results, self.settings)
+        context = pack_context(
+            request.question, retrieved.results, self.settings, token_counter=self.token_counter
+        )
         if not context.evidence:
             await self.retrieval.revalidate(
                 user_id=user_id, workspace_id=request.workspace_id, evidence=()
             )
-            return finish(reason="no_relevant_context")
+            return finish(
+                reason="insufficient_evidence" if context.excluded else "no_relevant_context"
+            )
         raw = await self.generator.generate(context.messages)
         invalid, output, citations = False, None, []
         try:
@@ -268,6 +315,7 @@ class RagService:
                 raise ValueError("generation too long")
             output = ModelAnswer.model_validate(strict_json(raw))
             citations = validate_citations(output, context)
+            validate_claim_support(output, context)
         except (ValueError, TypeError, RecursionError):
             invalid = True
         # Revalidate ALL packed evidence, even on refusal/invalid output; no partial release.

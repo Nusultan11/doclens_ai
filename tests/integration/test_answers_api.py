@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from uuid import UUID, uuid4
 
 import pytest
@@ -15,6 +16,89 @@ from tests.integration.test_rag import EvidenceGenerator
 from tests.integration.test_search_api import _body, _search_api_context
 
 pytestmark = [pytest.mark.integration, pytest.mark.storage]
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "answer,supported",
+    [
+        ("-001.50 kg for 2026", True),
+        ("+001.50 kg for 2026", False),
+        ("-001.50 mg for 2026", False),
+        ("-001.50 kg for 2025", False),
+    ],
+)
+async def test_authenticated_numeric_fact_fidelity(
+    migrated_database_url, test_storage_settings, answer, supported
+):
+    class NumericGenerator(EvidenceGenerator):
+        async def generate(self, messages):
+            evidence = json.loads(messages[1]["content"])["evidence"]
+            item = next(row for row in evidence if "Net mass:" in row["text"])
+            return json.dumps(
+                {
+                    "answerable": True,
+                    "answer": answer,
+                    "reason": None,
+                    "citations": [
+                        {
+                            "chunk_id": item["chunk_id"],
+                            "document_version_id": item["document_version_id"],
+                            "quote": item["text"],
+                            "quote_start": 0,
+                            "quote_end": len(item["text"]),
+                            "answer_start": 0,
+                            "answer_end": len(answer),
+                        }
+                    ],
+                }
+            )
+
+    async with _search_api_context(
+        migrated_database_url, test_storage_settings, paragraph="Net mass: -001.50 kg for 2026."
+    ) as (ctx, _):
+        ctx.application.state.rag_service = RagService(
+            ctx.application.state.retrieval_service, NumericGenerator(), RagSettings(_env_file=None)
+        )
+        response = await ctx.client.post(
+            "/api/v1/answers", json=body(ctx), headers=ctx.authorization(ctx.viewer_subject)
+        )
+        assert response.status_code == 200
+        assert response.json()["answerable"] is supported
+        if supported:
+            assert response.json()["answer"] == answer and response.json()["citations"]
+        else:
+            assert response.json()["reason"] == "insufficient_evidence"
+            assert response.json()["answer"] is None and response.json()["citations"] == []
+
+
+@pytest.mark.anyio
+async def test_authenticated_unsupported_numeric_answer_is_refused(
+    migrated_database_url, test_storage_settings
+):
+    class UnsupportedGenerator(EvidenceGenerator):
+        async def generate(self, messages):
+            data = json.loads(await super().generate(messages))
+            assert all(
+                "999" not in item["text"] for item in json.loads(messages[1]["content"])["evidence"]
+            )
+            data["answer"] = "999 kg"
+            data["citations"][0]["answer_end"] = len(data["answer"])
+            return json.dumps(data)
+
+    async with _search_api_context(migrated_database_url, test_storage_settings) as (ctx, _):
+        ctx.application.state.rag_service = RagService(
+            ctx.application.state.retrieval_service,
+            UnsupportedGenerator(),
+            RagSettings(_env_file=None),
+        )
+        response = await ctx.client.post(
+            "/api/v1/answers", json=body(ctx), headers=ctx.authorization(ctx.viewer_subject)
+        )
+        assert response.status_code == 200
+        assert response.json()["answerable"] is False
+        assert response.json()["reason"] == "insufficient_evidence"
+        assert response.json()["answer"] is None and response.json()["citations"] == []
 
 
 def body(context, **changes):
