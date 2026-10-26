@@ -57,3 +57,35 @@ jobs:
           --deselect=tests/unit/test_pdf_review_visual.py::test_browser_rendered_mouse_selection
           --deselect=tests/unit/test_pdf_grid_proposals.py::test_grid_http_security_and_browser
           --deselect=tests/unit/test_pdf_proposal_review.py::test_browser_confirm_correct_reject_and_export
+
+  windows-research-controls:
+    name: Windows research-worker resource contracts (Python 3.12)
+    runs-on: windows-2022
+    timeout-minutes: 10
+    env:
+      PYTHONPATH: ${{ github.workspace }}
+      PYTHONDONTWRITEBYTECODE: "1"
+      HF_HUB_OFFLINE: "1"
+      TRANSFORMERS_OFFLINE: "1"
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Install application and research-contract test dependencies
+        run: python -m pip install -e ".[dev,eda]" psutil==7.1.0
+
+      # These six worker cases require actual Windows Job Objects. Keep their
+      # timeout, memory, crash, output and descendant-cleanup assertions intact;
+      # unsupported platforms exercise the fail-closed preflight instead.
+      - name: Windows resource limits and owned-process cleanup
+        run: >-
+          python -m pytest tests/unit/test_extraction_campaign.py -q
+          --strict-config --strict-markers
+          --basetemp=evaluation-output/ci-windows-research

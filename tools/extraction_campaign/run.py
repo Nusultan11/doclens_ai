@@ -39,13 +39,24 @@ def environment(python: Path) -> dict:
 def run_one(python: Path, job: dict, output: Path) -> dict:
     import psutil
 
-    from tools.extraction_campaign.resources import WindowsJob
+    from tools.extraction_campaign.resources import WindowsJob, windows_job_supported
 
     if output.exists() or not output.resolve().is_relative_to(ROOT / "evaluation-output"):
         raise ValueError("fresh_private_attempt_required")
     output.mkdir(parents=True)
     policy = job["policy"]
     write_new(output / "job.json", job)
+    if not windows_job_supported():
+        result = {
+            "status": "resource_blocked_before_start",
+            "reason": "windows_job_controls_unavailable",
+            "attempted_inference": False,
+            "wall_seconds": None,
+            "peak_tree_rss_bytes": None,
+            "exit_code": None,
+        }
+        write_new(output / "receipt.json", result)
+        return result
     if psutil.virtual_memory().available < policy.get("minimum_available_ram_bytes", 0):
         result = {
             "status": "resource_blocked_before_start",

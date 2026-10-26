@@ -9,6 +9,11 @@ import pytest
 from tools.extraction_campaign import adapters
 from tools.extraction_campaign.evidence import Observation, compare, exact_present, score
 
+requires_windows_job = pytest.mark.skipif(
+    sys.platform != "win32",
+    reason="Requires real Windows Job Object controls; covered by the Windows CI job",
+)
+
 
 @pytest.mark.parametrize("value", [False, "1", 11, float("nan")])
 def test_geometry_does_not_coerce_or_hide_invalid_coordinates(value):
@@ -217,6 +222,7 @@ def test_failed_observation_denominators_and_page_error_are_separate():
     assert compare(before, missing)["anchor_presence"]["status"] == "UNKNOWN"
 
 
+@requires_windows_job
 @pytest.mark.parametrize(
     "mode,expected",
     [
@@ -258,6 +264,7 @@ def test_actual_research_worker_bounds_and_cleanup(mode, expected):
         assert result["error_type"] == "MemoryError"
 
 
+@requires_windows_job
 def test_owned_auxiliary_processes_are_killed_when_worker_finishes():
     import json
     from uuid import uuid4
@@ -287,6 +294,49 @@ def test_owned_auxiliary_processes_are_killed_when_worker_finishes():
     assert result["status"] == "completed" and result["remaining_owned_processes"] == []
     child = json.loads((output / "child.json").read_text())["pid"]
     assert not psutil.pid_exists(child)
+
+
+def test_windows_job_platform_eligibility():
+    from tools.extraction_campaign.resources import windows_job_supported
+
+    assert windows_job_supported() is (sys.platform == "win32")
+
+
+def test_windows_job_rejects_unsupported_platform(monkeypatch):
+    from tools.extraction_campaign import resources
+
+    monkeypatch.setattr(resources, "windows_job_supported", lambda: False)
+    with pytest.raises(ValueError, match="^windows_job_controls_unavailable$"):
+        resources.WindowsJob(1, memory_bytes=256 * 1024**2, cpu_seconds=10)
+
+
+def test_research_runner_blocks_unsupported_platform_before_spawning(tmp_path, monkeypatch):
+    import json
+
+    from tools.extraction_campaign import resources, run
+
+    def unexpected_start(*args, **kwargs):
+        pytest.fail("Unsupported platforms must not create a worker or resource guard")
+
+    monkeypatch.setattr(resources, "windows_job_supported", lambda: False)
+    monkeypatch.setattr(resources, "WindowsJob", unexpected_start)
+    monkeypatch.setattr(run.subprocess, "Popen", unexpected_start)
+    monkeypatch.setattr(run, "ROOT", tmp_path)
+    output = tmp_path / "evaluation-output" / "unsupported"
+    job = {"candidate": "probe", "configuration": {"mode": "asyncio"}, "policy": {}}
+    result = run.run_one(Path(sys.executable), job, output)
+
+    assert result == {
+        "status": "resource_blocked_before_start",
+        "reason": "windows_job_controls_unavailable",
+        "attempted_inference": False,
+        "wall_seconds": None,
+        "peak_tree_rss_bytes": None,
+        "exit_code": None,
+    }
+    assert json.loads((output / "receipt.json").read_text()) == result
+    assert json.loads((output / "job.json").read_text()) == job
+    assert {path.name for path in output.iterdir()} == {"job.json", "receipt.json"}
 
 
 @pytest.mark.parametrize("name", ["../model", "/model", "C:/model", "a\\b", ""])

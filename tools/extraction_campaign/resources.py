@@ -7,6 +7,11 @@ import os
 from ctypes import wintypes as w
 
 
+def windows_job_supported() -> bool:
+    """Platform eligibility only; actual job creation and limit readback must still succeed."""
+    return os.name == "nt"
+
+
 class Basic(c.Structure):
     _fields_ = [
         ("process_time", c.c_longlong),
@@ -48,7 +53,7 @@ class Extended(c.Structure):
 
 class WindowsJob:
     def __init__(self, pid: int, *, memory_bytes: int, cpu_seconds: int, processes: int = 8):
-        if os.name != "nt" or min(pid, memory_bytes, cpu_seconds, processes) <= 0:
+        if not windows_job_supported() or min(pid, memory_bytes, cpu_seconds, processes) <= 0:
             raise ValueError("windows_job_controls_unavailable")
         api = c.WinDLL("kernel32", use_last_error=True)
         api.CreateJobObjectW.argtypes, api.CreateJobObjectW.restype = (
