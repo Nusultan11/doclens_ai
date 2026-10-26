@@ -235,6 +235,14 @@ elision retains negation and every condition; a small EN/RU/KK permission gramma
 also accepts equivalent predicates such as `not allowed` / `prohibited`, with
 identical qualifiers. Recognized conflicting facts for the requested subject/scope
 are refused. Every citation must cover the whole answer and quote the whole chunk.
+Predicate case/spacing normalization never changes qualifiers, unit symbols or
+typed identifiers (`mW` differs from `MW`). Explicit periods require a complete
+scalar/permission relation, in the value or field label; a matching year inside
+an exclusion or neighboring clause supplies no support. Ambiguous temporal
+counterparts for the same property/entity are refused. The bounded scalar grammar
+does not interpret arbitrary units, composite expressions, formulas or relative dates.
+Unknown case aliases of opaque field names/symbols are refused; casing alone does
+not identify a natural-language word. Known grammar words retain case equivalence.
 
 Number-bearing answers additionally retain the existing literal complete-fact
 check, preserving signs, precision, units, formulas and periods. Only recognized
