@@ -1,0 +1,2451 @@
+{
+  "schema": "doclens-semantic-binding-closure-v1",
+  "created_utc": "2026-10-26T13:44:46.453266+00:00",
+  "engineering_status": "PASS for scoped defect closure",
+  "branch": "main",
+  "baseline_head": "e9252f22e47b2560edc549ff7edd862a0efb6810",
+  "implementation_commit": {
+    "sha": "10b8294007e5e9d031fc2d455f6182510b87eeea",
+    "parent": "e9252f22e47b2560edc549ff7edd862a0efb6810",
+    "subject": "fix(rag): preserve symbols and bind temporal evidence"
+  },
+  "source_and_test_sha256": {
+    "README.md": "adea72d810b32375060572154ac2f79cdeb38a6e376b829772590b0fec7fb83f",
+    "src/doclens_ai/services/answer_support.py": "016282e667bf83a2b4f3f0d281a305d203df4f7527d69f6447d936e434228f92",
+    "tests/unit/test_answer_support.py": "2ca83d87aa9d172fd6e8738ff8db41d610f823105ae2777c4340f0143d5e79e2",
+    "tests/integration/test_answer_semantics.py": "8cf43160008d347913f5735b6329642eb47d740ade9e91e4abb2f3977e71748f"
+  },
+  "commands": {
+    "api-red": {
+      "command": "C:\\Users\\nurs\\doclens_ai\\.venv\\Scripts\\python.exe -B C:\\Users\\nurs\\doclens_ai\\evaluation-output\\semantic-binding-fix-20261024\\services.py C:\\Users\\nurs\\doclens_ai\\evaluation-output\\semantic-binding-fix-20261024\\test_independent_api.py -q --strict-config --strict-markers -p no:cacheprovider --basetemp=C:\\Users\\nurs\\doclens_ai\\evaluation-output\\semantic-binding-fix-20261024\\api-red-tmp --junitxml=C:\\Users\\nurs\\doclens_ai\\evaluation-output\\semantic-binding-fix-20261024\\api-red.xml --tb=short",
+      "exit_code": 1,
+      "seconds": 32.48399999999674,
+      "junit": [
+        {
+          "name": "pytest",
+          "errors": "0",
+          "failures": "3",
+          "skipped": "0",
+          "tests": "5",
+          "time": "29.999",
+          "timestamp": "2026-10-24T17:31:20.861176+05:00",
+          "hostname": "DESKTOP-9CGUR1M"
+        }
+      ]
+    },
+    "counterpart-review-red": {
+      "command": "C:\\Users\\nurs\\doclens_ai\\.venv\\Scripts\\python.exe -B -m pytest tests/unit/test_answer_support.py -q --strict-config --strict-markers -p no:cacheprovider --basetemp=C:\\Users\\nurs\\doclens_ai\\evaluation-output\\semantic-binding-fix-20261024\\counterpart-review-red-tmp --junitxml=C:\\Users\\nurs\\doclens_ai\\evaluation-output\\semantic-binding-fix-20261024\\counterpart-review-red.xml --tb=short",
+      "exit_code": 1,
+      "seconds": 4.64100000000326,
+      "junit": [
+        {
+          "name": "pytest",
+          "errors": "0",
+          "failures": "1",
+          "skipped": "0",
+          "tests": "133",
+          "time": "2.881",
+          "timestamp": "2026-10-24T21:43:41.614463+05:00",
+          "hostname": "DESKTOP-9CGUR1M"
+        }
+      ]
+    },
+    "format": {
+      "command": "C:\\Users\\nurs\\doclens_ai\\.venv\\Scripts\\python.exe -B -m ruff format --check src/doclens_ai/services/answer_support.py tests/unit/test_answer_support.py tests/integration/test_answer_semantics.py",
+      "exit_code": 0,
+      "seconds": 0.23499999998603016
+    },
+    "full-units-before-counterpart": {
+      "command": "C:\\Users\\nurs\\doclens_ai\\.venv\\Scripts\\python.exe -B -m pytest tests/unit -q --strict-config --strict-markers -p no:cacheprovider --basetemp=C:\\Users\\nurs\\doclens_ai\\evaluation-output\\semantic-binding-fix-20261024\\full-units-tmp --junitxml=C:\\Users\\nurs\\doclens_ai\\evaluation-output\\semantic-binding-fix-20261024\\full-units.xml --tb=short",
+      "exit_code": 0,
+      "seconds": 337.2809999999881,
+      "junit": [
+        {
+          "name": "pytest",
+          "errors": "0",
+          "failures": "0",
+          "skipped": "6",
+          "tests": "2372",
+          "time": "335.426",
+          "timestamp": "2026-10-24T21:37:24.460525+05:00",
+          "hostname": "DESKTOP-9CGUR1M"
+        }
+      ]
+    },
+    "full-units": {
+      "command": "C:\\Users\\nurs\\doclens_ai\\.venv\\Scripts\\python.exe -B -m pytest tests/unit -q --strict-config --strict-markers -p no:cacheprovider --basetemp=C:\\Users\\nurs\\doclens_ai\\evaluation-output\\semantic-binding-fix-20261024\\full-units-tmp --junitxml=C:\\Users\\nurs\\doclens_ai\\evaluation-output\\semantic-binding-fix-20261024\\full-units.xml --tb=short",
+      "exit_code": 0,
+      "seconds": 347.9219999999914,
+      "junit": [
+        {
+          "name": "pytest",
+          "errors": "0",
+          "failures": "0",
+          "skipped": "6",
+          "tests": "2376",
+          "time": "345.855",
+          "timestamp": "2026-10-24T21:49:56.558940+05:00",
+          "hostname": "DESKTOP-9CGUR1M"
+        }
+      ]
+    },
+    "integration-paused": {
+      "command": "C:\\Users\\nurs\\doclens_ai\\.venv\\Scripts\\python.exe -B C:\\Users\\nurs\\doclens_ai\\evaluation-output\\semantic-binding-fix-20261024\\services.py tests/integration/test_answer_semantics.py tests/integration/test_answers_api.py tests/integration/test_rag.py tests/integration/test_retrieval.py tests/integration/test_search_api.py C:\\Users\\nurs\\doclens_ai\\evaluation-output\\semantic-binding-fix-20261024\\semantic_probes.py C:\\Users\\nurs\\doclens_ai\\evaluation-output\\semantic-binding-fix-20261024\\test_independent_api.py -q --strict-config --strict-markers -p no:cacheprovider --basetemp=C:\\Users\\nurs\\doclens_ai\\evaluation-output\\semantic-binding-fix-20261024\\integration-tmp --junitxml=C:\\Users\\nurs\\doclens_ai\\evaluation-output\\semantic-binding-fix-20261024\\integration.xml --tb=short",
+      "exit_code": 1,
+      "seconds": 160492.187,
+      "junit": [
+        {
+          "name": "pytest",
+          "errors": "0",
+          "failures": "1",
+          "skipped": "0",
+          "tests": "114",
+          "time": "160491.322",
+          "timestamp": "2026-10-24T21:50:00.096927+05:00",
+          "hostname": "DESKTOP-9CGUR1M"
+        }
+      ]
+    },
+    "integration": {
+      "command": "C:\\Users\\nurs\\doclens_ai\\.venv\\Scripts\\python.exe -B C:\\Users\\nurs\\doclens_ai\\evaluation-output\\semantic-binding-fix-20261024\\services.py tests/integration/test_answer_semantics.py tests/integration/test_answers_api.py tests/integration/test_rag.py tests/integration/test_retrieval.py tests/integration/test_search_api.py C:\\Users\\nurs\\doclens_ai\\evaluation-output\\semantic-binding-fix-20261024\\semantic_probes.py C:\\Users\\nurs\\doclens_ai\\evaluation-output\\semantic-binding-fix-20261024\\test_independent_api.py -q --strict-config --strict-markers -p no:cacheprovider --basetemp=C:\\Users\\nurs\\doclens_ai\\evaluation-output\\semantic-binding-fix-20261024\\integration-tmp --junitxml=C:\\Users\\nurs\\doclens_ai\\evaluation-output\\semantic-binding-fix-20261024\\integration.xml --tb=short",
+      "exit_code": 0,
+      "seconds": 669.1720000000205,
+      "junit": [
+        {
+          "name": "pytest",
+          "errors": "0",
+          "failures": "0",
+          "skipped": "0",
+          "tests": "114",
+          "time": "665.226",
+          "timestamp": "2026-10-26T18:27:28.638019+05:00",
+          "hostname": "DESKTOP-9CGUR1M"
+        }
+      ]
+    },
+    "lease-repeat": {
+      "command": "C:\\Users\\nurs\\doclens_ai\\.venv\\Scripts\\python.exe -B C:\\Users\\nurs\\doclens_ai\\evaluation-output\\semantic-binding-fix-20261024\\services.py tests/integration/test_rag.py::test_generation_time_pg_changes_invalidate_whole_answer[deleted] -q --strict-config --strict-markers -p no:cacheprovider --basetemp=C:\\Users\\nurs\\doclens_ai\\evaluation-output\\semantic-binding-fix-20261024\\lease-repeat-tmp --junitxml=C:\\Users\\nurs\\doclens_ai\\evaluation-output\\semantic-binding-fix-20261024\\lease-repeat.xml --tb=short",
+      "exit_code": 0,
+      "seconds": 11.46899999998277,
+      "junit": [
+        {
+          "name": "pytest",
+          "errors": "0",
+          "failures": "0",
+          "skipped": "0",
+          "tests": "1",
+          "time": "7.808",
+          "timestamp": "2026-10-26T18:26:33.091381+05:00",
+          "hostname": "DESKTOP-9CGUR1M"
+        }
+      ]
+    },
+    "lint": {
+      "command": "C:\\Users\\nurs\\doclens_ai\\.venv\\Scripts\\python.exe -B -m ruff check src tests tools alembic",
+      "exit_code": 0,
+      "seconds": 0.26600000000325963
+    },
+    "review-red": {
+      "command": "C:\\Users\\nurs\\doclens_ai\\.venv\\Scripts\\python.exe -B -m pytest tests/unit/test_answer_support.py -q --strict-config --strict-markers -p no:cacheprovider --basetemp=C:\\Users\\nurs\\doclens_ai\\evaluation-output\\semantic-binding-fix-20261024\\review-red-tmp --junitxml=C:\\Users\\nurs\\doclens_ai\\evaluation-output\\semantic-binding-fix-20261024\\review-red.xml --tb=short",
+      "exit_code": 1,
+      "seconds": 3.0460000000020955,
+      "junit": [
+        {
+          "name": "pytest",
+          "errors": "0",
+          "failures": "3",
+          "skipped": "0",
+          "tests": "124",
+          "time": "1.915",
+          "timestamp": "2026-10-24T17:49:22.748119+05:00",
+          "hostname": "DESKTOP-9CGUR1M"
+        }
+      ]
+    },
+    "start": {
+      "command": "C:\\Users\\nurs\\doclens_ai\\.venv\\Scripts\\python.exe -B C:\\Users\\nurs\\doclens_ai\\evaluation-output\\semantic-binding-fix-20261024\\services.py start",
+      "exit_code": 0,
+      "seconds": 11.625
+    },
+    "stop": {
+      "command": "C:\\Users\\nurs\\doclens_ai\\.venv\\Scripts\\python.exe -B C:\\Users\\nurs\\doclens_ai\\evaluation-output\\semantic-binding-fix-20261024\\services.py stop",
+      "exit_code": 0,
+      "seconds": 3.5160000000032596
+    },
+    "symbol-review-red": {
+      "command": "C:\\Users\\nurs\\doclens_ai\\.venv\\Scripts\\python.exe -B -m pytest tests/unit/test_answer_support.py -q --strict-config --strict-markers -p no:cacheprovider --basetemp=C:\\Users\\nurs\\doclens_ai\\evaluation-output\\semantic-binding-fix-20261024\\symbol-review-red-tmp --junitxml=C:\\Users\\nurs\\doclens_ai\\evaluation-output\\semantic-binding-fix-20261024\\symbol-review-red.xml --tb=short",
+      "exit_code": 1,
+      "seconds": 3.937999999994645,
+      "junit": [
+        {
+          "name": "pytest",
+          "errors": "0",
+          "failures": "2",
+          "skipped": "0",
+          "tests": "129",
+          "time": "2.388",
+          "timestamp": "2026-10-24T17:59:17.914474+05:00",
+          "hostname": "DESKTOP-9CGUR1M"
+        }
+      ]
+    },
+    "targeted": {
+      "command": "C:\\Users\\nurs\\doclens_ai\\.venv\\Scripts\\python.exe -B -m pytest tests/unit/test_answer_support.py tests/unit/test_rag.py tests/unit/test_rag_safety.py tests/unit/test_rag_quote_binding.py tests/unit/test_citation_binding_candidate.py tests/unit/test_retrieval.py C:\\Users\\nurs\\doclens_ai\\evaluation-output\\semantic-binding-fix-20261024\\test_independent_probes.py -q --strict-config --strict-markers -p no:cacheprovider --basetemp=C:\\Users\\nurs\\doclens_ai\\evaluation-output\\semantic-binding-fix-20261024\\targeted-tmp --junitxml=C:\\Users\\nurs\\doclens_ai\\evaluation-output\\semantic-binding-fix-20261024\\targeted.xml --tb=short",
+      "exit_code": 0,
+      "seconds": 5.344000000011874,
+      "junit": [
+        {
+          "name": "pytest",
+          "errors": "0",
+          "failures": "0",
+          "skipped": "0",
+          "tests": "342",
+          "time": "3.841",
+          "timestamp": "2026-10-24T21:48:57.239183+05:00",
+          "hostname": "DESKTOP-9CGUR1M"
+        }
+      ]
+    },
+    "tense-review-red": {
+      "command": "C:\\Users\\nurs\\doclens_ai\\.venv\\Scripts\\python.exe -B -m pytest tests/unit/test_answer_support.py -q --strict-config --strict-markers -p no:cacheprovider --basetemp=C:\\Users\\nurs\\doclens_ai\\evaluation-output\\semantic-binding-fix-20261024\\tense-review-red-tmp --junitxml=C:\\Users\\nurs\\doclens_ai\\evaluation-output\\semantic-binding-fix-20261024\\tense-review-red.xml --tb=short",
+      "exit_code": 1,
+      "seconds": 3.875,
+      "junit": [
+        {
+          "name": "pytest",
+          "errors": "0",
+          "failures": "1",
+          "skipped": "0",
+          "tests": "131",
+          "time": "2.404",
+          "timestamp": "2026-10-24T18:01:08.833688+05:00",
+          "hostname": "DESKTOP-9CGUR1M"
+        }
+      ]
+    },
+    "unicode-review-red": {
+      "command": "C:\\Users\\nurs\\doclens_ai\\.venv\\Scripts\\python.exe -B -m pytest tests/unit/test_answer_support.py -q --strict-config --strict-markers -p no:cacheprovider --basetemp=C:\\Users\\nurs\\doclens_ai\\evaluation-output\\semantic-binding-fix-20261024\\unicode-review-red-tmp --junitxml=C:\\Users\\nurs\\doclens_ai\\evaluation-output\\semantic-binding-fix-20261024\\unicode-review-red.xml --tb=short",
+      "exit_code": 1,
+      "seconds": 6.125,
+      "junit": [
+        {
+          "name": "pytest",
+          "errors": "0",
+          "failures": "2",
+          "skipped": "0",
+          "tests": "135",
+          "time": "3.845",
+          "timestamp": "2026-10-24T21:48:42.643495+05:00",
+          "hostname": "DESKTOP-9CGUR1M"
+        }
+      ]
+    },
+    "unit-red": {
+      "command": "C:\\Users\\nurs\\doclens_ai\\.venv\\Scripts\\python.exe -B -m pytest C:\\Users\\nurs\\doclens_ai\\evaluation-output\\semantic-binding-fix-20261024\\test_independent_probes.py -q --strict-config --strict-markers -p no:cacheprovider --basetemp=C:\\Users\\nurs\\doclens_ai\\evaluation-output\\semantic-binding-fix-20261024\\unit-red-tmp --junitxml=C:\\Users\\nurs\\doclens_ai\\evaluation-output\\semantic-binding-fix-20261024\\unit-red.xml --tb=short",
+      "exit_code": 1,
+      "seconds": 4.546999999991385,
+      "junit": [
+        {
+          "name": "pytest",
+          "errors": "0",
+          "failures": "3",
+          "skipped": "0",
+          "tests": "13",
+          "time": "3.337",
+          "timestamp": "2026-10-24T17:30:35.014062+05:00",
+          "hostname": "DESKTOP-9CGUR1M"
+        }
+      ]
+    }
+  },
+  "junit": {
+    "api-red.xml": {
+      "tests": 5,
+      "failures": 3,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 29.999,
+      "sha256": "7602414af9071d8ddc24b4cdf369585ec9671a4bb7009e1c611323bf8ecadc2b",
+      "per_file": {
+        "evaluation-output.semantic-binding-fix-20261024.test_independent_api": {
+          "cases": 5,
+          "failures": 3,
+          "errors": 0,
+          "skipped": 0
+        }
+      },
+      "passed": 2
+    },
+    "counterpart-review-red.xml": {
+      "tests": 133,
+      "failures": 1,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 2.881,
+      "sha256": "0b5d6c1a7b0fe8c67db3fe63f51eea9fa039ec2ad0ebf558ab3fa1514c75840e",
+      "per_file": {
+        "tests.unit.test_answer_support": {
+          "cases": 133,
+          "failures": 1,
+          "errors": 0,
+          "skipped": 0
+        }
+      },
+      "passed": 132
+    },
+    "full-units-before-counterpart.xml": {
+      "tests": 2372,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 6,
+      "seconds": 335.426,
+      "sha256": "35f096757dbe980f71df572206b691806bf43f41cc839e5d3b8991c3d61c1e26",
+      "per_file": {
+        "tests.unit.test_answer_support": {
+          "cases": 131,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_artifact_contracts": {
+          "cases": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_auth_jwt": {
+          "cases": 17,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_bm25_baseline": {
+          "cases": 18,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_bm25_runner": {
+          "cases": 15,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_bounded_engines": {
+          "cases": 9,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_chunking": {
+          "cases": 14,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_citation_binding_candidate": {
+          "cases": 33,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_config": {
+          "cases": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_corpus_v2": {
+          "cases": 41,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_data_quality_gate": {
+          "cases": 36,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 1
+        },
+        "tests.unit.test_dataset_adapters_v2": {
+          "cases": 26,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_dataset_readiness": {
+          "cases": 16,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_dense_baseline": {
+          "cases": 34,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_dockerignore": {
+          "cases": 40,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_docling_candidate": {
+          "cases": 125,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_document_ir": {
+          "cases": 19,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_docx_ancillary_limits": {
+          "cases": 8,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_docx_ancillary_warnings": {
+          "cases": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_docx_footnote_candidate": {
+          "cases": 62,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_docx_footnote_locator_review_packet": {
+          "cases": 42,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_docx_note_context": {
+          "cases": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_eda_profiling": {
+          "cases": 14,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_engine_router_contracts": {
+          "cases": 22,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_evidence_regressions": {
+          "cases": 55,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_extraction": {
+          "cases": 13,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_extraction_campaign": {
+          "cases": 31,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_extraction_coverage_audit": {
+          "cases": 28,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_extraction_engines": {
+          "cases": 8,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_extraction_fidelity": {
+          "cases": 34,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_extraction_kaggle": {
+          "cases": 10,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_extraction_v2": {
+          "cases": 36,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_fidelity_duplicate_keys": {
+          "cases": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_fidelity_relationship_scope": {
+          "cases": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_indexing": {
+          "cases": 30,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_ingestion": {
+          "cases": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_ir_chunk_fidelity": {
+          "cases": 18,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_ir_evidence": {
+          "cases": 46,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_ir_publication": {
+          "cases": 13,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_kaggle_rag_baseline": {
+          "cases": 51,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_kaggle_rag_model_compare": {
+          "cases": 13,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_kaggle_rag_schema_dev": {
+          "cases": 43,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_kaggle_rag_sufficiency_dev": {
+          "cases": 39,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_ml28_comparison": {
+          "cases": 33,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_ml28_evidence": {
+          "cases": 39,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_ml28_ocr": {
+          "cases": 22,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_ml28_review": {
+          "cases": 22,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_office_corpus_v2": {
+          "cases": 9,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_pdf_assisted_review": {
+          "cases": 17,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 1
+        },
+        "tests.unit.test_pdf_cell_recovery": {
+          "cases": 19,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_pdf_dev_reference": {
+          "cases": 26,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_pdf_filled_ruling_normalization": {
+          "cases": 47,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_pdf_grid_proposals": {
+          "cases": 42,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 1
+        },
+        "tests.unit.test_pdf_native_dev_diagnostic": {
+          "cases": 19,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_pdf_ocr_candidate": {
+          "cases": 53,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_pdf_proposal_review": {
+          "cases": 27,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 1
+        },
+        "tests.unit.test_pdf_review_eligibility": {
+          "cases": 28,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_pdf_review_visual": {
+          "cases": 23,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 1
+        },
+        "tests.unit.test_pdf_review_workbench": {
+          "cases": 34,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_pdf_source_only_faces": {
+          "cases": 13,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_pdf_source_unit_bounds": {
+          "cases": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_pdf_table_candidate": {
+          "cases": 45,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_pdf_table_geometry": {
+          "cases": 30,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_pdf_table_review_packet": {
+          "cases": 20,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_pdf_table_source_only_probe": {
+          "cases": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_pdfplumber_table_candidate": {
+          "cases": 32,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_processing_state": {
+          "cases": 10,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_rag": {
+          "cases": 57,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_rag_gold": {
+          "cases": 18,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_rag_quote_binding": {
+          "cases": 46,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_rag_safety": {
+          "cases": 28,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_readiness_continuation": {
+          "cases": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_readiness_evaluator": {
+          "cases": 25,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_readiness_partitions": {
+          "cases": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_readiness_release": {
+          "cases": 24,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 1
+        },
+        "tests.unit.test_readiness_scoring_fixes": {
+          "cases": 36,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_readiness_source_metrics": {
+          "cases": 14,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_retrieval": {
+          "cases": 30,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_retrieval_eval": {
+          "cases": 31,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_safe_cleaning": {
+          "cases": 86,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_storage_config": {
+          "cases": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_textblock_offsets": {
+          "cases": 61,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_upload_service": {
+          "cases": 10,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_worker": {
+          "cases": 22,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_xlsx_number_formats": {
+          "cases": 16,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_xlsx_shared_string_source": {
+          "cases": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_xlsx_sheet_classification": {
+          "cases": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      },
+      "passed": 2366
+    },
+    "full-units.xml": {
+      "tests": 2376,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 6,
+      "seconds": 345.855,
+      "sha256": "3005c8d6cbb09a4278484e8fbbf6e3400004319fd5d5f90e691cfbbe9ca04640",
+      "per_file": {
+        "tests.unit.test_answer_support": {
+          "cases": 135,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_artifact_contracts": {
+          "cases": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_auth_jwt": {
+          "cases": 17,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_bm25_baseline": {
+          "cases": 18,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_bm25_runner": {
+          "cases": 15,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_bounded_engines": {
+          "cases": 9,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_chunking": {
+          "cases": 14,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_citation_binding_candidate": {
+          "cases": 33,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_config": {
+          "cases": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_corpus_v2": {
+          "cases": 41,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_data_quality_gate": {
+          "cases": 36,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 1
+        },
+        "tests.unit.test_dataset_adapters_v2": {
+          "cases": 26,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_dataset_readiness": {
+          "cases": 16,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_dense_baseline": {
+          "cases": 34,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_dockerignore": {
+          "cases": 40,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_docling_candidate": {
+          "cases": 125,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_document_ir": {
+          "cases": 19,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_docx_ancillary_limits": {
+          "cases": 8,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_docx_ancillary_warnings": {
+          "cases": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_docx_footnote_candidate": {
+          "cases": 62,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_docx_footnote_locator_review_packet": {
+          "cases": 42,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_docx_note_context": {
+          "cases": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_eda_profiling": {
+          "cases": 14,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_engine_router_contracts": {
+          "cases": 22,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_evidence_regressions": {
+          "cases": 55,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_extraction": {
+          "cases": 13,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_extraction_campaign": {
+          "cases": 31,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_extraction_coverage_audit": {
+          "cases": 28,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_extraction_engines": {
+          "cases": 8,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_extraction_fidelity": {
+          "cases": 34,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_extraction_kaggle": {
+          "cases": 10,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_extraction_v2": {
+          "cases": 36,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_fidelity_duplicate_keys": {
+          "cases": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_fidelity_relationship_scope": {
+          "cases": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_indexing": {
+          "cases": 30,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_ingestion": {
+          "cases": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_ir_chunk_fidelity": {
+          "cases": 18,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_ir_evidence": {
+          "cases": 46,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_ir_publication": {
+          "cases": 13,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_kaggle_rag_baseline": {
+          "cases": 51,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_kaggle_rag_model_compare": {
+          "cases": 13,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_kaggle_rag_schema_dev": {
+          "cases": 43,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_kaggle_rag_sufficiency_dev": {
+          "cases": 39,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_ml28_comparison": {
+          "cases": 33,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_ml28_evidence": {
+          "cases": 39,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_ml28_ocr": {
+          "cases": 22,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_ml28_review": {
+          "cases": 22,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_office_corpus_v2": {
+          "cases": 9,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_pdf_assisted_review": {
+          "cases": 17,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 1
+        },
+        "tests.unit.test_pdf_cell_recovery": {
+          "cases": 19,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_pdf_dev_reference": {
+          "cases": 26,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_pdf_filled_ruling_normalization": {
+          "cases": 47,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_pdf_grid_proposals": {
+          "cases": 42,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 1
+        },
+        "tests.unit.test_pdf_native_dev_diagnostic": {
+          "cases": 19,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_pdf_ocr_candidate": {
+          "cases": 53,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_pdf_proposal_review": {
+          "cases": 27,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 1
+        },
+        "tests.unit.test_pdf_review_eligibility": {
+          "cases": 28,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_pdf_review_visual": {
+          "cases": 23,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 1
+        },
+        "tests.unit.test_pdf_review_workbench": {
+          "cases": 34,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_pdf_source_only_faces": {
+          "cases": 13,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_pdf_source_unit_bounds": {
+          "cases": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_pdf_table_candidate": {
+          "cases": 45,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_pdf_table_geometry": {
+          "cases": 30,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_pdf_table_review_packet": {
+          "cases": 20,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_pdf_table_source_only_probe": {
+          "cases": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_pdfplumber_table_candidate": {
+          "cases": 32,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_processing_state": {
+          "cases": 10,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_rag": {
+          "cases": 57,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_rag_gold": {
+          "cases": 18,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_rag_quote_binding": {
+          "cases": 46,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_rag_safety": {
+          "cases": 28,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_readiness_continuation": {
+          "cases": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_readiness_evaluator": {
+          "cases": 25,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_readiness_partitions": {
+          "cases": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_readiness_release": {
+          "cases": 24,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 1
+        },
+        "tests.unit.test_readiness_scoring_fixes": {
+          "cases": 36,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_readiness_source_metrics": {
+          "cases": 14,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_retrieval": {
+          "cases": 30,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_retrieval_eval": {
+          "cases": 31,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_safe_cleaning": {
+          "cases": 86,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_storage_config": {
+          "cases": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_textblock_offsets": {
+          "cases": 61,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_upload_service": {
+          "cases": 10,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_worker": {
+          "cases": 22,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_xlsx_number_formats": {
+          "cases": 16,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_xlsx_shared_string_source": {
+          "cases": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_xlsx_sheet_classification": {
+          "cases": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      },
+      "passed": 2370
+    },
+    "integration-paused.xml": {
+      "tests": 114,
+      "failures": 1,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 160491.322,
+      "sha256": "9e587aa73b99260ea2a7d987cbada6548aec1fe01e8e4072b2f50a3ddf4da456",
+      "per_file": {
+        "tests.integration.test_answer_semantics": {
+          "cases": 58,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.integration.test_answers_api": {
+          "cases": 12,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.integration.test_rag": {
+          "cases": 12,
+          "failures": 1,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.integration.test_retrieval": {
+          "cases": 16,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.integration.test_search_api": {
+          "cases": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "evaluation-output.semantic-binding-fix-20261024.semantic_probes": {
+          "cases": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "evaluation-output.semantic-binding-fix-20261024.test_independent_api": {
+          "cases": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      },
+      "passed": 113
+    },
+    "integration.xml": {
+      "tests": 114,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 665.226,
+      "sha256": "9131d2abedfa7929477170b6d50beddd720b908daf74a295a35d48bd8d330ebe",
+      "per_file": {
+        "tests.integration.test_answer_semantics": {
+          "cases": 58,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.integration.test_answers_api": {
+          "cases": 12,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.integration.test_rag": {
+          "cases": 12,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.integration.test_retrieval": {
+          "cases": 16,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.integration.test_search_api": {
+          "cases": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "evaluation-output.semantic-binding-fix-20261024.semantic_probes": {
+          "cases": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "evaluation-output.semantic-binding-fix-20261024.test_independent_api": {
+          "cases": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      },
+      "passed": 114
+    },
+    "lease-repeat.xml": {
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 7.808,
+      "sha256": "bfcd607cf41f5d79ff5914bd33955dd08db410682a29647cbbd872c408be8086",
+      "per_file": {
+        "tests.integration.test_rag": {
+          "cases": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      },
+      "passed": 1
+    },
+    "review-red.xml": {
+      "tests": 124,
+      "failures": 3,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 1.915,
+      "sha256": "4d56bc8f6fd9a2a597e418d1cec46feefc315171b9e83ec4e05fbd6add5900de",
+      "per_file": {
+        "tests.unit.test_answer_support": {
+          "cases": 124,
+          "failures": 3,
+          "errors": 0,
+          "skipped": 0
+        }
+      },
+      "passed": 121
+    },
+    "symbol-review-red.xml": {
+      "tests": 129,
+      "failures": 2,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 2.388,
+      "sha256": "c11dd5bab72b6d250461d6b8c8487a5f5ded07a2d077425cfc953c1e72c04514",
+      "per_file": {
+        "tests.unit.test_answer_support": {
+          "cases": 129,
+          "failures": 2,
+          "errors": 0,
+          "skipped": 0
+        }
+      },
+      "passed": 127
+    },
+    "targeted.xml": {
+      "tests": 342,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 3.841,
+      "sha256": "fd05db334eb55e9d51ac7cb1f3c6a39cfc04cb0586093131cdcb0acab5ef55b1",
+      "per_file": {
+        "tests.unit.test_answer_support": {
+          "cases": 135,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_rag": {
+          "cases": 57,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_rag_safety": {
+          "cases": 28,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_rag_quote_binding": {
+          "cases": 46,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_citation_binding_candidate": {
+          "cases": 33,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "tests.unit.test_retrieval": {
+          "cases": 30,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "evaluation-output.semantic-binding-fix-20261024.test_independent_probes": {
+          "cases": 13,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      },
+      "passed": 342
+    },
+    "tense-review-red.xml": {
+      "tests": 131,
+      "failures": 1,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 2.404,
+      "sha256": "29df4edda4896696e3eb03fb48df4601d371fae833f6b5ec901c688f54c5be4e",
+      "per_file": {
+        "tests.unit.test_answer_support": {
+          "cases": 131,
+          "failures": 1,
+          "errors": 0,
+          "skipped": 0
+        }
+      },
+      "passed": 130
+    },
+    "unicode-review-red.xml": {
+      "tests": 135,
+      "failures": 2,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 3.845,
+      "sha256": "e01613bde30cb33325fe7d2f58353de833fb06511b264bbec8d3b7495cb86486",
+      "per_file": {
+        "tests.unit.test_answer_support": {
+          "cases": 135,
+          "failures": 2,
+          "errors": 0,
+          "skipped": 0
+        }
+      },
+      "passed": 133
+    },
+    "unit-red.xml": {
+      "tests": 13,
+      "failures": 3,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 3.337,
+      "sha256": "01364b7d70348696730aa0adda90b97c1e6ab7d54cd46391032f18e0108fc8b9",
+      "per_file": {
+        "evaluation-output.semantic-binding-fix-20261024.test_independent_probes": {
+          "cases": 13,
+          "failures": 3,
+          "errors": 0,
+          "skipped": 0
+        }
+      },
+      "passed": 10
+    }
+  },
+  "full_unit_skips": [
+    {
+      "class": "tests.unit.test_data_quality_gate",
+      "name": "test_output_symlink_escape_rejected",
+      "reason": "Windows symlink privilege unavailable"
+    },
+    {
+      "class": "tests.unit.test_pdf_assisted_review",
+      "name": "test_offline_browser_review_and_csv_export",
+      "reason": "Local Node/Playwright/Edge browser inputs required"
+    },
+    {
+      "class": "tests.unit.test_pdf_grid_proposals",
+      "name": "test_grid_http_security_and_browser",
+      "reason": "Set ML30_NODE and ML30_NODE_MODULES for actual overlay/acceptance UI"
+    },
+    {
+      "class": "tests.unit.test_pdf_proposal_review",
+      "name": "test_browser_confirm_correct_reject_and_export",
+      "reason": "Set ML30_NODE and ML30_NODE_MODULES for actual independent-review UI"
+    },
+    {
+      "class": "tests.unit.test_pdf_review_visual",
+      "name": "test_browser_rendered_mouse_selection",
+      "reason": "Set ML30_NODE and ML30_NODE_MODULES for the actual browser path"
+    },
+    {
+      "class": "tests.unit.test_readiness_release",
+      "name": "test_symlink_rejected",
+      "reason": "Windows host lacks symlink privilege"
+    }
+  ],
+  "baseline_api_counterexamples": [
+    {
+      "name": "temporal-negated",
+      "source": "Net mass: -001.50 kg, not for 2026.",
+      "question": "What was the net mass for 2026?",
+      "proposed_answer": "-001.50 kg, not for 2026",
+      "expected_answerable": false,
+      "http_status": 200,
+      "response": {
+        "answerable": true,
+        "answer": "-001.50 kg, not for 2026",
+        "citations": [
+          {
+            "chunk_id": "1fbffe29-2132-5be8-8cf5-f84b14feb58d",
+            "document_version_id": "38072b37-9496-4c03-bc85-7715340f5d05",
+            "quote": "Net mass: -001.50 kg, not for 2026.",
+            "quote_start": 0,
+            "quote_end": 35,
+            "answer_start": 0,
+            "answer_end": 24,
+            "document_id": "4896e4d1-2962-4c96-999e-866a2b251f06",
+            "source_locator": {
+              "document_format": "docx",
+              "spans": [
+                {
+                  "source": {
+                    "page_number": null,
+                    "block_index": 0,
+                    "sheet_index": null,
+                    "sheet_name": null,
+                    "cell_coordinate": null,
+                    "table_index": null,
+                    "row_index": null,
+                    "column_index": null,
+                    "part_uri": "/word/document.xml",
+                    "xml_path": [
+                      0,
+                      0
+                    ],
+                    "note_id": null,
+                    "relationship_id": null
+                  },
+                  "source_start": 0,
+                  "source_end": 35,
+                  "source_length": 35,
+                  "offset_basis": "rendered_source_unit"
+                }
+              ]
+            }
+          }
+        ],
+        "reason": null,
+        "request_id": "92dc78e0-a4c2-499a-a29a-0a8208b06564"
+      },
+      "generator": "controlled adversarial test double",
+      "path": "authenticated ASGI HTTP / actual PostgreSQL MinIO Qdrant / actual intake extraction and ACTIVE linkage",
+      "oracle": "public synthetic engineering expectation, not Human Gold"
+    },
+    {
+      "name": "temporal-positive",
+      "source": "Net mass: -001.50 kg for 2026.",
+      "question": "What was the net mass for 2026?",
+      "proposed_answer": "-001.50 kg for 2026",
+      "expected_answerable": true,
+      "http_status": 200,
+      "response": {
+        "answerable": true,
+        "answer": "-001.50 kg for 2026",
+        "citations": [
+          {
+            "chunk_id": "b6fd5de1-5e7a-599a-8cbc-caf2a55d52f7",
+            "document_version_id": "97f7e718-2b13-4bf9-9f4c-57ab088efbce",
+            "quote": "Net mass: -001.50 kg for 2026.",
+            "quote_start": 0,
+            "quote_end": 30,
+            "answer_start": 0,
+            "answer_end": 19,
+            "document_id": "27f1e835-763e-482d-b37e-7d9061257bf8",
+            "source_locator": {
+              "document_format": "docx",
+              "spans": [
+                {
+                  "source": {
+                    "page_number": null,
+                    "block_index": 0,
+                    "sheet_index": null,
+                    "sheet_name": null,
+                    "cell_coordinate": null,
+                    "table_index": null,
+                    "row_index": null,
+                    "column_index": null,
+                    "part_uri": "/word/document.xml",
+                    "xml_path": [
+                      0,
+                      0
+                    ],
+                    "note_id": null,
+                    "relationship_id": null
+                  },
+                  "source_start": 0,
+                  "source_end": 30,
+                  "source_length": 30,
+                  "offset_basis": "rendered_source_unit"
+                }
+              ]
+            }
+          }
+        ],
+        "reason": null,
+        "request_id": "161702ee-7ced-4a88-83ec-7a902572bff0"
+      },
+      "generator": "controlled adversarial test double",
+      "path": "authenticated ASGI HTTP / actual PostgreSQL MinIO Qdrant / actual intake extraction and ACTIVE linkage",
+      "oracle": "public synthetic engineering expectation, not Human Gold"
+    },
+    {
+      "name": "temporal-source-only-other-period",
+      "source": "Net mass: -001.50 kg for 2025, unavailable for 2026.",
+      "question": "What was the net mass for 2026?",
+      "proposed_answer": "-001.50 kg for 2025, unavailable for 2026",
+      "expected_answerable": false,
+      "http_status": 200,
+      "response": {
+        "answerable": true,
+        "answer": "-001.50 kg for 2025, unavailable for 2026",
+        "citations": [
+          {
+            "chunk_id": "f605227d-2d83-5531-bbfa-4bcac23b6b00",
+            "document_version_id": "20183c8d-f297-48d7-8ff9-f86164a00829",
+            "quote": "Net mass: -001.50 kg for 2025, unavailable for 2026.",
+            "quote_start": 0,
+            "quote_end": 52,
+            "answer_start": 0,
+            "answer_end": 41,
+            "document_id": "5ea9079c-7b66-443b-a7ee-de05734cfe58",
+            "source_locator": {
+              "document_format": "docx",
+              "spans": [
+                {
+                  "source": {
+                    "page_number": null,
+                    "block_index": 0,
+                    "sheet_index": null,
+                    "sheet_name": null,
+                    "cell_coordinate": null,
+                    "table_index": null,
+                    "row_index": null,
+                    "column_index": null,
+                    "part_uri": "/word/document.xml",
+                    "xml_path": [
+                      0,
+                      0
+                    ],
+                    "note_id": null,
+                    "relationship_id": null
+                  },
+                  "source_start": 0,
+                  "source_end": 52,
+                  "source_length": 52,
+                  "offset_basis": "rendered_source_unit"
+                }
+              ]
+            }
+          }
+        ],
+        "reason": null,
+        "request_id": "e85c50ed-a60d-4e62-bd4e-01e4ef6ab0b3"
+      },
+      "generator": "controlled adversarial test double",
+      "path": "authenticated ASGI HTTP / actual PostgreSQL MinIO Qdrant / actual intake extraction and ACTIVE linkage",
+      "oracle": "public synthetic engineering expectation, not Human Gold"
+    },
+    {
+      "name": "unit-case-change",
+      "source": "Export is allowed for measurements in mW.",
+      "question": "Is export allowed?",
+      "proposed_answer": "permitted for measurements in MW",
+      "expected_answerable": false,
+      "http_status": 200,
+      "response": {
+        "answerable": true,
+        "answer": "permitted for measurements in MW",
+        "citations": [
+          {
+            "chunk_id": "d43b6155-1fef-5d6c-a886-14e6c5441be3",
+            "document_version_id": "12e3fa7b-984f-4c14-bddd-5ef39c773e38",
+            "quote": "Export is allowed for measurements in mW.",
+            "quote_start": 0,
+            "quote_end": 41,
+            "answer_start": 0,
+            "answer_end": 32,
+            "document_id": "9cf8486e-9072-40db-a409-4c54275de1d0",
+            "source_locator": {
+              "document_format": "docx",
+              "spans": [
+                {
+                  "source": {
+                    "page_number": null,
+                    "block_index": 0,
+                    "sheet_index": null,
+                    "sheet_name": null,
+                    "cell_coordinate": null,
+                    "table_index": null,
+                    "row_index": null,
+                    "column_index": null,
+                    "part_uri": "/word/document.xml",
+                    "xml_path": [
+                      0,
+                      0
+                    ],
+                    "note_id": null,
+                    "relationship_id": null
+                  },
+                  "source_start": 0,
+                  "source_end": 41,
+                  "source_length": 41,
+                  "offset_basis": "rendered_source_unit"
+                }
+              ]
+            }
+          }
+        ],
+        "reason": null,
+        "request_id": "ecf793eb-7e9f-4683-8f87-2ac306955cc8"
+      },
+      "generator": "controlled adversarial test double",
+      "path": "authenticated ASGI HTTP / actual PostgreSQL MinIO Qdrant / actual intake extraction and ACTIVE linkage",
+      "oracle": "public synthetic engineering expectation, not Human Gold"
+    },
+    {
+      "name": "unit-case-preserved",
+      "source": "Export is allowed for measurements in mW.",
+      "question": "Is export allowed?",
+      "proposed_answer": "permitted for measurements in mW",
+      "expected_answerable": true,
+      "http_status": 200,
+      "response": {
+        "answerable": true,
+        "answer": "permitted for measurements in mW",
+        "citations": [
+          {
+            "chunk_id": "891b347e-128c-5ef5-afec-adc818f09f41",
+            "document_version_id": "65ab62b0-a055-4150-bae3-21e822d3e8a3",
+            "quote": "Export is allowed for measurements in mW.",
+            "quote_start": 0,
+            "quote_end": 41,
+            "answer_start": 0,
+            "answer_end": 32,
+            "document_id": "619cea73-f05e-4764-961f-3585dd638a04",
+            "source_locator": {
+              "document_format": "docx",
+              "spans": [
+                {
+                  "source": {
+                    "page_number": null,
+                    "block_index": 0,
+                    "sheet_index": null,
+                    "sheet_name": null,
+                    "cell_coordinate": null,
+                    "table_index": null,
+                    "row_index": null,
+                    "column_index": null,
+                    "part_uri": "/word/document.xml",
+                    "xml_path": [
+                      0,
+                      0
+                    ],
+                    "note_id": null,
+                    "relationship_id": null
+                  },
+                  "source_start": 0,
+                  "source_end": 41,
+                  "source_length": 41,
+                  "offset_basis": "rendered_source_unit"
+                }
+              ]
+            }
+          }
+        ],
+        "reason": null,
+        "request_id": "430f4020-93a0-4178-859f-59bd7772c330"
+      },
+      "generator": "controlled adversarial test double",
+      "path": "authenticated ASGI HTTP / actual PostgreSQL MinIO Qdrant / actual intake extraction and ACTIVE linkage",
+      "oracle": "public synthetic engineering expectation, not Human Gold"
+    }
+  ],
+  "final_saved_api_counterexamples_and_controls": [
+    {
+      "name": "temporal-negated",
+      "source": "Net mass: -001.50 kg, not for 2026.",
+      "question": "What was the net mass for 2026?",
+      "proposed_answer": "-001.50 kg, not for 2026",
+      "expected_answerable": false,
+      "http_status": 200,
+      "response": {
+        "answerable": false,
+        "answer": null,
+        "citations": [],
+        "reason": "insufficient_evidence",
+        "request_id": "9b82f42a-a7fe-4738-a151-aa5bd986f7d6"
+      },
+      "generator": "controlled adversarial test double",
+      "path": "authenticated ASGI HTTP / actual PostgreSQL MinIO Qdrant / actual intake extraction and ACTIVE linkage",
+      "oracle": "public synthetic engineering expectation, not Human Gold"
+    },
+    {
+      "name": "temporal-positive",
+      "source": "Net mass: -001.50 kg for 2026.",
+      "question": "What was the net mass for 2026?",
+      "proposed_answer": "-001.50 kg for 2026",
+      "expected_answerable": true,
+      "http_status": 200,
+      "response": {
+        "answerable": true,
+        "answer": "-001.50 kg for 2026",
+        "citations": [
+          {
+            "chunk_id": "7fa3ec6c-a50c-58be-8f68-b4c568dc96c7",
+            "document_version_id": "d9d53f34-fb81-41a0-ba3e-f41bdbfd8d3b",
+            "quote": "Net mass: -001.50 kg for 2026.",
+            "quote_start": 0,
+            "quote_end": 30,
+            "answer_start": 0,
+            "answer_end": 19,
+            "document_id": "313c7356-5b01-4b69-aeb0-4fe45bdaf507",
+            "source_locator": {
+              "document_format": "docx",
+              "spans": [
+                {
+                  "source": {
+                    "page_number": null,
+                    "block_index": 0,
+                    "sheet_index": null,
+                    "sheet_name": null,
+                    "cell_coordinate": null,
+                    "table_index": null,
+                    "row_index": null,
+                    "column_index": null,
+                    "part_uri": "/word/document.xml",
+                    "xml_path": [
+                      0,
+                      0
+                    ],
+                    "note_id": null,
+                    "relationship_id": null
+                  },
+                  "source_start": 0,
+                  "source_end": 30,
+                  "source_length": 30,
+                  "offset_basis": "rendered_source_unit"
+                }
+              ]
+            }
+          }
+        ],
+        "reason": null,
+        "request_id": "500ff865-3e56-418e-a665-d766f5e154bd"
+      },
+      "generator": "controlled adversarial test double",
+      "path": "authenticated ASGI HTTP / actual PostgreSQL MinIO Qdrant / actual intake extraction and ACTIVE linkage",
+      "oracle": "public synthetic engineering expectation, not Human Gold"
+    },
+    {
+      "name": "temporal-source-only-other-period",
+      "source": "Net mass: -001.50 kg for 2025, unavailable for 2026.",
+      "question": "What was the net mass for 2026?",
+      "proposed_answer": "-001.50 kg for 2025, unavailable for 2026",
+      "expected_answerable": false,
+      "http_status": 200,
+      "response": {
+        "answerable": false,
+        "answer": null,
+        "citations": [],
+        "reason": "insufficient_evidence",
+        "request_id": "2d4f7f00-72fe-4c2e-b104-dc3cea4d17c2"
+      },
+      "generator": "controlled adversarial test double",
+      "path": "authenticated ASGI HTTP / actual PostgreSQL MinIO Qdrant / actual intake extraction and ACTIVE linkage",
+      "oracle": "public synthetic engineering expectation, not Human Gold"
+    },
+    {
+      "name": "unit-case-change",
+      "source": "Export is allowed for measurements in mW.",
+      "question": "Is export allowed?",
+      "proposed_answer": "permitted for measurements in MW",
+      "expected_answerable": false,
+      "http_status": 200,
+      "response": {
+        "answerable": false,
+        "answer": null,
+        "citations": [],
+        "reason": "insufficient_evidence",
+        "request_id": "841788f2-5ed1-43c6-b983-72783e244c88"
+      },
+      "generator": "controlled adversarial test double",
+      "path": "authenticated ASGI HTTP / actual PostgreSQL MinIO Qdrant / actual intake extraction and ACTIVE linkage",
+      "oracle": "public synthetic engineering expectation, not Human Gold"
+    },
+    {
+      "name": "unit-case-preserved",
+      "source": "Export is allowed for measurements in mW.",
+      "question": "Is export allowed?",
+      "proposed_answer": "permitted for measurements in mW",
+      "expected_answerable": true,
+      "http_status": 200,
+      "response": {
+        "answerable": true,
+        "answer": "permitted for measurements in mW",
+        "citations": [
+          {
+            "chunk_id": "2d4dcfd2-01cb-5f3f-8d15-a4cd47923995",
+            "document_version_id": "053ea91e-c163-425f-954e-7c630762ba7d",
+            "quote": "Export is allowed for measurements in mW.",
+            "quote_start": 0,
+            "quote_end": 41,
+            "answer_start": 0,
+            "answer_end": 32,
+            "document_id": "26f902d8-b12c-430b-a8ff-413a2dc90fd0",
+            "source_locator": {
+              "document_format": "docx",
+              "spans": [
+                {
+                  "source": {
+                    "page_number": null,
+                    "block_index": 0,
+                    "sheet_index": null,
+                    "sheet_name": null,
+                    "cell_coordinate": null,
+                    "table_index": null,
+                    "row_index": null,
+                    "column_index": null,
+                    "part_uri": "/word/document.xml",
+                    "xml_path": [
+                      0,
+                      0
+                    ],
+                    "note_id": null,
+                    "relationship_id": null
+                  },
+                  "source_start": 0,
+                  "source_end": 41,
+                  "source_length": 41,
+                  "offset_basis": "rendered_source_unit"
+                }
+              ]
+            }
+          }
+        ],
+        "reason": null,
+        "request_id": "7b51fbf8-b701-4930-8336-431504371219"
+      },
+      "generator": "controlled adversarial test double",
+      "path": "authenticated ASGI HTTP / actual PostgreSQL MinIO Qdrant / actual intake extraction and ACTIVE linkage",
+      "oracle": "public synthetic engineering expectation, not Human Gold"
+    }
+  ],
+  "previous_original_semantic_probes": [
+    {
+      "case": "negation-negative",
+      "expected_answerable": false,
+      "actual_answerable": false,
+      "http_status": 200,
+      "reason": "insufficient_evidence",
+      "citations": 0,
+      "exact_full_source_quote": false,
+      "synthetic": true,
+      "generator": "adversarial_test_double_not_real_model",
+      "path": "authenticated HTTP ASGI + actual PG/S3/Qdrant",
+      "oracle": "public synthetic engineering expectation, not Human Gold"
+    },
+    {
+      "case": "negation-positive",
+      "expected_answerable": true,
+      "actual_answerable": true,
+      "http_status": 200,
+      "reason": null,
+      "citations": 1,
+      "exact_full_source_quote": true,
+      "synthetic": true,
+      "generator": "adversarial_test_double_not_real_model",
+      "path": "authenticated HTTP ASGI + actual PG/S3/Qdrant",
+      "oracle": "public synthetic engineering expectation, not Human Gold"
+    },
+    {
+      "case": "instruction-negative",
+      "expected_answerable": false,
+      "actual_answerable": false,
+      "http_status": 200,
+      "reason": "insufficient_evidence",
+      "citations": 0,
+      "exact_full_source_quote": false,
+      "synthetic": true,
+      "generator": "adversarial_test_double_not_real_model",
+      "path": "authenticated HTTP ASGI + actual PG/S3/Qdrant",
+      "oracle": "public synthetic engineering expectation, not Human Gold"
+    },
+    {
+      "case": "period-negative",
+      "expected_answerable": false,
+      "actual_answerable": false,
+      "http_status": 200,
+      "reason": "insufficient_evidence",
+      "citations": 0,
+      "exact_full_source_quote": false,
+      "synthetic": true,
+      "generator": "adversarial_test_double_not_real_model",
+      "path": "authenticated HTTP ASGI + actual PG/S3/Qdrant",
+      "oracle": "public synthetic engineering expectation, not Human Gold"
+    },
+    {
+      "case": "period-positive",
+      "expected_answerable": true,
+      "actual_answerable": true,
+      "http_status": 200,
+      "reason": null,
+      "citations": 1,
+      "exact_full_source_quote": true,
+      "synthetic": true,
+      "generator": "adversarial_test_double_not_real_model",
+      "path": "authenticated HTTP ASGI + actual PG/S3/Qdrant",
+      "oracle": "public synthetic engineering expectation, not Human Gold"
+    },
+    {
+      "case": "invented-numeric-negative",
+      "expected_answerable": false,
+      "actual_answerable": false,
+      "http_status": 200,
+      "reason": "insufficient_evidence",
+      "citations": 0,
+      "exact_full_source_quote": false,
+      "synthetic": true,
+      "generator": "adversarial_test_double_not_real_model",
+      "path": "authenticated HTTP ASGI + actual PG/S3/Qdrant",
+      "oracle": "public synthetic engineering expectation, not Human Gold"
+    }
+  ],
+  "preservation": {
+    "baseline_head": "e9252f22e47b2560edc549ff7edd862a0efb6810",
+    "current_head": "e9252f22e47b2560edc549ff7edd862a0efb6810",
+    "changed_preexisting_paths": [
+      "README.md",
+      "src/doclens_ai/services/answer_support.py",
+      "tests/integration/test_answer_semantics.py",
+      "tests/unit/test_answer_support.py"
+    ],
+    "unexpected_changes": [],
+    "prior_verification_evidence_drift": [],
+    "deleted_runner_still_absent": true,
+    "final_source_pins_match": true,
+    "preserved_files": 435,
+    "preserved_prior_evidence_files": 49
+  },
+  "cleanup": {
+    "task_containers": 0,
+    "task_networks": 0,
+    "task_volumes": 0,
+    "commands": [
+      {
+        "command": "docker ps -aq --filter label=codex.task=doclens-semantic-binding-fix-20261024",
+        "exit_code": 0,
+        "count": 0
+      },
+      {
+        "command": "docker network ls -q --filter label=codex.task=doclens-semantic-binding-fix-20261024",
+        "exit_code": 0,
+        "count": 0
+      },
+      {
+        "command": "docker volume ls -q --filter label=codex.task=doclens-semantic-binding-fix-20261024",
+        "exit_code": 0,
+        "count": 0
+      }
+    ],
+    "unrelated_containers_present": 11,
+    "only_recorded_ids_removed_after_label_check": true
+  },
+  "service_environment": [
+    {
+      "id": "be6022dba9d349d7be33643293f27c7268d94f144d65ca10dd518338e1911eac",
+      "name": "pg",
+      "image": "postgres:16-alpine",
+      "image_id": "sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777",
+      "running": true,
+      "published_ports": {
+        "5432/tcp": [
+          {
+            "HostIp": "127.0.0.1",
+            "HostPort": "64741"
+          }
+        ]
+      }
+    },
+    {
+      "id": "04628237b1f3ac4a5b8b5ca59f46377ccb758723caac0437aa96609dd43e832e",
+      "name": "s3",
+      "image": "doclens_ai-minio:latest",
+      "image_id": "sha256:97d9b1697f88b2555495afb6e16e71069b9f329b9022f40345a45074332fd6c7",
+      "running": true,
+      "published_ports": {
+        "9000/tcp": [
+          {
+            "HostIp": "127.0.0.1",
+            "HostPort": "64742"
+          }
+        ]
+      }
+    },
+    {
+      "id": "7a2dbe6a12d74870c7cb7c2b55e3533894f0f6c7fb3f945891fff0c2e376f1e9",
+      "name": "qdrant",
+      "image": "qdrant/qdrant:v1.15.4",
+      "image_id": "sha256:6ac4807063bbecddca0250bfbcff52acf18c22263b904d12919349e6d0a408f1",
+      "running": true,
+      "published_ports": {
+        "6333/tcp": [
+          {
+            "HostIp": "127.0.0.1",
+            "HostPort": "64743"
+          }
+        ]
+      }
+    }
+  ],
+  "staged_review": {
+    "status": "PASS for scoped staged self-review",
+    "paths": [
+      "README.md",
+      "src/doclens_ai/services/answer_support.py",
+      "tests/integration/test_answer_semantics.py",
+      "tests/unit/test_answer_support.py"
+    ],
+    "staged_and_working_diff_checks_exit": 0,
+    "secret_pattern_matches": 0,
+    "removed_existing_test_lines": 0,
+    "source_index_worktree_match": {
+      "README.md": {
+        "index_blob_sha256": "adea72d810b32375060572154ac2f79cdeb38a6e376b829772590b0fec7fb83f",
+        "working_bytes_sha256": "adea72d810b32375060572154ac2f79cdeb38a6e376b829772590b0fec7fb83f"
+      },
+      "src/doclens_ai/services/answer_support.py": {
+        "index_blob_sha256": "016282e667bf83a2b4f3f0d281a305d203df4f7527d69f6447d936e434228f92",
+        "working_bytes_sha256": "016282e667bf83a2b4f3f0d281a305d203df4f7527d69f6447d936e434228f92"
+      },
+      "tests/integration/test_answer_semantics.py": {
+        "index_blob_sha256": "8cf43160008d347913f5735b6329642eb47d740ade9e91e4abb2f3977e71748f",
+        "working_bytes_sha256": "8cf43160008d347913f5735b6329642eb47d740ade9e91e4abb2f3977e71748f"
+      },
+      "tests/unit/test_answer_support.py": {
+        "index_blob_sha256": "2ca83d87aa9d172fd6e8738ff8db41d610f823105ae2777c4340f0143d5e79e2",
+        "working_bytes_sha256": "2ca83d87aa9d172fd6e8738ff8db41d610f823105ae2777c4340f0143d5e79e2"
+      }
+    },
+    "control_flow_review": [
+      "Trusted original request question and citation identity/offset/full quote checks remain before support.",
+      "Only registered linguistic predicate words normalize; qualifiers, symbols and typed entity/identifier/unit tails are literal.",
+      "Complete positive scalar/period binding; failed temporal parsing does not fall back to generic/boolean language branches.",
+      "Same-property/entity ambiguous, complex or conflicting counterparts refuse; explicitly different bound periods/entities stay independent.",
+      "All-packed ACL/ACTIVE revalidation remains outside the invalid/refusal catch in unchanged RagService.",
+      "Numeric extractive precision/sign/unit/formula guard is unchanged.",
+      "Known false-refusal and grammar limits documented; QG verdicts not promoted."
+    ]
+  },
+  "interrupted_intermediate_runs": [
+    {
+      "reason": "Independent review found additional compound-unit role normalization bypass; interrupted intermediate runs are not final verification",
+      "root_pids": [
+        6412,
+        6472,
+        12300,
+        27824
+      ],
+      "terminated_owned_pids": [
+        3348,
+        6412,
+        6472,
+        8208,
+        10952,
+        12300,
+        16720,
+        17580,
+        22588,
+        22784,
+        27824
+      ],
+      "shared_services_touched": false
+    },
+    {
+      "reason": "Self-review reproduced ignored unparseable same-property temporal counterpart; interrupted integration is not final verification",
+      "root_pids": [
+        23104,
+        32052
+      ],
+      "terminated_owned_pids": [
+        15556,
+        22496,
+        23104,
+        31136,
+        32052
+      ],
+      "shared_services_touched": false
+    },
+    {
+      "reason": "Self-review reproduced Unicode IGNORECASE/casefold dictionary mismatch; interrupted intermediate runs are not final verification",
+      "root_pids": [
+        10444,
+        26748,
+        29072,
+        31580
+      ],
+      "terminated_owned_pids": [
+        2868,
+        9036,
+        10444,
+        11304,
+        13676,
+        14352,
+        23528,
+        24760,
+        26748,
+        27008,
+        27540,
+        29072,
+        29896,
+        31580
+      ],
+      "shared_services_touched": false
+    }
+  ],
+  "artifact_sha256": {
+    "evaluation-output/semantic-binding-fix-20261024/api-red.log": "9e4fce18de55fba336d732d6669d357d29787e505820c1b65ca03be64f24524b",
+    "evaluation-output/semantic-binding-fix-20261024/api-red.xml": "7602414af9071d8ddc24b4cdf369585ec9671a4bb7009e1c611323bf8ecadc2b",
+    "evaluation-output/semantic-binding-fix-20261024/before.json": "46abb5f5c064e759116f4fadde4f4f8e68b3f1665c2d9a1ec8f8da27dc53849e",
+    "evaluation-output/semantic-binding-fix-20261024/cleanup.json": "da3e6628edf838c913acee42178a46f30af2a19002ae1da8df775b67182e50ba",
+    "evaluation-output/semantic-binding-fix-20261024/counterpart-review-red.log": "ee5ac46119fb34e18e4718adf55ae5dd97edaea86681fba352d9b7ec6414bb8b",
+    "evaluation-output/semantic-binding-fix-20261024/counterpart-review-red.xml": "0b5d6c1a7b0fe8c67db3fe63f51eea9fa039ec2ad0ebf558ab3fa1514c75840e",
+    "evaluation-output/semantic-binding-fix-20261024/final-source-sha256.json": "d7095707e5475b1d5f8bc429601d085cb77ba0ec922e323c16b55a83a4437f63",
+    "evaluation-output/semantic-binding-fix-20261024/format.log": "eee76f865de5a9f2456950f710ae5d5f9b5bd0ea02aa54f614c5eed6642a0bfd",
+    "evaluation-output/semantic-binding-fix-20261024/full-units-before-counterpart.log": "22519b534e07f86165b24ce47348967ac0fc82f9f67b715d0f8158842414c457",
+    "evaluation-output/semantic-binding-fix-20261024/full-units-before-counterpart.xml": "35f096757dbe980f71df572206b691806bf43f41cc839e5d3b8991c3d61c1e26",
+    "evaluation-output/semantic-binding-fix-20261024/full-units-interrupted.log": "d224432b7ec9db79943446c7b3f1b3ff2389f003a1cfb75119321ada34519b0d",
+    "evaluation-output/semantic-binding-fix-20261024/full-units-unicode-interrupted.log": "15255281fb183bf537148edc75727fc7d4965f51713e27bf751e4a19918ec703",
+    "evaluation-output/semantic-binding-fix-20261024/full-units.log": "bd5dbd7248bc2997339680b9aa7b68d325340d928a2930a9d27e1654c3cc966f",
+    "evaluation-output/semantic-binding-fix-20261024/full-units.xml": "3005c8d6cbb09a4278484e8fbbf6e3400004319fd5d5f90e691cfbbe9ca04640",
+    "evaluation-output/semantic-binding-fix-20261024/integration-counterpart-interrupted.log": "108419c26f252cc55a74f045421e97347c6b67e62c0b80ec9379a9099c5a5a02",
+    "evaluation-output/semantic-binding-fix-20261024/integration-interrupted.log": "9f0707ba107af619603372ef773671c5359f83cd8582f1addd288e6b8eec3db7",
+    "evaluation-output/semantic-binding-fix-20261024/integration-paused.log": "174405572cbd62ffaac4252e338edb626415b85b1893a5cd518a7391a866cecf",
+    "evaluation-output/semantic-binding-fix-20261024/integration-paused.xml": "9e587aa73b99260ea2a7d987cbada6548aec1fe01e8e4072b2f50a3ddf4da456",
+    "evaluation-output/semantic-binding-fix-20261024/integration-unicode-interrupted.log": "f8f2427665aa516d47807570735aeddcbc4f4ce465a7b2a9eb2e9b97018189d2",
+    "evaluation-output/semantic-binding-fix-20261024/integration.log": "213947f2b7d87aaefd27c1eecd322cdaa8c3eb2b0b00f6b8c76147d9cd5b6fe1",
+    "evaluation-output/semantic-binding-fix-20261024/integration.xml": "9131d2abedfa7929477170b6d50beddd720b908daf74a295a35d48bd8d330ebe",
+    "evaluation-output/semantic-binding-fix-20261024/interrupted-runs.json": "8d0b05ed53eb3799fd12181641e5299a7aea0e52733a3de9669820aca1a18b15",
+    "evaluation-output/semantic-binding-fix-20261024/lease-repeat.log": "eb4379789864f8c84cf280c082667fdc9a120a7855a60acb18065f9e81818c6a",
+    "evaluation-output/semantic-binding-fix-20261024/lease-repeat.xml": "bfcd607cf41f5d79ff5914bd33955dd08db410682a29647cbbd872c408be8086",
+    "evaluation-output/semantic-binding-fix-20261024/lint.log": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+    "evaluation-output/semantic-binding-fix-20261024/preservation.json": "55d6a4b65aa730a233de31dd3557f73574bd2eb7f4d43690b9506f6c26b1676b",
+    "evaluation-output/semantic-binding-fix-20261024/review-red.log": "0e861b0d284e925b028650b3ce18a63c8461208ee9d0188eedbbdc31ee110acf",
+    "evaluation-output/semantic-binding-fix-20261024/review-red.xml": "4d56bc8f6fd9a2a597e418d1cec46feefc315171b9e83ec4e05fbd6add5900de",
+    "evaluation-output/semantic-binding-fix-20261024/run.py": "1dc1dc0b44c0e7bdb38472e777d9ec068e670d9f232c9483cdeb657d85614c3c",
+    "evaluation-output/semantic-binding-fix-20261024/semantic_probes.py": "a141fa16b11f97b59e5220337d0f5377d117a57fa21a6424868732d7164a2ce1",
+    "evaluation-output/semantic-binding-fix-20261024/staged-review.json": "e207e7485504abd6c8ab2419cd6b01139d8e5c36578f364d44963a95be70b28d",
+    "evaluation-output/semantic-binding-fix-20261024/start.log": "60f97d1e586a097f7f72e0d4104d85b7f1fb52de62fbd3a7baf72af69bb6cdeb",
+    "evaluation-output/semantic-binding-fix-20261024/stop.log": "2a387540e4565820953a828e3a37f8b974507adc2807531e092cb74c9c214fb1",
+    "evaluation-output/semantic-binding-fix-20261024/symbol-review-red.log": "d465d432baae656048679a859942e26752c5ec80bf0104f522c13ff58d43f2a8",
+    "evaluation-output/semantic-binding-fix-20261024/symbol-review-red.xml": "c11dd5bab72b6d250461d6b8c8487a5f5ded07a2d077425cfc953c1e72c04514",
+    "evaluation-output/semantic-binding-fix-20261024/targeted.log": "aa44ccee6bc1710aeb6f3d40b294bd4c52e9319ef37b4737a12e20e1801b3324",
+    "evaluation-output/semantic-binding-fix-20261024/targeted.xml": "fd05db334eb55e9d51ac7cb1f3c6a39cfc04cb0586093131cdcb0acab5ef55b1",
+    "evaluation-output/semantic-binding-fix-20261024/tense-review-red.log": "ce226f06c63a6e0eebfce228579a13418c0e00c26c24d57fe2fda38eded0d663",
+    "evaluation-output/semantic-binding-fix-20261024/tense-review-red.xml": "29df4edda4896696e3eb03fb48df4601d371fae833f6b5ec901c688f54c5be4e",
+    "evaluation-output/semantic-binding-fix-20261024/test_independent_api.py": "6318da8c40eb747a95c93c98b26a46041ad47556ecd313a24a15c7b8ab4719f1",
+    "evaluation-output/semantic-binding-fix-20261024/test_independent_probes.py": "81a113aa79fa64464a1b450010cc308b1db5d1b3f837a4ef48e6fb9496daf3a9",
+    "evaluation-output/semantic-binding-fix-20261024/unicode-review-red.log": "b3aa369726462c5b687770929ade564a8a840e3460cf3ac752eabbadee4cded1",
+    "evaluation-output/semantic-binding-fix-20261024/unicode-review-red.xml": "e01613bde30cb33325fe7d2f58353de833fb06511b264bbec8d3b7495cb86486",
+    "evaluation-output/semantic-binding-fix-20261024/unit-red.log": "8185e82f0a6f17054b707d38275bde5d36648d0e1a511fb8611533dc19f723a9",
+    "evaluation-output/semantic-binding-fix-20261024/unit-red.xml": "01364b7d70348696730aa0adda90b97c1e6ab7d54cd46391032f18e0108fc8b9"
+  },
+  "unit_growth": {
+    "previous_passed": 2310,
+    "new_cases": 60,
+    "current_passed": 2370,
+    "removed_or_deselected_tests": 0
+  },
+  "quality_status": {
+    "QG-08": "FAIL retained; not requalified by engineering regression success",
+    "QG-09": "FAIL retained; not requalified by engineering regression success",
+    "production_authorized": false
+  },
+  "limits": [
+    "Bounded positive grammar, not universal semantic entailment.",
+    "Opaque field/identifier case aliases and symbol/Unicode/unit conversions remain unsupported.",
+    "Temporal scalar grammar supports literal numbers and listed unit forms, or permission predicates; no composite/formula/relative-date reasoning or arbitrary calendar validation.",
+    "Ambiguous or undated counterparts for the same property/entity can cause conservative refusals.",
+    "Controlled providers and public synthetic engineering oracles; no independently reviewed Human Gold, real-model rates, multilingual population quality, approved thresholds or operational release qualification supplied."
+  ],
+  "report_sha256": "d22acc7338012b07e93d80d8813614f3127457dcece06e73701fa87526cbb89a"
+}
