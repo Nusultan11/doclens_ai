@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 import json
+import shutil
 import zipfile
 
 import pytest
@@ -11,6 +12,271 @@ from doclens_ai.extraction.fidelity_gold import fingerprint
 from tools.extraction_quality import blind_review_batch as batch
 from tools.extraction_quality import office_readiness_oracle as office
 from tools.extraction_quality.readiness_io import atomic
+
+
+@pytest.fixture
+def pdf_session(tmp_path, monkeypatch):
+    from tests.unit.test_pdf_review_workbench import fixture
+    from tools.extraction_quality import pdf_review_workbench as workbench
+
+    app, parts = fixture(tmp_path)
+    bundle = app.root / "evaluation-output/packet-1"
+    workspace = app.root / "evaluation-output/workspace"
+    shutil.copytree(app.bundle, bundle)
+    shutil.copytree(app.output, workspace)
+
+    def resume(*args, **kwargs):
+        return workbench.Workbench(
+            app.manifest,
+            app.corpus,
+            app.gold,
+            bundle,
+            workspace,
+            resume=True,
+            root=app.root,
+            expected=app.expected,
+            allow_synthetic=True,
+        )
+
+    monkeypatch.setattr(batch, "ROOT", app.root)
+    monkeypatch.setattr(batch, "PDF_ROOT", "evaluation-output")
+    monkeypatch.setattr(batch, "PDF_IDS", tuple(app.records))
+    monkeypatch.setattr(batch, "Workbench", resume)
+    original = batch.pdf_packet.preflight
+
+    def preflight(*args, **kwargs):
+        return original(
+            app.manifest,
+            app.corpus,
+            app.gold,
+            app.expected,
+            allow_synthetic=True,
+        )
+
+    monkeypatch.setattr(batch.pdf_packet, "preflight", preflight)
+    return resume, workspace, parts
+
+
+def test_frozen_pdf_inputs_survive_valid_annotation(pdf_session):
+    resume, _, _ = pdf_session
+    before = batch.pdf_inputs()
+    app = resume()
+    key = next(iter(app.records))
+    draft = copy.deepcopy(app.state["documents"][key]["draft"])
+    draft["pages"][0]["notes"] = "synthetic independent annotation in progress"
+    app.update("draft", {"revision": app.view()["revision"], "document_id": key, "draft": draft})
+    app.update(
+        "inspect",
+        {"revision": app.view()["revision"], "document_id": key, "page": 1, "inspected": True},
+    )
+    assert batch.pdf_inputs() == before
+
+
+@pytest.fixture
+def pdf_batch(pdf_session, monkeypatch):
+    resume, workspace, parts = pdf_session
+    app = resume()
+    code = app.root / "tools/batch.py"
+    code.parent.mkdir()
+    code.write_text("synthetic lifecycle code")
+    monkeypatch.setattr(batch, "__file__", str(code))
+    rows = []
+    for key, record in app.records.items():
+        row = source(key, "pdf")
+        path = app.paths[key]
+        row["sha256"] = record.source_sha256
+        row["source_reference"] = {
+            "path": path.relative_to(app.root).as_posix(),
+            "sha256": record.source_sha256,
+            "size_bytes": record.source_size_bytes,
+            "format": "pdf",
+        }
+        rows.append(row)
+    for key, fmt, build in (("e2-doc", "docx", docx), ("e2-sheet", "xlsx", xlsx)):
+        row = source(key, fmt)
+        path = app.root / row["source_reference"]["path"]
+        build(path)
+        row["sha256"] = row["source_reference"]["sha256"] = corpus.sha256(path)
+        row["source_reference"]["size_bytes"] = path.stat().st_size
+        rows.append(row)
+    release_root = app.root / "evaluation-output/release"
+    release_root.mkdir()
+    atomic(release_root / "effective-matrix.json", {"population": rows})
+    atomic(release_root / "RELEASE.json", {"synthetic": True})
+    monkeypatch.setattr(batch.release, "verify", lambda _: {"integrity": "PASS"})
+    monkeypatch.setattr(batch, "attribution", lambda *_: b"synthetic attribution\n")
+    output = app.root / "evaluation-output/frozen-inputs"
+    batch.prepare(output, release_root)
+    return output, release_root, rows, resume, workspace, parts
+
+
+def legacy_copy(output, release_root):
+    """Synthetic version-1 fixture; the real historical v3 is verified separately."""
+    selection, files, protected = batch.expected_inputs(release_root, version=batch.LEGACY_VERSION)
+    other = output.with_name("legacy-inputs")
+    other.mkdir()
+    atomic(other / "selection.json", selection)
+    for name, data in files.items():
+        path = other / "reviewer" / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(data)
+    manifest = corpus.read_json(output / "BATCH.json")
+    manifest.update(version=batch.LEGACY_VERSION, protected_sha256=protected)
+    manifest["artifact_sha256"] = {
+        p.relative_to(other).as_posix(): corpus.sha256(p) for p in other.rglob("*") if p.is_file()
+    }
+    manifest.pop("fingerprint")
+    manifest["fingerprint"] = fingerprint(manifest)
+    atomic(other / "BATCH.json", manifest)
+    return other
+
+
+@pytest.mark.parametrize("phase", ["partial", "inspected", "sealed", "revealed"])
+def test_frozen_batch_survives_reviewer_lifecycle_and_legacy_is_read_only(pdf_batch, phase):
+    from tests.unit.test_pdf_review_workbench import seal, update
+
+    output, release_root, _, resume, workspace, parts = pdf_batch
+    legacy = legacy_copy(output, release_root)
+    before = {
+        p: p.read_bytes() for root in (output, legacy) for p in root.rglob("*") if p.is_file()
+    }
+    frozen = batch.verify(output)
+    historical = batch.verify(legacy)
+    app = resume()
+    key = next(iter(app.records))
+    if phase in {"sealed", "revealed"}:
+        seal(app, parts)  # Explicit synthetic fixture, never actual human review.
+        if phase == "revealed":
+            update(app, "reveal", confirm_reveal=True)
+    else:
+        draft = copy.deepcopy(app.state["documents"][key]["draft"])
+        draft["pages"][0]["notes"] = "synthetic in-progress source annotation"
+        update(app, "draft", document_id=key, draft=draft)
+        if phase == "inspected":
+            update(app, "inspect", document_id=key, page=1, inspected=True)
+    assert batch.verify(output) == frozen
+    assert batch.verify(legacy) == historical
+    assert batch.verify_session(output, workspace)["session"] == "RESUMABLE"
+    assert batch.verify_session(legacy, workspace)["human_reviews"] == 0
+    assert all(path.read_bytes() == data for path, data in before.items())
+    with pytest.raises(ValueError, match="pristine"):
+        batch.prepare(output.with_name("new-after-review"), release_root)
+
+
+@pytest.mark.parametrize(
+    "damage",
+    ["invalid_locator", "forged_review", "wrong_binding", "leakage", "partial_write", "missing"],
+)
+def test_bad_session_is_blocked_without_invalidating_frozen_inputs(pdf_batch, damage):
+    output, _, _, resume, workspace, _ = pdf_batch
+    expected = batch.verify(output)
+    app = resume()
+    key = next(iter(app.records))
+    state = copy.deepcopy(app.state)
+    draft = state["documents"][key]["draft"]
+    if damage == "invalid_locator":
+        draft["pages"][0]["regions"] = [{"bbox_pdf_user_space_points": [0, 0, 99999, 99999]}]
+    elif damage == "forged_review":
+        draft["state"] = "REVIEWED"
+    elif damage == "wrong_binding":
+        state["binding"] = "0" * 64
+    elif damage == "leakage":
+        draft["reviewer"]["parser_outputs_seen"] = True
+    if damage == "missing":
+        (workspace / "workbench.json").unlink()
+    elif damage == "partial_write":
+        (workspace / "workbench.json").write_text('{"interrupted":')
+    else:
+        atomic(workspace / "workbench.json", state)
+    assert batch.verify(output) == expected
+    with pytest.raises((ValueError, OSError)):
+        batch.verify_session(output, workspace)
+
+
+def test_interrupted_atomic_save_keeps_last_session_and_frozen_inputs(pdf_batch, monkeypatch):
+    from tools.extraction_quality import pdf_review_workbench as workbench
+
+    output, _, _, resume, workspace, _ = pdf_batch
+    expected = batch.verify(output)
+    original = (workspace / "workbench.json").read_bytes()
+    app = resume()
+    key = next(iter(app.records))
+
+    def interrupted(*args):
+        raise OSError("synthetic save interruption")
+
+    monkeypatch.setattr(workbench.os, "replace", interrupted)
+    with pytest.raises(OSError):
+        app.update(
+            "inspect",
+            {"revision": app.view()["revision"], "document_id": key, "page": 1, "inspected": True},
+        )
+    assert (workspace / "workbench.json").read_bytes() == original
+    (workspace / ".review-interrupted.partial").write_text("unfinished temporary data")
+    assert batch.verify(output) == expected
+    assert batch.verify_session(output, workspace)["session"] == "RESUMABLE"
+
+
+@pytest.mark.parametrize(
+    "damage", ["raw", "packet", "rights", "family", "forged_pdf", "invalid_pdf_locator"]
+)
+def test_immutable_guards_survive_session_separation(pdf_batch, damage):
+    output, release_root, rows, _, workspace, _ = pdf_batch
+    if damage == "raw":
+        (batch.ROOT / rows[0]["source_reference"]["path"]).write_bytes(b"changed RAW")
+    elif damage == "packet":
+        path = workspace.parent / "packet-1/REVIEW.md"
+        path.write_text("changed immutable packet")
+    elif damage in {"rights", "family"}:
+        path = release_root / "effective-matrix.json"
+        value = corpus.read_json(path)
+        if damage == "rights":
+            value["population"][0]["rights"]["new_annotation"] = None
+        else:
+            value["population"][1]["related_families"] = [value["population"][0]["family"]]
+        path.write_bytes(batch.encode(value))  # Deliberately corrupt this synthetic fixture.
+    else:
+        key = batch.PDF_IDS[0]
+        path = output / f"reviewer/review/{key}/independent.json"
+        value = corpus.read_json(path)
+        if damage == "forged_pdf":
+            value["reviewer"]["id"] = "forged reviewer"
+        else:
+            value["pages"][0]["crop_box_pdf_user_space"] = [0, 0, 99999, 99999]
+        atomic(path, value)
+        reseal(output)
+    with pytest.raises(ValueError):
+        batch.verify(output)
+
+
+@pytest.mark.parametrize("pin", ["workspace", "code"])
+def test_legacy_pins_cannot_be_relabelled_or_replaced(pdf_batch, pin):
+    output, release_root, _, _, _, _ = pdf_batch
+    legacy = legacy_copy(output, release_root)
+    manifest = corpus.read_json(legacy / "BATCH.json")
+    name = (
+        (batch.ROOT / batch.PDF_ROOT / "workspace/workbench.json")
+        .relative_to(batch.ROOT)
+        .as_posix()
+    )
+    if pin == "code":
+        name = batch.Path(batch.__file__).relative_to(batch.ROOT).as_posix()
+    manifest["protected_sha256"][name] = "0" * 64
+    atomic(legacy / "BATCH.json", manifest)
+    reseal(legacy)
+    with pytest.raises(ValueError, match="binding drift"):
+        batch.verify(legacy)
+
+
+def test_session_sidecar_leakage_and_input_overlap_rejected(pdf_batch):
+    output, _, _, _, workspace, _ = pdf_batch
+    before = batch.verify(output)
+    atomic(workspace / "grid-proposals/unrelated.json", {"predictions": "synthetic"})
+    with pytest.raises(ValueError, match="machine proposals"):
+        batch.verify_session(output, workspace)
+    with pytest.raises(ValueError, match="outside frozen"):
+        batch.verify_session(output, output / "reviewer")
+    assert batch.verify(output) == before
 
 
 def source(key, fmt, family=None):
@@ -231,7 +497,7 @@ def frozen(tmp_path, monkeypatch):
     atomic(release_root / "effective-matrix.json", {"population": rows})
     atomic(release_root / "RELEASE.json", {"fixture": True})
     monkeypatch.setattr(batch.release, "verify", lambda _: {"integrity": "PASS"})
-    monkeypatch.setattr(batch, "pdf_inputs", lambda: ({"review/pdf.json": b"{}\n"}, {}))
+    monkeypatch.setattr(batch, "pdf_inputs", lambda **_: ({"review/pdf.json": b"{}\n"}, {}))
     monkeypatch.setattr(batch, "attribution", lambda *_: b"synthetic attribution\n")
     output = tmp_path / "evaluation-output/batch"
     batch.prepare(output, release_root)

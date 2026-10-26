@@ -1,13 +1,14 @@
 """Freeze original-only local development reviewer inputs; never accept human Gold.
 
-Only reviewer/ is a handoff. The surrounding selection/audit records are private
-coordinator evidence. Existing PDF workbench state is read and pinned, never rebuilt.
+Only reviewer/ is a handoff. Frozen inputs and mutable reviewer sessions have
+separate validation boundaries. Neither boundary accepts answers as human Gold.
 """
 
 from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import json
 from collections import Counter
 from pathlib import Path
@@ -20,17 +21,21 @@ from tools.extraction_quality import office_readiness_oracle as office
 from tools.extraction_quality import pdf_table_review_packet as pdf_packet
 from tools.extraction_quality import readiness_release as release
 from tools.extraction_quality.pdf_review_validation import original_pages
+from tools.extraction_quality.pdf_review_workbench import VERSION as WORKBENCH_VERSION
 from tools.extraction_quality.pdf_review_workbench import Workbench
 from tools.extraction_quality.readiness_evaluator import Observation
 from tools.extraction_quality.readiness_io import ROOT, atomic, atomic_bytes, confined
 from tools.extraction_quality.readiness_source_checks import resolve_xml
 
-VERSION = "blind-extraction-review-batch-1"
+VERSION = "blind-extraction-review-batch-2"
+LEGACY_VERSION = "blind-extraction-review-batch-1"
+# Accepted version-1 implementation, retained as historical provenance, not active code.
+LEGACY_CODE_SHA256 = "a29e64153abd5043d6cf2ad6353f0d4b90ba454e48157ead4fc4021834ed5eb0"
 PDF_IDS = ("c1-0033", "c1-0040")
 DEFAULT_RELEASE = "evaluation-output/extraction-readiness-continuation-20261023-v2"
 PDF_ROOT = "evaluation-output/qg00-annotation-rights-20261021"
 RULE = "rights-family-first; DOCX nested/tables/ancillary; XLSX cells<=20000; descending; id tie"
-INSTRUCTIONS = """Blind Extraction review — local development only
+LEGACY_INSTRUCTIONS = """Blind Extraction review — local development only
 
 Use only this reviewer directory, the bound originals and a separate writable
 answer directory. Do not edit these frozen inputs. Do not open the coordinator
@@ -56,6 +61,12 @@ supplied by actual reviewers. This tool validates frozen blank inputs only; it
 cannot approve completed answers or export Gold. Use existing strict review/Gold
 validators and a separate reviewed revision after genuine review/adjudication.
 """
+INSTRUCTIONS = LEGACY_INSTRUCTIONS.replace(
+    "PDF: resume the already prepared original-only workspace through the coordinator.",
+    "PDF: resume the already prepared original-only workspace through the coordinator.\n"
+    "Frozen input verification is independent of saved reviewer edits. Validate the\n"
+    "mutable workspace separately with verify-session; this never certifies Gold.",
+)
 
 
 def family_map(rows: list[dict]) -> dict[str, str]:
@@ -97,7 +108,7 @@ def family_map(rows: list[dict]) -> dict[str, str]:
     return {r["id"]: components[s.sample_id] for r, s in zip(rows, samples, strict=True)}
 
 
-def select(rows: list[dict]) -> dict:
+def select(rows: list[dict], *, version: str = VERSION) -> dict:
     ids = [r["id"] for r in rows]
     if len(ids) != len(set(ids)) or not set(PDF_IDS) <= set(ids):
         raise ValueError("duplicate or missing source identity")
@@ -171,7 +182,7 @@ def select(rows: list[dict]) -> dict:
                 reason = "structural_metadata_unavailable"
             decision["reasons"] = [reason]
     return {
-        "version": VERSION,
+        "version": version,
         "rule": RULE,
         "selected": chosen,
         "population": len(rows),
@@ -284,9 +295,9 @@ def office_locators(path: Path, fmt: str) -> list[dict]:
     return locators
 
 
-def office_sheet(row: dict, path: Path) -> dict:
+def office_sheet(row: dict, path: Path, *, version: str = VERSION) -> dict:
     return {
-        "version": VERSION,
+        "version": version,
         "source_id": row["id"],
         "source_sha256": row["sha256"],
         "source_size_bytes": row["source_reference"]["size_bytes"],
@@ -327,40 +338,101 @@ def office_sheet(row: dict, path: Path) -> dict:
     }
 
 
-def pdf_inputs() -> tuple[dict[str, bytes], dict[str, str]]:
+def resume_pdf_workspace(workspace: Path | None = None) -> Workbench:
     base = confined(ROOT, PDF_ROOT)
-    # Resume validation is read-only: it checks packet hashes, source binding and
-    # worksheet/proposal state without initializing, resetting or serving the UI.
-    workbench = Workbench(
+    return Workbench(
         ROOT / "docs/eda/corpus_v1_manifest.csv",
         ROOT / "local-corpus",
         ROOT / release.GOLD,
         base / "packet-1",
-        base / "workspace",
+        workspace if workspace is not None else base / "workspace",
         resume=True,
         root=ROOT,
         eligibility=ROOT / release.ELIGIBILITY,
     )
-    paths, records = workbench.paths, workbench.records.values()
-    workspace = base / "workspace/workbench.json"
-    state = workbench.state
-    if state["exposed"] is not False or set(state["documents"]) != set(PDF_IDS):
-        raise ValueError("PDF workspace exposed or wrong population")
+
+
+def pdf_draft(record, pages: list[dict]) -> dict:
+    draft, _, _ = pdf_packet.worksheets(record, pages)
+    draft["reviewer"].update(
+        kind=None, annotation_authorized=None, annotation_permission_reference=None
+    )
+    draft.update(text_anchors=[], order_pairs=[])
+    return draft
+
+
+def pdf_inputs(
+    *, legacy: bool = False, require_pristine: bool = False
+) -> tuple[dict[str, bytes], dict[str, str]]:
+    """Reconstruct blank inputs from immutable originals/packet, never live annotations.
+
+    Bundle checks retain Workbench._verify_bundle's inventory, identity and digest
+    contract. A live Workbench is needed only for admission of a new preparation.
+    """
+    base = confined(ROOT, PDF_ROOT)
+    identity, paths, records, _ = pdf_packet.preflight(
+        ROOT / "docs/eda/corpus_v1_manifest.csv",
+        ROOT / "local-corpus",
+        ROOT / release.GOLD,
+        pdf_packet.Expected(),
+        eligibility=ROOT / release.ELIGIBILITY,
+    )
+    if {r.document_id for r in records} != set(PDF_IDS):
+        raise ValueError("PDF input population mismatch")
+    bundle = base / "packet-1"
+    manifest = corpus.read_json(bundle / "artifact-manifest.json")
+    marker = corpus.read_json(bundle / "COMPLETE.json")
+    expected = {"inputs.json", "summary.json", "REVIEW.md"}
+    for key in PDF_IDS:
+        expected.add(f"sources/{key}.pdf")
+        expected.update(
+            f"review/{key}/{name}.json"
+            for name in (
+                "independent",
+                "legacy-assertions",
+                "adjudication",
+            )
+        )
+    if (
+        set(manifest) != expected
+        or marker.get("packet_fingerprint") != fingerprint(manifest)
+        or marker.get("artifact_manifest_sha256")
+        != corpus.sha256(bundle / "artifact-manifest.json")
+        or corpus.read_json(bundle / "inputs.json")["inputs"] != identity
+    ):
+        raise ValueError("Frozen PDF packet identity mismatch")
+    for name, digest in manifest.items():
+        if corpus.sha256(confined(bundle, name)) != digest:
+            raise ValueError("Frozen PDF packet artifact mismatch")
     files = {}
-    protected = {workspace.relative_to(ROOT).as_posix(): corpus.sha256(workspace)}
+    protected, documents = {}, {}
     for record in records:
         key = record.document_id
-        draft, _, _ = pdf_packet.worksheets(record, original_pages(paths[key]))
-        draft["reviewer"].update(
-            kind=None, annotation_authorized=None, annotation_permission_reference=None
-        )
-        draft.update(text_anchors=[], order_pairs=[])
-        entry = state["documents"][key]
-        if entry != {"draft": draft, "inspected_pages": [], "seal": None, "adjudication": None}:
-            raise ValueError("PDF workspace is no longer a pristine blind draft")
+        draft = pdf_draft(record, original_pages(paths[key]))
+        documents[key] = {"draft": draft, "inspected_pages": [], "seal": None, "adjudication": None}
         files[f"review/{key}/independent.json"] = encode(draft)
         files[f"sources/{key}.pdf"] = paths[key].read_bytes()
         protected[paths[key].relative_to(ROOT).as_posix()] = record.source_sha256
+    initial_state = {
+        "version": WORKBENCH_VERSION,
+        "binding": fingerprint(
+            {"inputs": identity, "packet": corpus.sha256(bundle / "artifact-manifest.json")}
+        ),
+        "exposed": False,
+        "documents": documents,
+    }
+    if require_pristine and resume_pdf_workspace().state != initial_state:
+        raise ValueError("PDF workspace is no longer a pristine blind draft")
+    if legacy:
+        # Version 1 pinned the initial workspace bytes. Validate that historical
+        # pin against reconstructed initial state, never the mutable current file.
+        protected[(base / "workspace/workbench.json").relative_to(ROOT).as_posix()] = (
+            hashlib.sha256(encode(initial_state)).hexdigest()
+        )
+    else:
+        for name in ("artifact-manifest.json", "COMPLETE.json"):
+            path = bundle / name
+            protected[path.relative_to(ROOT).as_posix()] = corpus.sha256(path)
     return files, protected
 
 
@@ -398,27 +470,37 @@ def attribution(selected: list[str], release_root: Path) -> bytes:
     return ("\n".join(lines) + "\n").encode("utf-8")
 
 
-def expected_inputs(release_root: Path) -> tuple[dict, dict[str, bytes], dict[str, str]]:
+def expected_inputs(
+    release_root: Path,
+    *,
+    version: str = VERSION,
+    prepare: bool = False,
+) -> tuple[dict, dict[str, bytes], dict[str, str]]:
     release.verify(release_root)
     matrix = corpus.read_json(release_root / "effective-matrix.json")
     rows = matrix["population"]
-    selection = select(rows)  # Freeze choice before reading any selected Office content.
-    files, protected = pdf_inputs()
+    selection = select(rows, version=version)  # Select before reading Office content.
+    files, protected = pdf_inputs(legacy=version == LEGACY_VERSION, require_pristine=prepare)
     by_id = {r["id"]: r for r in rows}
     for key in selection["selected"]:
         row = by_id[key]
         path = corpus.asset_path(ROOT, corpus.Asset.model_validate(row["source_reference"]))
         if row["format"] != "pdf":
             files[f"sources/{key}.{row['format']}"] = path.read_bytes()
-            files[f"review/{key}/independent.json"] = encode(office_sheet(row, path))
+            files[f"review/{key}/independent.json"] = encode(
+                office_sheet(row, path, version=version)
+            )
         protected[path.relative_to(ROOT).as_posix()] = row["sha256"]
-    files["REVIEW.txt"] = INSTRUCTIONS.encode("utf-8")
+    instructions = LEGACY_INSTRUCTIONS if version == LEGACY_VERSION else INSTRUCTIONS
+    files["REVIEW.txt"] = instructions.encode("utf-8")
     # A source-qualified attribution accompanies the reviewer originals, without diagnostic fields.
     files["ATTRIBUTION.txt"] = attribution(selection["selected"], release_root)
     protected[(release_root / "RELEASE.json").relative_to(ROOT).as_posix()] = corpus.sha256(
         release_root / "RELEASE.json"
     )
-    protected[Path(__file__).relative_to(ROOT).as_posix()] = corpus.sha256(Path(__file__))
+    protected[Path(__file__).relative_to(ROOT).as_posix()] = (
+        LEGACY_CODE_SHA256 if version == LEGACY_VERSION else corpus.sha256(Path(__file__))
+    )
     return selection, files, protected
 
 
@@ -426,7 +508,7 @@ def prepare(output: Path, release_root: Path) -> dict:
     corpus.no_links(output)
     if output.exists() or not output.resolve().is_relative_to(ROOT / "evaluation-output"):
         raise ValueError("fresh private destination required")
-    selection, files, protected = expected_inputs(release_root)
+    selection, files, protected = expected_inputs(release_root, prepare=True)
     output.mkdir(parents=True)
     atomic(output / "selection.json", selection)
     for relative, data in files.items():
@@ -454,28 +536,26 @@ def verify(output: Path) -> dict:
     if not output.resolve().is_relative_to(ROOT / "evaluation-output"):
         raise ValueError("private batch required")
     manifest = corpus.read_json(output / "BATCH.json")
-    if (
-        set(manifest)
-        != {
-            "version",
-            "release_root",
-            "artifact_sha256",
-            "protected_sha256",
-            "selected",
-            "human_reviews",
-            "quality",
-            "family_completeness",
-            "fingerprint",
-        }
-        or manifest["version"] != VERSION
-    ):
+    if set(manifest) != {
+        "version",
+        "release_root",
+        "artifact_sha256",
+        "protected_sha256",
+        "selected",
+        "human_reviews",
+        "quality",
+        "family_completeness",
+        "fingerprint",
+    } or manifest["version"] not in {VERSION, LEGACY_VERSION}:
         raise ValueError("batch schema or prediction leakage")
     if (
         fingerprint({k: v for k, v in manifest.items() if k != "fingerprint"})
         != manifest["fingerprint"]
     ):
         raise ValueError("batch fingerprint mismatch")
-    selection, files, protected = expected_inputs(confined(ROOT, manifest["release_root"]))
+    selection, files, protected = expected_inputs(
+        confined(ROOT, manifest["release_root"]), version=manifest["version"]
+    )
     expected = {
         "selection.json": encode(selection),
         **{"reviewer/" + p: b for p, b in files.items()},
@@ -504,6 +584,11 @@ def verify(output: Path) -> dict:
         ):
             raise ValueError("frozen input drift, forged review, leakage or invalid locator")
     for relative, digest in protected.items():
+        if manifest["version"] == LEGACY_VERSION and relative in {
+            (Path(PDF_ROOT) / "workspace/workbench.json").as_posix(),
+            Path(__file__).relative_to(ROOT).as_posix(),
+        }:
+            continue  # Historical provenance was reconstructed and checked above.
         if corpus.sha256(confined(ROOT, relative)) != digest:
             raise ValueError("protected input drift")
     return {
@@ -516,18 +601,54 @@ def verify(output: Path) -> dict:
     }
 
 
+def verify_session(output: Path, workspace: Path | None = None) -> dict:
+    """Check resumability separately; saved draft content is never input Gold."""
+    result = verify(output)
+    target = workspace if workspace is not None else confined(ROOT, PDF_ROOT) / "workspace"
+    corpus.no_links(target)
+    if target.resolve().is_relative_to(output.resolve()) or output.resolve().is_relative_to(
+        target.resolve()
+    ):
+        raise ValueError("mutable workspace must be outside frozen inputs")
+    app = resume_pdf_workspace(target)
+    if set(app.records) != set(PDF_IDS):
+        raise ValueError("review session population mismatch")
+    for entry in app.state["documents"].values():
+        if entry["seal"] is None and (
+            entry["draft"]["state"] != "DRAFT_NOT_REVIEWED"
+            or entry["draft"]["completion"]["signed_review_fingerprint"] is not None
+        ):
+            raise ValueError("unsealed session claims a completed review")
+        reviewer = entry["draft"]["reviewer"]
+        if (
+            reviewer.get("parser_outputs_seen") is True
+            or reviewer.get("legacy_assertions_seen_before_draft") is True
+            or any(t.get("assisted_grid_proposals") for t in entry["draft"]["tables"])
+        ):
+            raise ValueError("independent review session reports prediction or legacy exposure")
+    proposals = app.output / "grid-proposals"
+    corpus.no_links(proposals)
+    if any(proposals.glob("*.json")):
+        raise ValueError("independent review session contains machine proposals")
+    return {**result, "session": "RESUMABLE", "review_acceptance": "NOT_EVALUATED"}
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("mode", choices=("prepare", "verify"))
+    parser.add_argument("mode", choices=("prepare", "verify", "verify-session"))
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--release", type=Path, default=Path(DEFAULT_RELEASE))
+    parser.add_argument("--workspace", type=Path)
     args = parser.parse_args()
     try:
-        result = (
-            prepare(args.output.resolve(), args.release.resolve())
-            if args.mode == "prepare"
-            else verify(args.output.resolve())
-        )
+        if args.mode == "prepare":
+            result = prepare(args.output.resolve(), args.release.resolve())
+        elif args.mode == "verify-session":
+            result = verify_session(
+                args.output.resolve(), args.workspace.resolve() if args.workspace else None
+            )
+        else:
+            result = verify(args.output.resolve())
         print(json.dumps(result, sort_keys=True))
         return 0
     except (OSError, ValueError, KeyError, TypeError) as error:
