@@ -165,9 +165,9 @@ def test_docx_exception_confirmation_does_not_invent_underlying_source_cause():
     assert triage.diagnosis(row, {}, replay)["classification"] == "UNRESOLVED"
 
 
-def test_original_body_xml_comment_explains_current_docx_failure(tmp_path, monkeypatch):
+def test_original_body_xml_comment_historical_cause_and_fixed_extraction(tmp_path, monkeypatch):
     from docx import Document
-    from lxml.etree import Comment
+    from lxml.etree import Comment, fromstring
 
     monkeypatch.setattr(triage, "ROOT", tmp_path)
     source = tmp_path / "comment-before-paragraph.docx"
@@ -182,14 +182,43 @@ def test_original_body_xml_comment_explains_current_docx_failure(tmp_path, monke
     }
     package = triage.package_evidence(source, "docx")
     replay = triage.trace_extraction(source, metadata)
-    assert replay["capture"]["error_category"] == "extraction_failed"
+    assert replay["capture"]["status"] == "success"
+    assert replay["capture"]["error_category"] is None
+    assert [(b["text"], b["order"]) for b in replay["capture"]["blocks"]] == [
+        ("Synthetic regression content", 0)
+    ]
+    location = replay["capture"]["blocks"][0]["source"]
+    assert location["part_uri"] == "/word/document.xml"
+    assert location["xml_path"] == [0, 1]
+    original = Document(source)
+    with zipfile.ZipFile(source) as archive:
+        node = fromstring(archive.read("word/document.xml"))
+    for index in location["xml_path"]:
+        node = node[index]
+    assert "".join(node.itertext()) == "Synthetic regression content"
+
+    # The pre-fix tag operation still demonstrates the historical mechanism.
+    # This is a synthetic diagnostic input, not a replacement for saved real traces.
+    with pytest.raises(AttributeError, match="rsplit") as historical_error:
+        original.element.body[0].tag.rsplit("}", maxsplit=1)
+    historical_fingerprint = fingerprint({"synthetic_historical_failure": metadata})
+    historical_replay = {
+        "capture_fingerprint": historical_fingerprint,
+        "exception_events": [
+            {
+                "function": "_extract_docx",
+                "exception_type": "AttributeError",
+                "message": str(historical_error.value),
+            }
+        ],
+    }
     result = triage.diagnosis(
         {
             "failure": "extraction_failed",
-            "capture": {"content_sha256": replay["capture_fingerprint"]},
+            "capture": {"content_sha256": historical_fingerprint},
         },
         package,
-        replay,
+        historical_replay,
     )
     assert result["classification"] == "CONFIRMED"
     assert result["mechanism"] == "docx_xml_comment_body_traversal"

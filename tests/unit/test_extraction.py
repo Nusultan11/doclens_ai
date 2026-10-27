@@ -6,6 +6,8 @@ from pathlib import Path
 
 import pytest
 from docx import Document
+from docx.oxml import OxmlElement
+from lxml import etree
 from openpyxl import Workbook
 from openpyxl.worksheet.table import Table as XlsxTable
 from openpyxl.worksheet.table import TableStyleInfo
@@ -134,6 +136,91 @@ def test_docx_preserves_body_order_and_merged_cell_semantics(tmp_path: Path) -> 
     assert [cell.text for cell in cells].count("vertical once") == 1
     assert (vertical_cell.row_span, vertical_cell.column_span) == (2, 1)
     assert (vertical_cell.row_index, vertical_cell.column_index) == (1, 2)
+
+
+@pytest.mark.parametrize("node_kind", ["comment", "processing_instruction"])
+@pytest.mark.parametrize("unsupported_element", [False, True])
+def test_docx_non_element_body_nodes_preserve_text_tables_and_physical_xml_paths(
+    tmp_path: Path, node_kind: str, unsupported_element: bool
+) -> None:
+    source = tmp_path / "non-elements.docx"
+    document = Document()
+    document.add_paragraph("before −001.50")
+    table = document.add_table(rows=2, cols=2)
+    table.cell(0, 0).merge(table.cell(0, 1)).text = "merged header"
+    table.cell(1, 0).text = "left"
+    table.cell(1, 1).text = "003 −12.50"
+    document.add_paragraph("after")
+    if unsupported_element:
+        table._tbl.addprevious(OxmlElement("w:customXml"))
+    for element in list(document.element.body):
+        node = (
+            etree.Comment("Not document text")
+            if node_kind == "comment"
+            else etree.ProcessingInstruction("synthetic", "not document text")
+        )
+        element.addprevious(node)
+    document.save(source)
+
+    result = extract_file(source)
+
+    assert result.status is (
+        ExtractionStatus.NEEDS_REVIEW if unsupported_element else ExtractionStatus.SUCCESS
+    )
+    assert result.error_category is None
+    assert [block.kind for block in result.blocks] == ["text", "table", "text"]
+    assert [block.order for block in result.blocks] == [0, 1, 2]
+    assert result.blocks[0].text == "before −001.50"
+    assert result.blocks[2].text == "after"
+    extracted = result.blocks[1]
+    assert isinstance(extracted, TableBlock)
+    assert extracted.table_index == 0
+    cells = [cell for row in extracted.rows for cell in row.cells]
+    assert [(c.text, c.row_index, c.column_index, c.row_span, c.column_span) for c in cells] == [
+        ("merged header", 0, 0, 1, 2),
+        ("left", 1, 0, 1, 1),
+        ("003 −12.50", 1, 1, 1, 1),
+    ]
+    assert [(w.code, w.count) for w in result.warnings] == (
+        [(WarningCode.UNSUPPORTED_BODY_CONTENT_NOT_EXTRACTED, 1)] if unsupported_element else []
+    )
+
+    # Preserve comments/PIs while resolving paths against the actual saved original.
+    with zipfile.ZipFile(source) as archive:
+        root = etree.fromstring(archive.read("word/document.xml"))
+    body = root.find("{http://schemas.openxmlformats.org/wordprocessingml/2006/main}body")
+    assert body is not None
+    body_index = list(root).index(body)
+    body_ordinals = (1, 5, 7) if unsupported_element else (1, 3, 5)
+    for block, ordinal in zip(result.blocks, body_ordinals, strict=True):
+        assert block.source.part_uri == "/word/document.xml"
+        assert block.source.xml_path == (body_index, ordinal)
+        assert block.source.page_number is None
+        node = root
+        for index in block.source.xml_path:
+            node = node[index]
+        assert node is body[ordinal]
+        if isinstance(block, TextBlock):
+            assert "".join(node.itertext()) == block.text
+        else:
+            assert node.tag == "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}tbl"
+    for cell in cells:
+        assert cell.source.part_uri == "/word/document.xml"
+        assert cell.source.xml_path[:2] == (body_index, body_ordinals[1])
+        node = root
+        for index in cell.source.xml_path:
+            node = node[index]
+        assert node.tag == "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}tc"
+        assert "".join(node.itertext()) == cell.text
+
+    for limits in (
+        ExtractionLimits(max_document_blocks=2),
+        ExtractionLimits(max_extracted_characters=1),
+        ExtractionLimits(max_table_cells=2),
+    ):
+        bounded = extract_file(source, limits=limits)
+        assert bounded.status is ExtractionStatus.FAILED
+        assert bounded.error_category is ErrorCategory.LIMIT_EXCEEDED
 
 
 def test_docx_preserves_header_with_explicit_review_status(tmp_path: Path) -> None:

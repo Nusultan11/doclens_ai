@@ -317,7 +317,7 @@ def _extract_docx(
                         source=table_block.source,
                     )
                 )
-        elif child.tag.rsplit("}", maxsplit=1)[-1] != "sectPr":
+        elif isinstance(child.tag, str) and child.tag.rsplit("}", maxsplit=1)[-1] != "sectPr":
             unsupported_body_content_count += 1
 
         if len(blocks) > limits.max_document_blocks:
