@@ -1,0 +1,229 @@
+{
+  "allowlist": {
+    "originals": [
+      {
+        "cloud_classification": "UNRESOLVED",
+        "document_id": "c1-0031",
+        "remote_alias": "originals/c1-0031.pdf",
+        "sha256": "1179d9f2925a83d6503608b8049b2a23b8e81f15a42d60e7bdd0bce52d6cc253",
+        "size_bytes": 1732
+      },
+      {
+        "cloud_classification": "UNRESOLVED",
+        "document_id": "c1-0032",
+        "remote_alias": "originals/c1-0032.pdf",
+        "sha256": "5f9082eabbb52eaf71510592a043958cb7f67b955158f7d9d12435783bc52471",
+        "size_bytes": 20617
+      },
+      {
+        "cloud_classification": "UNRESOLVED",
+        "document_id": "c1-0033",
+        "remote_alias": "originals/c1-0033.pdf",
+        "sha256": "081c9cfcc8e885544698f617dfdb9bf351fcf60b512cc449a3620deb538695fd",
+        "size_bytes": 29702
+      },
+      {
+        "cloud_classification": "UNRESOLVED",
+        "document_id": "c1-0035",
+        "remote_alias": "originals/c1-0035.pdf",
+        "sha256": "94a5b7cdc01f39d482683e7480f4f593089c54731d333d60544558db903b8c3a",
+        "size_bytes": 38361
+      },
+      {
+        "cloud_classification": "UNRESOLVED",
+        "document_id": "c1-0040",
+        "remote_alias": "originals/c1-0040.pdf",
+        "sha256": "18a25155acbe6dfb0a97309097234dc3040a67d2f54250af82288e56dc8c4344",
+        "size_bytes": 64968
+      },
+      {
+        "cloud_classification": "UNRESOLVED",
+        "document_id": "c1-0041",
+        "remote_alias": "originals/c1-0041.pdf",
+        "sha256": "daef7ef6b8dd4200817d1342dfdb480ace0f4a0a3f921165f777ee294bf0485a",
+        "size_bytes": 77333
+      },
+      {
+        "cloud_classification": "UNRESOLVED",
+        "document_id": "c1-0043",
+        "remote_alias": "originals/c1-0043.pdf",
+        "sha256": "b70a5d33160ee12eba6b5f66e305df69b6d504389c11c142657c41d2be45c3ce",
+        "size_bytes": 91484
+      },
+      {
+        "cloud_classification": "UNRESOLVED",
+        "document_id": "c1-0044",
+        "remote_alias": "originals/c1-0044.pdf",
+        "sha256": "43a961d9f86849a18ddf680a77ed4e4d38dd8f7b4c0e795dc5a51ec9ff255410",
+        "size_bytes": 100551
+      },
+      {
+        "cloud_classification": "UNRESOLVED",
+        "document_id": "c1-0048",
+        "remote_alias": "originals/c1-0048.pdf",
+        "sha256": "5928ffa7f5f8d44678a56d810794f4263e4a3db9a7d87422ec8d3c6907186f4f",
+        "size_bytes": 228777
+      },
+      {
+        "cloud_classification": "UNRESOLVED",
+        "document_id": "c1-0049",
+        "remote_alias": "originals/c1-0049.pdf",
+        "sha256": "fa821b92dde14335883c0327f70851d9b5813feea8584136eb125fe8833a9240",
+        "size_bytes": 254032
+      },
+      {
+        "cloud_classification": "UNRESOLVED",
+        "document_id": "c1-0050",
+        "remote_alias": "originals/c1-0050.pdf",
+        "sha256": "f1ac87dc692b4e6a48f821a06457e6ee09023ddc83c6e121af60b521d14b9524",
+        "size_bytes": 461365
+      }
+    ],
+    "supporting_files": [
+      {
+        "remote_alias": "ATTRIBUTION.md",
+        "sha256": "1e8b5a5b4ba9ba60676c3cbcc76c659026a0f2bb6a6808879eb4c593d31d2d7d",
+        "size_bytes": 4121
+      },
+      {
+        "remote_alias": "OPEN-GOVERNMENT-LICENCE-v3.0.html",
+        "sha256": "f5b2b9f2af63647cde889fa6c3508f5705925295b74912c68caa28dd37e64aa5",
+        "size_bytes": 10450
+      },
+      {
+        "remote_alias": "PROVENANCE.json",
+        "sha256": "55eba29f306833717cede207a8690e0d57db67711806a2241eaac3a0d2d86cdc",
+        "size_bytes": 7893
+      }
+    ]
+  },
+  "approved_at": null,
+  "approved_by": null,
+  "current_authorization": "PREPARE_REVIEW_PACKET_ONLY_NO_UPLOADS_OR_JOBS",
+  "data_staging": "NONE_originals_not_copied_preview_metadata_only",
+  "excluded_from_transfer": [
+    "Gold and historical labels",
+    "reviewer inputs/sessions/attestations",
+    "EX-01 captures and prior local outputs",
+    "TEST/QA/sealed originals",
+    "repository and Git history",
+    "credentials and environment secrets",
+    "model weights",
+    "code/runner files not separately reviewed and allowlisted",
+    "unrelated evaluation reports",
+    "source renderings and annotation proposals"
+  ],
+  "fingerprint": "3b15d4450156554bde35a1f57fdb9fe799a0d4c8f12ccd7317474ec6c4ece9db",
+  "frozen_resource_policy": {
+    "cloud_transfer": false,
+    "concurrency": 1,
+    "cpu_seconds": 1200,
+    "critical_loss_gate": "any_measured_new_critical_loss_REJECT_frozen_config",
+    "inference_network": "deny_external_allow_only_explicit_owned_loopback",
+    "max_configurations": 3,
+    "minimum_available_ram_bytes": 2684354560,
+    "native_output_bytes": 134217728,
+    "oom_modifications_max": 1,
+    "os_commit_bytes": 4294967296,
+    "process_tree_rss_bytes": 1610612736,
+    "production_promotion": false,
+    "quality_thresholds": "TBD_no_QG_claim",
+    "repetitions": 2,
+    "scratch_bytes": 268435456,
+    "stop": "R3_only_after_R2_DEV_recovery_no_sealed_tuning",
+    "wall_seconds_per_document": 600
+  },
+  "mandatory_stop_conditions": [
+    "any source still not CLOUD_ADMITTED",
+    "source byte/size or allowlist drift",
+    "missing explicit human transfer authorization bound to final manifest",
+    "owner/privacy/collaborator/recipient mismatch",
+    "unreviewed provider terms/retention",
+    "missing validated runner/runtime/resource parity",
+    "model/config changes",
+    "any unexpected staged file or secret",
+    "proposed retention cannot be met"
+  ],
+  "model_configuration": {
+    "artifact_fingerprint": "3d5869718615820bc954966e26e85fce336cab115803452ac34d69b346c70e71",
+    "cell_matching": true,
+    "device": "cpu",
+    "do_ocr": false,
+    "enrichment": false,
+    "external_plugins": false,
+    "remote_services": false,
+    "seed": 0,
+    "table_mode": "fast",
+    "threads": 2
+  },
+  "original_bytes": 1368922,
+  "output_privacy": "Source-bearing exports/logs remain private; sanitized aggregates only in Git",
+  "packet_status": "READY_FOR_PARAMETER_REVIEW",
+  "proposed_destination": {
+    "collaborators": [],
+    "competitions": [],
+    "dataset": "nurs2005/doclens-extraction-r1-dev-pdf-11",
+    "inference_network": "no external inference/data egress; enforcement unverified",
+    "notebook": "nurs2005/doclens-extraction-r1-docling-dev",
+    "other_notebooks": [],
+    "owner": "nurs2005",
+    "privacy": "PRIVATE_REQUIRED",
+    "provider": "Kaggle",
+    "provider_regions_subprocessors_backup_retention": "NOT_VERIFIED",
+    "recipients": [
+      "proposed owner account",
+      "Kaggle service and its infrastructure"
+    ],
+    "status": "PROPOSED_NOT_CREATED_NOT_REMOTE_VERIFIED"
+  },
+  "proposed_output_scope": [
+    "full Docling native document/backend-page/conversion exports",
+    "source/config/code/model/environment fingerprints",
+    "per-document statuses/errors/warnings/timing/peak-memory receipts",
+    "private deterministic comparison evidence for both repetitions"
+  ],
+  "proposed_retention": {
+    "local_evidence": "retain only in ignored private storage for reproducibility",
+    "provider_backup_purge_guarantee": "NOT_ESTABLISHED",
+    "remote_cleanup_already_authorized": false,
+    "remote_delete_within_hours_after_verified_local_download": 24,
+    "remote_maximum_days_from_first_upload": 7,
+    "rule": "earlier deadline wins; no extension without separately reviewed approval",
+    "targets": [
+      "new dataset versions",
+      "new notebook outputs and logs",
+      "owned temporary resources"
+    ]
+  },
+  "purpose": "Original-cohort R1 Docling versus local native technical comparison only",
+  "purpose_constraints": {
+    "documents": 11,
+    "gold_transfer": false,
+    "independent_quality": "NOT_EVALUATED",
+    "production_promotion": false,
+    "repetitions": 2,
+    "scoring_location": "LOCAL_ONLY",
+    "sequential_workers": 1
+  },
+  "r1_configuration_fingerprint": "8f38b59b116df87a37f60aef1e26b0291cdb213a743ec8824d50cd43ad28676d",
+  "r1_protocol_fingerprint": "5baceb7c7655b918486f8a554705a7e6bb65210235c484f524b5e9ea3d002658",
+  "remote_execution_limitations": [
+    "Kaggle extraction staging is R0-only; a reviewed standalone source is required",
+    "retired extraction_remote.py remains deleted; no replacement created",
+    "Linux enforcement of the existing local limits and worker parity is unverified",
+    "local Windows artifact paths are not a registered Kaggle mount-path configuration",
+    "this data-transfer proposal does not authorize code/model transfer or job submission"
+  ],
+  "resource_admission_minimum_bytes": 2684354560,
+  "source_audit_fingerprint": "f0155ab44039d0c39d56327b23a476636c0797d955cb4e30e8a7aa13849b50df",
+  "source_cloud_admission": {
+    "CLOUD_ADMITTED": 0,
+    "CLOUD_BLOCKED": 0,
+    "UNRESOLVED": 11
+  },
+  "total_files": 14,
+  "total_proposed_bytes": 1391386,
+  "transfer_authorized": false,
+  "transfer_execution_status": "BLOCKED",
+  "version": "r1-kaggle-transfer-approval-draft-1"
+}
